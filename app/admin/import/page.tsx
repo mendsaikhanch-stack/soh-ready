@@ -20,6 +20,13 @@ interface ColumnMapping {
   payments: number | null;
 }
 
+interface SheetData {
+  sheetName: string;
+  rows: ParsedRow[];
+  detectedFormat: string;
+  mapping: ColumnMapping;
+}
+
 export default function ImportPage() {
   const [step, setStep] = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
   const [fileName, setFileName] = useState('');
@@ -29,6 +36,8 @@ export default function ImportPage() {
   const [importResult, setImportResult] = useState({ success: 0, failed: 0 });
   const [error, setError] = useState('');
   const [detectedFormat, setDetectedFormat] = useState('');
+  const [sheets, setSheets] = useState<SheetData[]>([]);
+  const [activeSheet, setActiveSheet] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Тоо эсэхийг шалгах
@@ -163,6 +172,8 @@ export default function ImportPage() {
     if (!file) return;
     setError('');
     setFileName(file.name);
+    setSheets([]);
+    setActiveSheet(0);
 
     try {
       let hdrs: string[] = [];
@@ -175,6 +186,9 @@ export default function ImportPage() {
       } else {
         ({ hdrs, rows } = await parseExcel(file));
       }
+
+      // Олон sheet байвал эхний sheet-ийг сонгож харуулна
+      // (sheets state нь parseExcel дотор set хийгдсэн)
 
       if (rows.length === 0) {
         setError('Файлд өгөгдөл байхгүй');
@@ -211,6 +225,15 @@ export default function ImportPage() {
     }
   };
 
+  // Sheet сонгох
+  const switchSheet = (idx: number) => {
+    setActiveSheet(idx);
+    const s = sheets[idx];
+    setParsedRows(s.rows);
+    setDetectedFormat(s.detectedFormat);
+    setMapping(s.mapping);
+  };
+
   // Mapping ашиглаж мөрүүдийг бэлдэх
   const applyMapping = (m: ColumnMapping, rows: string[][]): ParsedRow[] => {
     if (m.name === null) return [];
@@ -223,24 +246,16 @@ export default function ImportPage() {
     })).filter(r => r.name.trim() && r.name.length > 1);
   };
 
-  // Excel задлах
-  const parseExcel = async (file: File): Promise<{ hdrs: string[]; rows: string[][] }> => {
-    const buffer = await file.arrayBuffer();
-    const wb = XLSX.read(buffer, { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
+  // Нэг sheet задлах
+  const parseOneSheet = (ws: XLSX.WorkSheet): { hdrs: string[]; rows: string[][] } | null => {
     const data = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, defval: '' });
+    if (data.length < 2) return null;
 
-    if (data.length < 2) throw new Error('Хангалттай өгөгдөл байхгүй');
-
-    // Header мөрийг олох — эхний хоосон биш мөр
     let headerIdx = 0;
     for (let i = 0; i < Math.min(5, data.length); i++) {
       const row = data[i];
       const nonEmpty = row.filter(c => String(c).trim()).length;
-      if (nonEmpty >= 2) {
-        headerIdx = i;
-        break;
-      }
+      if (nonEmpty >= 2) { headerIdx = i; break; }
     }
 
     const hdrs = data[headerIdx].map(h => String(h).trim());
@@ -248,7 +263,51 @@ export default function ImportPage() {
       .filter(row => row.some(cell => String(cell).trim()))
       .map(row => row.map(cell => String(cell)));
 
+    if (rows.length === 0) return null;
     return { hdrs, rows };
+  };
+
+  // Excel задлах — бүх sheet
+  const parseExcel = async (file: File): Promise<{ hdrs: string[]; rows: string[][] }> => {
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: 'array' });
+
+    // Бүх sheet-ийг задалж, тус бүрийг auto-map хийх
+    const allSheets: SheetData[] = [];
+
+    for (const sheetName of wb.SheetNames) {
+      const ws = wb.Sheets[sheetName];
+      const parsed = parseOneSheet(ws);
+      if (!parsed) continue;
+
+      const sheetMapping = smartAutoMap(parsed.hdrs, parsed.rows);
+      const mapped = applyMapping(sheetMapping, parsed.rows);
+      if (mapped.length === 0) continue;
+
+      const detected: string[] = [];
+      if (sheetMapping.name !== null) detected.push(`Нэр: "${parsed.hdrs[sheetMapping.name] || `Багана ${sheetMapping.name + 1}`}"`);
+      if (sheetMapping.apartment !== null) detected.push(`Байр: "${parsed.hdrs[sheetMapping.apartment] || `Багана ${sheetMapping.apartment + 1}`}"`);
+      if (sheetMapping.phone !== null) detected.push(`Утас: "${parsed.hdrs[sheetMapping.phone] || `Багана ${sheetMapping.phone + 1}`}"`);
+      if (sheetMapping.debt !== null) detected.push(`Өр: "${parsed.hdrs[sheetMapping.debt] || `Багана ${sheetMapping.debt + 1}`}"`);
+      if (sheetMapping.payments !== null) detected.push(`Төлсөн: "${parsed.hdrs[sheetMapping.payments] || `Багана ${sheetMapping.payments + 1}`}"`);
+
+      allSheets.push({
+        sheetName,
+        rows: mapped,
+        detectedFormat: detected.join(' · '),
+        mapping: sheetMapping,
+      });
+    }
+
+    if (allSheets.length > 1) {
+      setSheets(allSheets);
+    }
+
+    // Эхний sheet-ийн raw data буцаах (handleFile-д ашиглагдана)
+    const firstSheet = wb.Sheets[wb.SheetNames[0]];
+    const result = parseOneSheet(firstSheet);
+    if (!result) throw new Error('Хангалттай өгөгдөл байхгүй');
+    return result;
   };
 
   // CSV задлах
@@ -304,13 +363,18 @@ export default function ImportPage() {
     return isNaN(num) ? 0 : num;
   };
 
-  // Supabase руу импортлох
+  // Supabase руу импортлох — бүх хуудсыг нэг дор
   const doImport = async () => {
     setStep('importing');
     let success = 0;
     let failed = 0;
 
-    for (const row of parsedRows) {
+    // Олон sheet байвал бүгдийг нь, эсвэл зөвхөн одоогийн parsedRows
+    const allRows = sheets.length > 1
+      ? sheets.flatMap(s => s.rows)
+      : parsedRows;
+
+    for (const row of allRows) {
       const { error } = await supabase.from('residents').insert([{
         name: row.name,
         apartment: row.apartment,
@@ -343,6 +407,8 @@ export default function ImportPage() {
     setParsedRows([]);
     setError('');
     setDetectedFormat('');
+    setSheets([]);
+    setActiveSheet(0);
     if (fileRef.current) fileRef.current.value = '';
   };
 
@@ -406,10 +472,34 @@ export default function ImportPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-semibold">📄 {fileName}</h2>
-              <p className="text-sm text-gray-500">{parsedRows.length} оршин суугч илэрлээ</p>
+              <p className="text-sm text-gray-500">
+                {sheets.length > 1
+                  ? `${sheets.reduce((s, sh) => s + sh.rows.length, 0)} оршин суугч · ${sheets.length} хуудас`
+                  : `${parsedRows.length} оршин суугч илэрлээ`
+                }
+              </p>
             </div>
             <button onClick={reset} className="text-sm text-gray-500 hover:underline">Өөр файл</button>
           </div>
+
+          {/* Sheet tabs — олон хуудас байвал */}
+          {sheets.length > 1 && (
+            <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+              {sheets.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => switchSheet(i)}
+                  className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+                    activeSheet === i
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {s.sheetName} ({s.rows.length})
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Илрүүлсэн формат */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
@@ -481,7 +571,10 @@ export default function ImportPage() {
             </button>
             <button onClick={doImport}
               className="flex-1 py-3 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition">
-              ✓ Импортлох ({parsedRows.length} хүн)
+              ✓ Импортлох ({sheets.length > 1
+                ? `${sheets.reduce((s, sh) => s + sh.rows.length, 0)} хүн · ${sheets.length} хуудас`
+                : `${parsedRows.length} хүн`
+              })
             </button>
           </div>
         </div>
