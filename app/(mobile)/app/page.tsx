@@ -32,7 +32,7 @@ export default function WelcomePage() {
   if (checking) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center">
-        <div className="animate-pulse text-5xl">🏢</div>
+        <div className="animate-pulse text-5xl">🏠</div>
       </div>
     );
   }
@@ -47,11 +47,11 @@ export default function WelcomePage() {
       <div className={`flex-1 flex flex-col items-center justify-center px-6 text-white relative z-10 transition-all duration-700 ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         {/* Logo */}
         <div className="w-20 h-20 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-5 shadow-lg border border-white/20">
-          <span className="text-4xl">🏢</span>
+          <span className="text-4xl">🏠</span>
         </div>
 
-        <h1 className="text-3xl font-bold tracking-tight mb-1">СӨХ Систем</h1>
-        <p className="text-blue-200 text-sm mb-8">Орон сууцны удирдлагын платформ</p>
+        <h1 className="text-3xl font-bold tracking-tight mb-1">Тоот</h1>
+        <p className="text-blue-200 text-sm mb-8">Таны байрны бүх зүйл нэг дор</p>
 
         {/* Feature grid */}
         <div className="grid grid-cols-2 gap-2.5 w-full">
@@ -102,7 +102,7 @@ export default function WelcomePage() {
           Нэвтрэх
         </button>
 
-        <p className="text-center text-blue-300/60 text-xs mt-4">v1.0 · СӨХ Систем</p>
+        <p className="text-center text-blue-300/60 text-xs mt-4">v1.0 · Тоот</p>
       </div>
     </div>
   );

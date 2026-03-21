@@ -8,8 +8,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "СӨХ Систем",
-  description: "Сууц өмчлөгчдийн холбооны удирдлагын систем",
+  title: "Тоот",
+  description: "Таны байрны бүх зүйл нэг дор",
 };
 
 export const viewport = {

@@ -11,8 +11,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <button onClick={() => router.push('/')} className="flex items-center gap-2">
-            <span className="text-2xl">🏢</span>
-            <span className="font-bold text-lg">СӨХ Систем</span>
+            <span className="text-2xl">🏠</span>
+            <span className="font-bold text-lg">Тоот</span>
           </button>
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <a href="#features" className="text-gray-600 hover:text-gray-900 transition">Боломжууд</a>
@@ -39,10 +39,10 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl">🏢</span>
-                <span className="font-bold text-lg">СӨХ Систем</span>
+                <span className="text-2xl">🏠</span>
+                <span className="font-bold text-lg">Тоот</span>
               </div>
-              <p className="text-gray-400 text-sm">Монголын СӨХ-үүдэд зориулсан орон сууцны удирдлагын платформ</p>
+              <p className="text-gray-400 text-sm">Таны байрны бүх зүйл нэг дор</p>
             </div>
             <div>
               <h4 className="font-semibold mb-3">Платформ</h4>
@@ -56,7 +56,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               <h4 className="font-semibold mb-3">Холбоо барих</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>📞 7700-1122</li>
-                <li>📧 info@soh-system.mn</li>
+                <li>📧 info@toot.mn</li>
                 <li>📍 Улаанбаатар хот</li>
               </ul>
             </div>
@@ -69,7 +69,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-500">
-            © 2026 СӨХ Систем. Бүх эрх хуулиар хамгаалагдсан.
+            © 2026 Тоот. Бүх эрх хуулиар хамгаалагдсан.
           </div>
         </div>
       </footer>

@@ -69,10 +69,10 @@ export default function LandingPage() {
 
         <div className="relative max-w-6xl mx-auto px-4 py-20 md:py-32 text-center text-white">
           <div className="inline-block bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm mb-6 border border-white/20">
-            Монголд анхны СӨХ платформ
+            Таны байрны бүх зүйл нэг дор
           </div>
           <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4 max-w-3xl mx-auto">
-            Монголын СӨХ-үүдэд<br />зориулсан <span className="text-yellow-300">#1 платформ</span>
+            Байрны бүх төлбөр,<br />мэдээлэл <span className="text-yellow-300">нэг дор</span>
           </h1>
           <p className="text-blue-200 text-base md:text-lg max-w-xl mx-auto mb-8">
             Төлбөр цуглуулах, тайлан гаргах, оршин суугчидтай харилцах — бүгдийг нэг системээр.
@@ -216,7 +216,7 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="py-16 md:py-24 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-center">
         <div className="max-w-2xl mx-auto px-4">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">Таны СӨХ-д шинэ түвшний удирдлага</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">Таны байранд шинэ түвшний удирдлага</h2>
           <p className="text-blue-200 mb-8">Өнөөдөр бүртгүүлж, 3 сар үнэгүй ашиглаарай. Банкны карт шаардахгүй.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button onClick={() => router.push('/app')} className="px-8 py-3.5 bg-white text-blue-700 rounded-xl font-bold text-sm shadow-lg">

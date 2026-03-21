@@ -48,8 +48,8 @@ export default function LoginPage() {
       <div className="px-4 py-6">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-2">🏢</div>
-          <p className="text-sm text-gray-500">СӨХ Систем-д нэвтрэх</p>
+          <div className="text-5xl mb-2">🏠</div>
+          <p className="text-sm text-gray-500">Тоот апп-д нэвтрэх</p>
         </div>
 
         {error && (
