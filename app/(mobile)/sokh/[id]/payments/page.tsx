@@ -20,6 +20,7 @@ const bankApps = [
   { id: 'golomt', name: 'Голомт', color: 'bg-blue-700', scheme: 'golomtbank://payment' },
   { id: 'tdb', name: 'ХХБ', color: 'bg-red-600', scheme: 'tdbm://payment' },
   { id: 'state', name: 'Төрийн банк', color: 'bg-sky-600', scheme: 'statebank://payment' },
+  { id: 'xac', name: 'Хас банк', color: 'bg-emerald-600', scheme: 'xacbank://payment' },
   { id: 'bogd', name: 'Богд банк', color: 'bg-amber-600', scheme: 'bogdbank://payment' },
   { id: 'ckbank', name: 'Капитрон', color: 'bg-purple-600', scheme: 'capitronbank://payment' },
   { id: 'most', name: 'Most Money', color: 'bg-orange-500', scheme: 'mostmoney://payment' },
