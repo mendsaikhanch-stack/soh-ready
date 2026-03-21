@@ -15,6 +15,19 @@ interface BillItem {
 
 type PayMethod = 'qpay' | 'bank' | 'card' | null;
 
+const bankApps = [
+  { id: 'khan', name: 'Хаан банк', color: 'bg-green-600', scheme: 'khanbank://payment' },
+  { id: 'golomt', name: 'Голомт', color: 'bg-blue-700', scheme: 'golomtbank://payment' },
+  { id: 'tdb', name: 'ХХБ', color: 'bg-red-600', scheme: 'tdbm://payment' },
+  { id: 'state', name: 'Төрийн банк', color: 'bg-sky-600', scheme: 'statebank://payment' },
+  { id: 'bogd', name: 'Богд банк', color: 'bg-amber-600', scheme: 'bogdbank://payment' },
+  { id: 'ckbank', name: 'Капитрон', color: 'bg-purple-600', scheme: 'capitronbank://payment' },
+  { id: 'most', name: 'Most Money', color: 'bg-orange-500', scheme: 'mostmoney://payment' },
+  { id: 'social', name: 'SocialPay', color: 'bg-pink-600', scheme: 'socialpay://payment' },
+  { id: 'monpay', name: 'MonPay', color: 'bg-indigo-600', scheme: 'monpay://payment' },
+  { id: 'hipay', name: 'Hi-Pay', color: 'bg-teal-500', scheme: 'hipay://payment' },
+];
+
 export default function PaymentsPage() {
   const params = useParams();
   const router = useRouter();
@@ -244,50 +257,62 @@ export default function PaymentsPage() {
       {payingBill && !paySuccess && (
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50" onClick={() => setPayingBill(null)}>
           <div
-            className="bg-white w-full max-w-[430px] rounded-t-2xl p-6 animate-slide-up"
+            className="bg-white w-full max-w-[430px] rounded-t-2xl p-6 max-h-[85vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
             <h2 className="text-lg font-bold mb-1">Төлбөр төлөх</h2>
             <p className="text-sm text-gray-500 mb-4">{payingBill.name} — {payingBill.amount.toLocaleString()}₮</p>
 
-            <h3 className="text-sm font-semibold text-gray-500 mb-3">ТӨЛБӨРИЙН АРГА</h3>
-            <div className="space-y-2 mb-6">
-              <button
-                onClick={() => setPayMethod('qpay')}
-                className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition ${
-                  payMethod === 'qpay' ? 'border-green-500 bg-green-50' : 'border-gray-200'
-                }`}
-              >
-                <span className="text-2xl">📱</span>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">QPay</p>
-                  <p className="text-xs text-gray-500">QR код уншуулж төлөх</p>
-                </div>
-                {payMethod === 'qpay' && <span className="text-green-500">✓</span>}
-              </button>
+            {/* Банкны апп-аар төлөх */}
+            <h3 className="text-sm font-semibold text-gray-500 mb-3">БАНКНЫ АПП-ААР ТӨЛӨХ</h3>
+            <div className="grid grid-cols-5 gap-2 mb-6">
+              {bankApps.map(bank => (
+                <button
+                  key={bank.id}
+                  onClick={() => {
+                    window.location.href = bank.scheme;
+                    // Апп нээгдэхгүй бол 1.5 секундын дараа store руу чиглүүлнэ
+                    setTimeout(() => {
+                      setPayMethod('bank');
+                    }, 1500);
+                  }}
+                  className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-gray-50 active:scale-95 transition"
+                >
+                  <div className={`w-11 h-11 ${bank.color} rounded-xl flex items-center justify-center`}>
+                    <span className="text-white text-xs font-bold">
+                      {bank.name.slice(0, 2)}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-gray-600 text-center leading-tight">{bank.name}</span>
+                </button>
+              ))}
+            </div>
 
+            {/* Бусад арга */}
+            <h3 className="text-sm font-semibold text-gray-500 mb-3">БУСАД АРГА</h3>
+            <div className="space-y-2 mb-4">
               <button
                 onClick={() => setPayMethod('bank')}
-                className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition ${
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition ${
                   payMethod === 'bank' ? 'border-green-500 bg-green-50' : 'border-gray-200'
                 }`}
               >
-                <span className="text-2xl">🏦</span>
+                <span className="text-xl">🏦</span>
                 <div className="flex-1">
-                  <p className="font-medium text-sm">Банк шилжүүлэг</p>
-                  <p className="text-xs text-gray-500">Дансны дугаараар шилжүүлэх</p>
+                  <p className="font-medium text-sm">Дансаар шилжүүлэх</p>
+                  <p className="text-xs text-gray-500">Дансны мэдээлэл харах</p>
                 </div>
                 {payMethod === 'bank' && <span className="text-green-500">✓</span>}
               </button>
 
               <button
                 onClick={() => setPayMethod('card')}
-                className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition ${
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition ${
                   payMethod === 'card' ? 'border-green-500 bg-green-50' : 'border-gray-200'
                 }`}
               >
-                <span className="text-2xl">💳</span>
+                <span className="text-xl">💳</span>
                 <div className="flex-1">
                   <p className="font-medium text-sm">Карт</p>
                   <p className="text-xs text-gray-500">Visa, Mastercard</p>
@@ -295,16 +320,6 @@ export default function PaymentsPage() {
                 {payMethod === 'card' && <span className="text-green-500">✓</span>}
               </button>
             </div>
-
-            {/* QPay QR */}
-            {payMethod === 'qpay' && (
-              <div className="bg-gray-50 rounded-xl p-4 mb-4 text-center">
-                <div className="w-40 h-40 bg-white border-2 border-dashed border-gray-300 rounded-xl mx-auto flex items-center justify-center mb-2">
-                  <span className="text-4xl">📱</span>
-                </div>
-                <p className="text-xs text-gray-500">QPay апп-аар QR кодыг уншуулна уу</p>
-              </div>
-            )}
 
             {/* Банк данс */}
             {payMethod === 'bank' && (
@@ -321,6 +336,10 @@ export default function PaymentsPage() {
                   <div className="flex justify-between">
                     <span className="text-gray-500">Нэр:</span>
                     <span className="font-medium">СӨХ нэр</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Гүйлгээний утга:</span>
+                    <span className="font-medium">{payingBill.name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Дүн:</span>
@@ -344,17 +363,14 @@ export default function PaymentsPage() {
               </div>
             )}
 
-            <button
-              onClick={confirmPay}
-              disabled={!payMethod}
-              className={`w-full py-3 rounded-xl font-semibold text-sm transition ${
-                payMethod
-                  ? 'bg-green-600 text-white active:bg-green-700'
-                  : 'bg-gray-200 text-gray-400'
-              }`}
-            >
-              Төлөх ({payingBill.amount.toLocaleString()}₮)
-            </button>
+            {payMethod && (
+              <button
+                onClick={confirmPay}
+                className="w-full py-3 rounded-xl font-semibold text-sm bg-green-600 text-white active:bg-green-700 transition"
+              >
+                Төлсөн ({payingBill.amount.toLocaleString()}₮)
+              </button>
+            )}
           </div>
         </div>
       )}
