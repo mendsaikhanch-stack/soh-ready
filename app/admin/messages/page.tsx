@@ -11,121 +11,167 @@ interface Resident {
   debt: number;
 }
 
-interface SentMessage {
-  id: string;
-  to: string;
-  toName: string;
-  content: string;
-  type: 'debt' | 'announcement' | 'custom';
-  sentAt: string;
-  status: 'sent' | 'delivered' | 'read' | 'failed';
+interface ScheduledNotification {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  scheduled_at: string;
+  created_at: string;
+  status: string;
+  target: string;
 }
 
 export default function AdminMessages() {
   const [residents, setResidents] = useState<Resident[]>([]);
-  const [sentMessages, setSentMessages] = useState<SentMessage[]>([]);
+  const [scheduled, setScheduled] = useState<ScheduledNotification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'send' | 'history'>('send');
+  const [tab, setTab] = useState<'send' | 'scheduled'>('send');
 
   // Илгээх форм
   const [msgType, setMsgType] = useState<'debt' | 'announcement' | 'custom'>('debt');
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [title, setTitle] = useState('');
   const [customText, setCustomText] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('09:00');
   const [sending, setSending] = useState(false);
-  const [sendResult, setSendResult] = useState<{ success: number; failed: number } | null>(null);
+  const [sendResult, setSendResult] = useState<string | null>(null);
+  const [target, setTarget] = useState<'all' | 'debtors'>('all');
 
   useEffect(() => {
-    const fetchData = async () => {
-      const { data } = await supabase.from('residents').select('*').order('name');
-      setResidents(data || []);
-
-      // Илгээсэн мэдэгдлүүдийг localStorage-аас унших
-      const stored = localStorage.getItem('sokh-sent-messages');
-      if (stored) setSentMessages(JSON.parse(stored));
-
-      setLoading(false);
-    };
     fetchData();
   }, []);
 
-  const saveSentMessages = (msgs: SentMessage[]) => {
-    setSentMessages(msgs);
-    localStorage.setItem('sokh-sent-messages', JSON.stringify(msgs));
-  };
-
-  // Автомат текст үүсгэх
-  const generateMessage = (resident: Resident): string => {
-    if (msgType === 'debt') {
-      return `Сайн байна уу, ${resident.name}. Таны ${resident.apartment} тоотын СӨХ хураамжийн үлдэгдэл ${resident.debt.toLocaleString()}₮ байна. Хугацаандаа төлнө үү. Баярлалаа.`;
-    } else if (msgType === 'announcement') {
-      return customText || 'Шинэ зарлал байна. СӨХ Систем апп-аас шалгана уу.';
-    }
-    return customText;
-  };
-
-  // Өртэй бүгдийг сонгох
-  const selectAllDebtors = () => {
-    const debtorIds = residents.filter(r => r.debt > 0).map(r => r.id);
-    setSelectedIds(debtorIds);
-  };
-
-  const selectAll = () => setSelectedIds(residents.map(r => r.id));
-  const selectNone = () => setSelectedIds([]);
-
-  const toggleSelect = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  // Мсж илгээх
-  const sendMessages = async () => {
-    if (selectedIds.length === 0) return;
-    setSending(true);
-    setSendResult(null);
-    let success = 0, failed = 0;
-
-    const newMessages: SentMessage[] = [];
-
-    for (const id of selectedIds) {
-      const resident = residents.find(r => r.id === id);
-      if (!resident) { failed++; continue; }
-
-      const content = generateMessage(resident);
-
-      // Мэдэгдлийг хадгалах (жинхэнэ SMS/push интеграц хийхэд энд холбоно)
-      newMessages.push({
-        id: `msg-${Date.now()}-${id}`,
-        to: resident.phone || resident.apartment,
-        toName: resident.name,
-        content,
-        type: msgType,
-        sentAt: new Date().toISOString(),
-        status: resident.phone ? 'sent' : 'delivered', // Утас байхгүй бол апп-д илгээсэн
-      });
-      success++;
-    }
-
-    const updated = [...newMessages, ...sentMessages];
-    saveSentMessages(updated);
-
-    setSendResult({ success, failed });
-    setSending(false);
-    setSelectedIds([]);
-  };
-
-  const statusLabel: Record<string, { text: string; color: string }> = {
-    sent: { text: 'Илгээсэн', color: 'bg-blue-100 text-blue-700' },
-    delivered: { text: 'Хүргэсэн', color: 'bg-green-100 text-green-700' },
-    read: { text: 'Уншсан', color: 'bg-green-100 text-green-700' },
-    failed: { text: 'Алдаатай', color: 'bg-red-100 text-red-700' },
-  };
-
-  const typeLabel: Record<string, string> = {
-    debt: '💰 Өрийн сануулга',
-    announcement: '📢 Зарлал',
-    custom: '✉️ Захидал',
+  const fetchData = async () => {
+    const [{ data: res }, { data: notifs }] = await Promise.all([
+      supabase.from('residents').select('*').order('name'),
+      supabase.from('scheduled_notifications').select('*').order('scheduled_at', { ascending: false }),
+    ]);
+    setResidents(res || []);
+    setScheduled(notifs || []);
+    setLoading(false);
   };
 
   const debtors = residents.filter(r => r.debt > 0);
+  const totalDebt = debtors.reduce((s, r) => s + Number(r.debt), 0);
+
+  // Автомат гарчиг + текст
+  const getDefaults = () => {
+    if (msgType === 'debt') {
+      return {
+        title: 'Төлбөрийн сануулга',
+        message: `Нийт ${debtors.length} тоот ${totalDebt.toLocaleString()}₮ өртэй байна. Хугацаандаа төлнө үү.`,
+      };
+    }
+    return { title, message: customText };
+  };
+
+  // Мэдэгдэл товлох
+  const scheduleNotification = async () => {
+    if (!scheduledDate) return;
+
+    const defaults = getDefaults();
+    if (!defaults.title || !defaults.message) {
+      setSendResult('Гарчиг болон текст бөглөнө үү');
+      return;
+    }
+
+    setSending(true);
+    setSendResult(null);
+
+    const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+
+    // sokh_id = 7 (одоогоор hardcoded, дараа dynamic болгоно)
+    const { error } = await supabase.from('scheduled_notifications').insert({
+      sokh_id: 7,
+      title: defaults.title,
+      message: defaults.message,
+      type: msgType,
+      scheduled_at: scheduledAt,
+      status: 'pending',
+      target: msgType === 'debt' ? 'debtors' : target,
+    });
+
+    if (error) {
+      setSendResult('Алдаа: ' + error.message);
+    } else {
+      setSendResult('Мэдэгдэл амжилттай товлогдлоо!');
+      setTitle('');
+      setCustomText('');
+      setScheduledDate('');
+      setScheduledTime('09:00');
+      fetchData();
+    }
+
+    setSending(false);
+  };
+
+  // Шууд илгээх (одоо)
+  const sendNow = async () => {
+    const defaults = getDefaults();
+    if (!defaults.title || !defaults.message) {
+      setSendResult('Гарчиг болон текст бөглөнө үү');
+      return;
+    }
+
+    setSending(true);
+    setSendResult(null);
+
+    const { error } = await supabase.from('scheduled_notifications').insert({
+      sokh_id: 7,
+      title: defaults.title,
+      message: defaults.message,
+      type: msgType,
+      scheduled_at: new Date().toISOString(),
+      status: 'sent',
+      target: msgType === 'debt' ? 'debtors' : target,
+    });
+
+    if (error) {
+      setSendResult('Алдаа: ' + error.message);
+    } else {
+      setSendResult('Мэдэгдэл амжилттай илгээгдлээ!');
+      setTitle('');
+      setCustomText('');
+      fetchData();
+    }
+
+    setSending(false);
+  };
+
+  // Мэдэгдэл цуцлах
+  const cancelNotification = async (id: number) => {
+    await supabase.from('scheduled_notifications').update({ status: 'cancelled' }).eq('id', id);
+    fetchData();
+  };
+
+  // Мэдэгдэл устгах
+  const deleteNotification = async (id: number) => {
+    await supabase.from('scheduled_notifications').delete().eq('id', id);
+    fetchData();
+  };
+
+  const statusColors: Record<string, { text: string; color: string }> = {
+    pending: { text: 'Хүлээгдэж буй', color: 'bg-yellow-100 text-yellow-700' },
+    sent: { text: 'Илгээсэн', color: 'bg-green-100 text-green-700' },
+    cancelled: { text: 'Цуцалсан', color: 'bg-gray-100 text-gray-500' },
+  };
+
+  const typeIcons: Record<string, string> = {
+    debt: '💰',
+    announcement: '📢',
+    custom: '✉️',
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Өнөөдрийн огноо (min date-д хэрэглэнэ)
+  const today = new Date().toISOString().split('T')[0];
+
+  if (loading) return <div className="p-6 text-gray-400">Ачаалж байна...</div>;
 
   return (
     <div className="p-6">
@@ -139,15 +185,15 @@ export default function AdminMessages() {
             tab === 'send' ? 'bg-white shadow-sm' : 'text-gray-500'
           }`}
         >
-          Илгээх
+          Мэдэгдэл үүсгэх
         </button>
         <button
-          onClick={() => setTab('history')}
+          onClick={() => setTab('scheduled')}
           className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
-            tab === 'history' ? 'bg-white shadow-sm' : 'text-gray-500'
+            tab === 'scheduled' ? 'bg-white shadow-sm' : 'text-gray-500'
           }`}
         >
-          Илгээсэн ({sentMessages.length})
+          Товлосон ({scheduled.filter(s => s.status === 'pending').length})
         </button>
       </div>
 
@@ -179,136 +225,191 @@ export default function AdminMessages() {
           {/* Өрийн мэдэгдлийн тайлбар */}
           {msgType === 'debt' && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4 text-sm text-yellow-700">
-              Өртэй {debtors.length} тоотод автомат сануулга илгээнэ. Мэдэгдэл бүр тухайн тоотын нэр, өрийн дүнг агуулна.
+              Өртэй {debtors.length} тоотод автомат сануулга илгээнэ. Нийт өр: {totalDebt.toLocaleString()}₮
             </div>
           )}
 
-          {/* Чөлөөт/зарлал текст */}
+          {/* Гарчиг + текст (зарлал / чөлөөт) */}
           {(msgType === 'custom' || msgType === 'announcement') && (
-            <div className="bg-white border rounded-xl p-4 mb-4">
-              <h3 className="text-sm font-semibold mb-2">Мэдэгдлийн текст</h3>
-              <textarea
-                value={customText}
-                onChange={e => setCustomText(e.target.value)}
-                placeholder={msgType === 'announcement' ? 'Зарлалын агуулга...' : 'Мэдэгдлийн текст...'}
-                className="w-full border rounded-lg px-3 py-2 text-sm h-24 resize-none"
-              />
-            </div>
-          )}
-
-          {/* Хүлээн авагч сонгох */}
-          <div className="bg-white border rounded-xl p-4 mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold">Хүлээн авагч ({selectedIds.length}/{residents.length})</h3>
-              <div className="flex gap-2">
-                {msgType === 'debt' && (
-                  <button onClick={selectAllDebtors} className="text-xs text-red-600 hover:underline">
-                    Өртэй ({debtors.length})
-                  </button>
-                )}
-                <button onClick={selectAll} className="text-xs text-blue-600 hover:underline">Бүгд</button>
-                <button onClick={selectNone} className="text-xs text-gray-500 hover:underline">Цуцлах</button>
+            <div className="bg-white border rounded-xl p-4 mb-4 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Гарчиг</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Мэдэгдлийн гарчиг..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Агуулга</label>
+                <textarea
+                  value={customText}
+                  onChange={e => setCustomText(e.target.value)}
+                  placeholder="Мэдэгдлийн текст..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm h-24 resize-none"
+                />
               </div>
             </div>
+          )}
 
-            <div className="max-h-60 overflow-y-auto space-y-1">
-              {residents.map(r => (
-                <label
-                  key={r.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${
-                    selectedIds.includes(r.id) ? 'bg-blue-50' : 'hover:bg-gray-50'
+          {/* Хүлээн авагч */}
+          {msgType !== 'debt' && (
+            <div className="bg-white border rounded-xl p-4 mb-4">
+              <h3 className="text-sm font-semibold mb-3">Хүлээн авагч</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setTarget('all')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    target === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(r.id)}
-                    onChange={() => toggleSelect(r.id)}
-                    className="rounded"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{r.name}</p>
-                    <p className="text-xs text-gray-400">{r.apartment} {r.phone && `· ${r.phone}`}</p>
-                  </div>
-                  {r.debt > 0 && (
-                    <span className="text-xs text-red-500 font-medium">{r.debt.toLocaleString()}₮</span>
-                  )}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Урьдчилж харах */}
-          {selectedIds.length > 0 && (
-            <div className="bg-gray-50 border rounded-xl p-4 mb-4">
-              <h3 className="text-sm font-semibold mb-2">Жишээ мэдэгдэл</h3>
-              <div className="bg-white rounded-lg p-3 text-sm text-gray-700 border">
-                {generateMessage(residents.find(r => r.id === selectedIds[0])!)}
+                  👥 Бүх оршин суугч ({residents.length})
+                </button>
+                <button
+                  onClick={() => setTarget('debtors')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    target === 'debtors' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  💰 Өртэй ({debtors.length})
+                </button>
               </div>
             </div>
           )}
 
-          {/* Амжилтын мэдээ */}
+          {/* Огноо товлох */}
+          <div className="bg-white border rounded-xl p-4 mb-4">
+            <h3 className="text-sm font-semibold mb-3">📅 Илгээх хугацаа</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Огноо</label>
+                <input
+                  type="date"
+                  value={scheduledDate}
+                  onChange={e => setScheduledDate(e.target.value)}
+                  min={today}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Цаг</label>
+                <input
+                  type="time"
+                  value={scheduledTime}
+                  onChange={e => setScheduledTime(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Огноо сонговол тухайн өдөр автомат илгээнэ. Хоосон үлдээвэл шууд илгээнэ.
+            </p>
+          </div>
+
+          {/* Амжилтын / алдааны мэдээ */}
           {sendResult && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4 text-sm text-green-700">
-              ✅ {sendResult.success} мэдэгдэл амжилттай илгээлээ
-              {sendResult.failed > 0 && ` · ${sendResult.failed} алдаатай`}
+            <div className={`rounded-xl p-3 mb-4 text-sm border ${
+              sendResult.startsWith('Алдаа')
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-green-50 border-green-200 text-green-700'
+            }`}>
+              {sendResult.startsWith('Алдаа') ? '❌' : '✅'} {sendResult}
             </div>
           )}
 
-          {/* Илгээх товч */}
-          <button
-            onClick={sendMessages}
-            disabled={selectedIds.length === 0 || sending}
-            className={`w-full py-3 rounded-xl font-semibold text-sm transition ${
-              selectedIds.length > 0 && !sending
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-gray-200 text-gray-400'
-            }`}
-          >
-            {sending ? 'Илгээж байна...' : `Илгээх (${selectedIds.length} хүн)`}
-          </button>
+          {/* Товчнууд */}
+          <div className="flex gap-3">
+            {scheduledDate ? (
+              <button
+                onClick={scheduleNotification}
+                disabled={sending}
+                className={`flex-1 py-3 rounded-xl font-semibold text-sm transition ${
+                  !sending ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400'
+                }`}
+              >
+                {sending ? 'Хадгалж байна...' : `📅 ${scheduledDate} өдөр товлох`}
+              </button>
+            ) : (
+              <button
+                onClick={sendNow}
+                disabled={sending}
+                className={`flex-1 py-3 rounded-xl font-semibold text-sm transition ${
+                  !sending ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-400'
+                }`}
+              >
+                {sending ? 'Илгээж байна...' : 'Одоо илгээх'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* History tab */}
-      {tab === 'history' && (
+      {/* Scheduled tab */}
+      {tab === 'scheduled' && (
         <div>
-          {sentMessages.length === 0 ? (
+          {scheduled.length === 0 ? (
             <div className="bg-white rounded-xl border p-8 text-center">
               <p className="text-3xl mb-2">📭</p>
-              <p className="text-gray-400">Илгээсэн мэдэгдэл байхгүй</p>
+              <p className="text-gray-400">Товлосон мэдэгдэл байхгүй</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {sentMessages.map(m => (
-                <div key={m.id} className="bg-white border rounded-xl p-4">
+            <div className="space-y-3">
+              {scheduled.map(n => (
+                <div key={n.id} className="bg-white border rounded-xl p-4">
                   <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <p className="text-sm font-semibold">{m.toName}</p>
-                      <p className="text-xs text-gray-400">{m.to}</p>
-                    </div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusLabel[m.status].color}`}>
-                        {statusLabel[m.status].text}
-                      </span>
+                      <span className="text-lg">{typeIcons[n.type] || '📢'}</span>
+                      <div>
+                        <h3 className="text-sm font-bold">{n.title}</h3>
+                        <p className="text-xs text-gray-400">
+                          {n.target === 'all' ? '👥 Бүгд' : '💰 Өртэй'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">{m.content}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-400">{typeLabel[m.type]}</span>
-                    <span className="text-[10px] text-gray-400">
-                      {new Date(m.sentAt).toLocaleString('mn-MN')}
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusColors[n.status]?.color || 'bg-gray-100'}`}>
+                      {statusColors[n.status]?.text || n.status}
                     </span>
+                  </div>
+
+                  <p className="text-sm text-gray-600 mb-3">{n.message}</p>
+
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-gray-400">
+                      <span className="font-medium text-gray-600">📅 {formatDate(n.scheduled_at)}</span>
+                      <span className="mx-2">·</span>
+                      <span>Үүсгэсэн: {formatDate(n.created_at)}</span>
+                    </div>
+
+                    {n.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => cancelNotification(n.id)}
+                          className="text-xs text-orange-500 hover:underline"
+                        >
+                          Цуцлах
+                        </button>
+                        <button
+                          onClick={() => deleteNotification(n.id)}
+                          className="text-xs text-red-500 hover:underline"
+                        >
+                          Устгах
+                        </button>
+                      </div>
+                    )}
+
+                    {n.status === 'cancelled' && (
+                      <button
+                        onClick={() => deleteNotification(n.id)}
+                        className="text-xs text-red-500 hover:underline"
+                      >
+                        Устгах
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
-
-              <button
-                onClick={() => { saveSentMessages([]); }}
-                className="w-full mt-4 py-2 text-sm text-red-500 hover:underline"
-              >
-                Түүх цэвэрлэх
-              </button>
             </div>
           )}
         </div>

@@ -6,7 +6,7 @@ import { supabase } from '@/app/lib/supabase';
 
 interface Notification {
   id: string;
-  type: 'debt' | 'announcement' | 'reminder' | 'info';
+  type: 'debt' | 'announcement' | 'reminder' | 'info' | 'scheduled';
   title: string;
   message: string;
   date: string;
@@ -31,7 +31,59 @@ export default function NotificationsPage() {
     const now = new Date();
     const sokhId = params.id;
 
-    // 1. Өртэй оршин суугчдын сануулга
+    // 1. Товлосон мэдэгдлүүд (scheduled_at <= now && status = 'sent' эсвэл 'pending' + хугацаа болсон)
+    const { data: scheduledNotifs } = await supabase
+      .from('scheduled_notifications')
+      .select('*')
+      .eq('sokh_id', sokhId)
+      .in('status', ['sent', 'pending'])
+      .lte('scheduled_at', now.toISOString())
+      .order('scheduled_at', { ascending: false });
+
+    if (scheduledNotifs) {
+      const readIds = getReadNotifications();
+
+      // pending → sent болгох (хугацаа нь болсон)
+      const pendingIds = scheduledNotifs
+        .filter(n => n.status === 'pending')
+        .map(n => n.id);
+
+      if (pendingIds.length > 0) {
+        await supabase
+          .from('scheduled_notifications')
+          .update({ status: 'sent' })
+          .in('id', pendingIds);
+      }
+
+      scheduledNotifs.forEach(n => {
+        const isRead = readIds.includes(`sn-${n.id}`);
+
+        const iconMap: Record<string, string> = {
+          debt: '💰',
+          announcement: '📢',
+          custom: '✉️',
+        };
+        const colorMap: Record<string, string> = {
+          debt: isRead ? 'bg-gray-50 border-gray-200' : 'bg-red-50 border-red-200',
+          announcement: isRead ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200',
+          custom: isRead ? 'bg-gray-50 border-gray-200' : 'bg-purple-50 border-purple-200',
+        };
+
+        notifs.push({
+          id: `sn-${n.id}`,
+          type: 'scheduled',
+          title: n.title,
+          message: n.message,
+          date: n.scheduled_at,
+          read: isRead,
+          icon: iconMap[n.type] || '📢',
+          color: colorMap[n.type] || (isRead ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'),
+          action: n.type === 'debt' ? 'payments' : undefined,
+        });
+      });
+    }
+
+    // 2. Өртэй оршин суугчдын сануулга
     const { data: residents } = await supabase
       .from('residents')
       .select('*')
@@ -42,7 +94,6 @@ export default function NotificationsPage() {
       const totalDebt = debtResidents.reduce((s, r) => s + Number(r.debt), 0);
 
       if (totalDebt > 0) {
-        // Нийт өрийн мэдэгдэл
         notifs.push({
           id: 'debt-summary',
           type: 'debt',
@@ -75,7 +126,7 @@ export default function NotificationsPage() {
           }
         });
 
-        // Сарын сануулга (сар бүрийн 1, 10, 20-нд)
+        // Сарын сануулга
         const day = now.getDate();
         if (day <= 3) {
           notifs.push({
@@ -105,7 +156,7 @@ export default function NotificationsPage() {
       }
     }
 
-    // 2. Шинэ зарлалууд
+    // 3. Шинэ зарлалууд
     const { data: announcements } = await supabase
       .from('announcements')
       .select('*')
@@ -114,12 +165,10 @@ export default function NotificationsPage() {
       .limit(10);
 
     if (announcements) {
-      const readIds = getReadAnnouncements();
+      const readAnnIds = getReadAnnouncements();
 
       announcements.forEach(a => {
-        const isNew = !readIds.includes(a.id);
-        const daysDiff = Math.floor((now.getTime() - new Date(a.created_at).getTime()) / 86400000);
-
+        const isNew = !readAnnIds.includes(a.id);
         notifs.push({
           id: `ann-${a.id}`,
           type: 'announcement',
@@ -136,7 +185,7 @@ export default function NotificationsPage() {
       });
     }
 
-    // 3. Системийн мэдэгдлүүд
+    // 4. Системийн мэдэгдэл
     notifs.push({
       id: 'welcome',
       type: 'info',
@@ -148,7 +197,7 @@ export default function NotificationsPage() {
       color: 'bg-gray-50 border-gray-200',
     });
 
-    // Шинэ зүйлсийг эхэнд, хуучин зүйлсийг хойно
+    // Шинэ зүйлсийг эхэнд
     notifs.sort((a, b) => {
       if (a.read !== b.read) return a.read ? 1 : -1;
       return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -158,10 +207,16 @@ export default function NotificationsPage() {
     setLoading(false);
   };
 
-  // LocalStorage-д уншсан зарлалуудыг хадгалах
   const getReadAnnouncements = (): number[] => {
     try {
       const stored = localStorage.getItem(`sokh-${params.id}-read-announcements`);
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  };
+
+  const getReadNotifications = (): string[] => {
+    try {
+      const stored = localStorage.getItem(`sokh-${params.id}-read-notifs`);
       return stored ? JSON.parse(stored) : [];
     } catch { return []; }
   };
@@ -173,7 +228,14 @@ export default function NotificationsPage() {
       .map(n => parseInt(n.id.replace('ann-', '')));
     localStorage.setItem(`sokh-${params.id}-read-announcements`, JSON.stringify(annIds));
 
-    // Бүх мэдэгдлийг уншсан болгох
+    // Товлосон мэдэгдлүүдийг уншсан болгох
+    const snIds = notifications
+      .filter(n => n.id.startsWith('sn-'))
+      .map(n => n.id);
+    const existingReadNotifs = getReadNotifications();
+    const allRead = [...new Set([...existingReadNotifs, ...snIds])];
+    localStorage.setItem(`sokh-${params.id}-read-notifs`, JSON.stringify(allRead));
+
     localStorage.setItem(`sokh-${params.id}-notif-seen`, new Date().toISOString());
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
@@ -185,9 +247,11 @@ export default function NotificationsPage() {
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
   const timeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Дөнгөж сая';
     if (mins < 60) return `${mins} мин`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours} цаг`;
