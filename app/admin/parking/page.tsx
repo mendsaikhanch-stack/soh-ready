@@ -21,11 +21,24 @@ interface BlockingIncident {
   notificationSent: boolean;
 }
 
+interface GuestVehicle {
+  id: string;
+  plateNumber: string;
+  hostName: string;        // Зочлогдсон айл
+  hostApartment: string;   // Тоот
+  enteredAt: string;       // Орсон цаг
+  allowedMinutes: number;  // Зөвшөөрсөн хугацаа (минут)
+  exitedAt: string | null; // Гарсан цаг
+  overCharge: number;      // Хугацаа хэтэрсний торгууль
+  charged: boolean;        // Төлбөр нэмэгдсэн эсэх
+}
+
 interface GateSettings {
   ipAddress: string;
   port: string;
   connected: boolean;
   autoOpen: boolean;
+  overchargePerHour: number; // Хугацаа хэтэрсний цагийн төлбөр
 }
 
 const STORAGE_KEYS = {
@@ -33,6 +46,7 @@ const STORAGE_KEYS = {
   incidents: 'sokh-parking-incidents',
   gateSettings: 'sokh-parking-gate',
   spots: 'sokh-parking-spots',
+  guests: 'sokh-parking-guests',
 };
 
 const TOTAL_SPOTS = 30;
@@ -49,9 +63,11 @@ export default function AdminParking() {
     port: '8080',
     connected: false,
     autoOpen: true,
+    overchargePerHour: 5000,
   });
+  const [guests, setGuests] = useState<GuestVehicle[]>([]);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'vehicles' | 'spots' | 'blocking' | 'gate'>('vehicles');
+  const [activeTab, setActiveTab] = useState<'vehicles' | 'spots' | 'blocking' | 'guests' | 'gate'>('vehicles');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -73,7 +89,17 @@ export default function AdminParking() {
     ipAddress: '192.168.1.100',
     port: '8080',
     autoOpen: true,
+    overchargePerHour: 5000,
   });
+
+  // Guest form
+  const [guestForm, setGuestForm] = useState({
+    plateNumber: '',
+    hostName: '',
+    hostApartment: '',
+    allowedMinutes: 60,
+  });
+  const [showGuestForm, setShowGuestForm] = useState(false);
 
   useEffect(() => {
     const savedVehicles = localStorage.getItem(STORAGE_KEYS.vehicles);
@@ -85,8 +111,10 @@ export default function AdminParking() {
     if (savedGate) {
       const g = JSON.parse(savedGate);
       setGateSettings(g);
-      setGateForm({ ipAddress: g.ipAddress, port: g.port, autoOpen: g.autoOpen });
+      setGateForm({ ipAddress: g.ipAddress, port: g.port, autoOpen: g.autoOpen, overchargePerHour: g.overchargePerHour || 5000 });
     }
+    const savedGuests = localStorage.getItem(STORAGE_KEYS.guests);
+    if (savedGuests) setGuests(JSON.parse(savedGuests));
   }, []);
 
   const saveVehicles = (v: Vehicle[]) => {
@@ -103,6 +131,75 @@ export default function AdminParking() {
     setGateSettings(g);
     localStorage.setItem(STORAGE_KEYS.gateSettings, JSON.stringify(g));
   };
+
+  const saveGuests = (g: GuestVehicle[]) => {
+    setGuests(g);
+    localStorage.setItem(STORAGE_KEYS.guests, JSON.stringify(g));
+  };
+
+  const addGuest = () => {
+    if (!guestForm.plateNumber || !guestForm.hostName) return;
+    const guest: GuestVehicle = {
+      id: Date.now().toString(),
+      plateNumber: guestForm.plateNumber,
+      hostName: guestForm.hostName,
+      hostApartment: guestForm.hostApartment,
+      enteredAt: new Date().toISOString(),
+      allowedMinutes: guestForm.allowedMinutes,
+      exitedAt: null,
+      overCharge: 0,
+      charged: false,
+    };
+    saveGuests([guest, ...guests]);
+    setGuestForm({ plateNumber: '', hostName: '', hostApartment: '', allowedMinutes: 60 });
+    setShowGuestForm(false);
+  };
+
+  const exitGuest = (id: string) => {
+    const updated = guests.map(g => {
+      if (g.id !== id) return g;
+      const now = new Date();
+      const entered = new Date(g.enteredAt);
+      const minutesPassed = Math.floor((now.getTime() - entered.getTime()) / 60000);
+      const overMinutes = Math.max(0, minutesPassed - g.allowedMinutes);
+      const overHours = Math.ceil(overMinutes / 60);
+      const charge = overHours * gateSettings.overchargePerHour;
+      return { ...g, exitedAt: now.toISOString(), overCharge: charge };
+    });
+    saveGuests(updated);
+  };
+
+  const chargeGuest = (id: string) => {
+    const updated = guests.map(g => g.id === id ? { ...g, charged: true } : g);
+    saveGuests(updated);
+    const guest = guests.find(g => g.id === id);
+    if (guest) {
+      alert(`${guest.hostName} (${guest.hostApartment} тоот)-ийн төлбөр дээр ${guest.overCharge.toLocaleString()}₮ нэмэгдлээ`);
+    }
+  };
+
+  const getGuestStatus = (g: GuestVehicle) => {
+    if (g.exitedAt) return 'exited';
+    const now = Date.now();
+    const entered = new Date(g.enteredAt).getTime();
+    const minutesPassed = Math.floor((now - entered) / 60000);
+    if (minutesPassed > g.allowedMinutes) return 'overdue';
+    return 'active';
+  };
+
+  const getTimeRemaining = (g: GuestVehicle) => {
+    const now = Date.now();
+    const entered = new Date(g.enteredAt).getTime();
+    const minutesPassed = Math.floor((now - entered) / 60000);
+    const remaining = g.allowedMinutes - minutesPassed;
+    if (remaining <= 0) {
+      const over = Math.abs(remaining);
+      return `${Math.floor(over / 60)} цаг ${over % 60} мин хэтэрсэн`;
+    }
+    return `${Math.floor(remaining / 60)} цаг ${remaining % 60} мин үлдсэн`;
+  };
+
+  const activeGuests = guests.filter(g => !g.exitedAt);
 
   const filtered = vehicles.filter(v =>
     v.plateNumber.toLowerCase().includes(search.toLowerCase()) ||
@@ -186,6 +283,7 @@ export default function AdminParking() {
       ipAddress: gateForm.ipAddress,
       port: gateForm.port,
       autoOpen: gateForm.autoOpen,
+      overchargePerHour: gateForm.overchargePerHour,
     };
     saveGateSettings(updated);
     alert('Тохиргоо хадгалагдлаа!');
@@ -207,7 +305,8 @@ export default function AdminParking() {
     { key: 'vehicles' as const, label: 'Машинууд', icon: '🚗' },
     { key: 'spots' as const, label: 'Зогсоол', icon: '🅿️' },
     { key: 'blocking' as const, label: 'Машин хаалт', icon: '🚫' },
-    { key: 'gate' as const, label: 'Хаалт/Шлагбаум', icon: '🚧' },
+    { key: 'guests' as const, label: `Зочин${activeGuests.length ? ` (${activeGuests.length})` : ''}`, icon: '🎫' },
+    { key: 'gate' as const, label: 'Хаалт', icon: '🚧' },
   ];
 
   return (
@@ -507,6 +606,164 @@ export default function AdminParking() {
         </div>
       )}
 
+      {/* ========== GUESTS TAB ========== */}
+      {activeTab === 'guests' && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-500">
+                Идэвхтэй: {activeGuests.length} зочин
+                {activeGuests.filter(g => getGuestStatus(g) === 'overdue').length > 0 && (
+                  <span className="text-red-500 ml-2">
+                    ({activeGuests.filter(g => getGuestStatus(g) === 'overdue').length} хугацаа хэтэрсэн)
+                  </span>
+                )}
+              </p>
+            </div>
+            <button onClick={() => setShowGuestForm(!showGuestForm)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+              + Зочин бүртгэх
+            </button>
+          </div>
+
+          {/* Зочин бүртгэх форм */}
+          {showGuestForm && (
+            <div className="bg-white border rounded-xl p-4 mb-4">
+              <h3 className="font-semibold mb-3">🎫 Зочны машин бүртгэх</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Зочны машины дугаар</label>
+                  <input
+                    placeholder="жнь: 0456УБА"
+                    value={guestForm.plateNumber}
+                    onChange={e => setGuestForm({ ...guestForm, plateNumber: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Зочилж буй айлын нэр</label>
+                  <input
+                    placeholder="Оршин суугчийн нэр"
+                    value={guestForm.hostName}
+                    onChange={e => setGuestForm({ ...guestForm, hostName: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Тоот</label>
+                  <input
+                    placeholder="жнь: 3-р байр, 45"
+                    value={guestForm.hostApartment}
+                    onChange={e => setGuestForm({ ...guestForm, hostApartment: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Зөвшөөрсөн хугацаа</label>
+                  <select
+                    value={guestForm.allowedMinutes}
+                    onChange={e => setGuestForm({ ...guestForm, allowedMinutes: Number(e.target.value) })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value={30}>30 минут</option>
+                    <option value={60}>1 цаг</option>
+                    <option value={120}>2 цаг</option>
+                    <option value={180}>3 цаг</option>
+                    <option value={360}>6 цаг</option>
+                    <option value={720}>12 цаг</option>
+                    <option value={1440}>24 цаг (1 өдөр)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-3 text-xs text-yellow-700">
+                Хугацаа хэтрэхэд цаг тутам <strong>{gateSettings.overchargePerHour.toLocaleString()}₮</strong> нэмэгдэж, тухайн айлын төлбөр дээр нэмэгдэнэ.
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => setShowGuestForm(false)} className="px-4 py-2 border rounded-lg text-sm">Цуцлах</button>
+                <button onClick={addGuest} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">
+                  Бүртгэх + Хаалт нээх
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Зочдын жагсаалт */}
+          {guests.length === 0 ? (
+            <div className="bg-white rounded-xl p-6 text-center border">
+              <p className="text-3xl mb-2">🎫</p>
+              <p className="text-gray-400">Зочны бүртгэл байхгүй</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {guests.map(g => {
+                const status = getGuestStatus(g);
+                return (
+                  <div key={g.id} className={`bg-white rounded-xl p-4 border ${
+                    status === 'overdue' ? 'border-red-300 bg-red-50' :
+                    status === 'exited' ? 'opacity-60' : ''
+                  }`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-blue-700">{g.plateNumber}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                            status === 'active' ? 'bg-green-100 text-green-700' :
+                            status === 'overdue' ? 'bg-red-100 text-red-700 animate-pulse' :
+                            'bg-gray-100 text-gray-500'
+                          }`}>
+                            {status === 'active' ? 'Идэвхтэй' : status === 'overdue' ? 'ХУГАЦАА ХЭТЭРСЭН' : 'Гарсан'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Зочилсон: <strong>{g.hostName}</strong> ({g.hostApartment})
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Орсон: {new Date(g.enteredAt).toLocaleString('mn-MN')}
+                          {' · '}Зөвшөөрсөн: {g.allowedMinutes >= 60 ? `${Math.floor(g.allowedMinutes/60)} цаг` : `${g.allowedMinutes} мин`}
+                        </p>
+                        {!g.exitedAt && (
+                          <p className={`text-xs mt-1 font-medium ${status === 'overdue' ? 'text-red-600' : 'text-green-600'}`}>
+                            ⏱ {getTimeRemaining(g)}
+                          </p>
+                        )}
+                        {g.exitedAt && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Гарсан: {new Date(g.exitedAt).toLocaleString('mn-MN')}
+                          </p>
+                        )}
+                        {g.overCharge > 0 && (
+                          <p className="text-sm font-semibold text-red-600 mt-1">
+                            Торгууль: {g.overCharge.toLocaleString()}₮
+                            {g.charged && <span className="text-green-600 ml-2">✓ Нэмэгдсэн</span>}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {!g.exitedAt && (
+                          <button
+                            onClick={() => exitGuest(g.id)}
+                            className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-xs font-medium hover:bg-orange-200"
+                          >
+                            Гарсан
+                          </button>
+                        )}
+                        {g.exitedAt && g.overCharge > 0 && !g.charged && (
+                          <button
+                            onClick={() => chargeGuest(g.id)}
+                            className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700"
+                          >
+                            Төлбөр нэмэх
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ========== GATE TAB ========== */}
       {activeTab === 'gate' && (
         <div>
@@ -570,7 +827,7 @@ export default function AdminParking() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-3">
               <button
                 onClick={() => setGateForm({ ...gateForm, autoOpen: !gateForm.autoOpen })}
                 className={`relative w-11 h-6 rounded-full transition ${gateForm.autoOpen ? 'bg-blue-600' : 'bg-gray-300'}`}
@@ -578,6 +835,19 @@ export default function AdminParking() {
                 <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition ${gateForm.autoOpen ? 'left-[22px]' : 'left-0.5'}`}></span>
               </button>
               <span className="text-sm">Бүртгэлтэй дугаар автоматаар нээх</span>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-xs text-gray-500 mb-1 block">Зочны хугацаа хэтэрсний торгууль (цаг тутам)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={gateForm.overchargePerHour}
+                  onChange={e => setGateForm({ ...gateForm, overchargePerHour: Number(e.target.value) })}
+                  className="w-32 border rounded-lg px-3 py-2 text-sm"
+                />
+                <span className="text-sm text-gray-500">₮ / цаг</span>
+              </div>
             </div>
 
             <div className="flex gap-2">
