@@ -24,9 +24,43 @@ interface AIAlert {
   description: string;
 }
 
+interface FootageRequest {
+  id: string;
+  residentName: string;
+  apartment: string;
+  phone: string;
+  category: string;
+  description: string;
+  dateFrom: string;
+  dateTo: string;
+  location: string;
+  status: 'pending' | 'reviewing' | 'approved' | 'rejected' | 'done';
+  createdAt: string;
+  adminNote: string;
+}
+
 const STORAGE_KEYS = {
   cameras: 'sokh-cctv-cameras',
   alerts: 'sokh-cctv-alerts',
+  footageRequests: 'sokh-cctv-footage-requests',
+};
+
+const FOOTAGE_CATEGORIES = [
+  { id: 'parking_incident', label: 'Зогсоолын осол', icon: '🚗', desc: 'Мөргөлдсөн, шүргэсэн, шүргэлцсэн' },
+  { id: 'suspicious_person', label: 'Сэжигтэй хүн', icon: '👤', desc: 'Гадны танихгүй хүн холхисон' },
+  { id: 'theft_crime', label: 'Хулгай/Гэмт хэрэг', icon: '🚨', desc: 'Хулгай, эвдрэл, гэмт хэргийн шинжтэй' },
+  { id: 'lost_item', label: 'Алдсан/Унагаасан эд зүйл', icon: '📦', desc: 'Гээсэн, орхисон, унагаасан юм хайх' },
+  { id: 'playground', label: 'Хүүхдийн тоглоомын талбай', icon: '🧒', desc: 'Хүүхэд хянах, аюулгүй байдал' },
+  { id: 'property_damage', label: 'Эд хөрөнгийн хохирол', icon: '💥', desc: 'Байрны эд хогшил гэмтээсэн' },
+  { id: 'other', label: 'Бусад', icon: '📹', desc: 'Дээрхээс бусад шалтгаан' },
+];
+
+const REQUEST_STATUS: Record<string, { label: string; color: string }> = {
+  pending: { label: 'Хүлээгдэж буй', color: 'bg-yellow-100 text-yellow-700' },
+  reviewing: { label: 'Шалгаж байна', color: 'bg-blue-100 text-blue-700' },
+  approved: { label: 'Зөвшөөрсөн', color: 'bg-green-100 text-green-700' },
+  rejected: { label: 'Татгалзсан', color: 'bg-red-100 text-red-700' },
+  done: { label: 'Бичлэг хүргэсэн', color: 'bg-purple-100 text-purple-700' },
 };
 
 const ALERT_TYPE_MAP: Record<string, { label: string; icon: string }> = {
@@ -56,7 +90,8 @@ const DEFAULT_CAMERAS: Camera[] = [
 export default function AdminCCTV() {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [alerts, setAlerts] = useState<AIAlert[]>([]);
-  const [activeTab, setActiveTab] = useState<'grid' | 'list' | 'ai' | 'connection'>('grid');
+  const [activeTab, setActiveTab] = useState<'grid' | 'list' | 'ai' | 'requests' | 'connection'>('grid');
+  const [footageRequests, setFootageRequests] = useState<FootageRequest[]>([]);
   const [gridLayout, setGridLayout] = useState<'2x2' | '3x2'>('2x2');
   const [fullscreenCamera, setFullscreenCamera] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -85,7 +120,41 @@ export default function AdminCCTV() {
     if (savedAlerts) {
       setAlerts(JSON.parse(savedAlerts));
     }
+    const savedRequests = localStorage.getItem(STORAGE_KEYS.footageRequests);
+    if (savedRequests) setFootageRequests(JSON.parse(savedRequests));
   }, []);
+
+  const saveFootageRequests = (r: FootageRequest[]) => {
+    setFootageRequests(r);
+    localStorage.setItem(STORAGE_KEYS.footageRequests, JSON.stringify(r));
+  };
+
+  const updateRequestStatus = (id: string, status: FootageRequest['status'], note?: string) => {
+    const updated = footageRequests.map(r => {
+      if (r.id !== id) return r;
+      const req = { ...r, status };
+      if (note !== undefined) req.adminNote = note;
+      return req;
+    });
+    saveFootageRequests(updated);
+
+    // Айлд мэдэгдэл илгээх
+    const req = footageRequests.find(r => r.id === id);
+    if (req) {
+      const statusText = REQUEST_STATUS[status].label;
+      const msgs = JSON.parse(localStorage.getItem('sokh-sent-messages') || '[]');
+      msgs.unshift({
+        id: `msg-${Date.now()}-footage`,
+        to: req.apartment,
+        toName: req.residentName,
+        content: `Таны камерын бичлэг шүүх хүсэлт "${statusText}" төлөвтэй боллоо. ${note ? `Тэмдэглэл: ${note}` : ''} Категори: ${FOOTAGE_CATEGORIES.find(c => c.id === req.category)?.label || req.category}`,
+        type: 'custom',
+        sentAt: new Date().toISOString(),
+        status: 'sent',
+      });
+      localStorage.setItem('sokh-sent-messages', JSON.stringify(msgs));
+    }
+  };
 
   const saveCameras = (c: Camera[]) => {
     setCameras(c);
@@ -179,10 +248,13 @@ export default function AdminCCTV() {
   const onlineCount = cameras.filter(c => c.status === 'online').length;
   const gridCameras = gridLayout === '2x2' ? cameras.slice(0, 4) : cameras.slice(0, 6);
 
+  const pendingRequests = footageRequests.filter(r => r.status === 'pending' || r.status === 'reviewing').length;
+
   const tabs = [
-    { key: 'grid' as const, label: 'Камер харах', icon: '📹' },
-    { key: 'list' as const, label: 'Камер жагсаалт', icon: '📋' },
-    { key: 'ai' as const, label: 'AI хяналт', icon: '🤖' },
+    { key: 'grid' as const, label: 'Камер', icon: '📹' },
+    { key: 'list' as const, label: 'Жагсаалт', icon: '📋' },
+    { key: 'ai' as const, label: 'AI', icon: '🤖' },
+    { key: 'requests' as const, label: `Хүсэлт${pendingRequests ? ` (${pendingRequests})` : ''}`, icon: '🎬' },
     { key: 'connection' as const, label: 'Холболт', icon: '🔌' },
   ];
 
@@ -548,6 +620,122 @@ export default function AdminCCTV() {
                         </p>
                       </div>
                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========== REQUESTS TAB ========== */}
+      {activeTab === 'requests' && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-500">
+              Нийт: {footageRequests.length} хүсэлт
+              {pendingRequests > 0 && <span className="text-orange-500 ml-1">· {pendingRequests} хүлээгдэж буй</span>}
+            </p>
+          </div>
+
+          {/* Категорийн тайлбар */}
+          <div className="bg-white border rounded-xl p-4 mb-4">
+            <h3 className="font-semibold mb-3 text-sm">📋 Бичлэг шүүх хүсэлтийн категориуд</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {FOOTAGE_CATEGORIES.map(cat => (
+                <div key={cat.id} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
+                  <span className="text-lg">{cat.icon}</span>
+                  <div>
+                    <p className="text-xs font-medium">{cat.label}</p>
+                    <p className="text-[10px] text-gray-500">{cat.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Хүсэлтүүд */}
+          {footageRequests.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 text-center border">
+              <p className="text-3xl mb-2">🎬</p>
+              <p className="text-gray-400">Бичлэг шүүх хүсэлт ирээгүй</p>
+              <p className="text-xs text-gray-400 mt-1">Оршин суугчид аппаар хүсэлт илгээнэ</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {footageRequests.map(req => {
+                const cat = FOOTAGE_CATEGORIES.find(c => c.id === req.category);
+                const st = REQUEST_STATUS[req.status];
+                return (
+                  <div key={req.id} className={`bg-white rounded-xl p-4 border ${req.status === 'pending' ? 'border-orange-300' : ''}`}>
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{cat?.icon || '📹'}</span>
+                        <div>
+                          <p className="text-sm font-semibold">{cat?.label || req.category}</p>
+                          <p className="text-xs text-gray-500">{req.residentName} · {req.apartment}</p>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st.color}`}>
+                        {st.label}
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-gray-700 mb-2">{req.description}</p>
+
+                    <div className="flex items-center gap-4 text-xs text-gray-400 mb-3">
+                      <span>📅 {new Date(req.dateFrom).toLocaleDateString('mn-MN')} — {new Date(req.dateTo).toLocaleDateString('mn-MN')}</span>
+                      <span>📍 {req.location}</span>
+                      {req.phone && <span>📞 {req.phone}</span>}
+                    </div>
+
+                    {req.adminNote && (
+                      <div className="bg-blue-50 rounded-lg p-2 mb-3 text-xs text-blue-700">
+                        Админ: {req.adminNote}
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-gray-400 mb-3">
+                      Илгээсэн: {new Date(req.createdAt).toLocaleString('mn-MN')}
+                    </p>
+
+                    {/* Үйлдлүүд */}
+                    {(req.status === 'pending' || req.status === 'reviewing') && (
+                      <div className="flex gap-2">
+                        {req.status === 'pending' && (
+                          <button
+                            onClick={() => updateRequestStatus(req.id, 'reviewing')}
+                            className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-200"
+                          >
+                            🔍 Шалгаж эхлэх
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            const note = prompt('Тэмдэглэл (заавал биш):') || '';
+                            updateRequestStatus(req.id, 'approved', note);
+                          }}
+                          className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-medium hover:bg-green-200"
+                        >
+                          ✅ Зөвшөөрөх
+                        </button>
+                        <button
+                          onClick={() => {
+                            const note = prompt('Татгалзсан шалтгаан:') || '';
+                            updateRequestStatus(req.id, 'rejected', note);
+                          }}
+                          className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200"
+                        >
+                          ❌ Татгалзах
+                        </button>
+                        <button
+                          onClick={() => updateRequestStatus(req.id, 'done', 'Бичлэг хүргэгдсэн')}
+                          className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-xs font-medium hover:bg-purple-200"
+                        >
+                          🎬 Бичлэг хүргэсэн
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
