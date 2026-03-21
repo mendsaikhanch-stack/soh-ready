@@ -39,7 +39,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-blue-600 text-white px-4 py-4">
-        <button onClick={() => router.push('/')} className="text-white/80 text-sm mb-1">
+        <button onClick={() => router.push('/app')} className="text-white/80 text-sm mb-1">
           ← Буцах
         </button>
         <h1 className="text-lg font-bold">Нэвтрэх</h1>

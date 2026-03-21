@@ -90,7 +90,7 @@ export default function RegisterPage() {
     else if (step === 3) { setSelectedDistrict(null); setStep(2); }
     else if (step === 4) { setSelectedKhoroo(null); setStep(3); }
     else if (step === 5) { setSelectedSokh(null); setStep(4); }
-    else { router.push('/'); }
+    else { router.push('/app'); }
   };
 
   const handleRegister = async () => {

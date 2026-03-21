@@ -11,6 +11,7 @@ const navItems = [
   { icon: '📋', label: 'Тайлан', href: '/admin/reports' },
   { icon: '🗳', label: 'Санал хураалт', href: '/admin/polls' },
   { icon: '💬', label: 'Мессеж', href: '/admin/messages' },
+  { icon: '📤', label: 'Файл импорт', href: '/admin/import' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
