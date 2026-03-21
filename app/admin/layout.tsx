@@ -12,6 +12,8 @@ const navItems = [
   { icon: '📋', label: 'Тайлан', href: '/admin/reports' },
   { icon: '🗳', label: 'Санал хураалт', href: '/admin/polls' },
   { icon: '💬', label: 'Мессеж', href: '/admin/messages' },
+  { icon: '🚗', label: 'Зогсоол', href: '/admin/parking' },
+  { icon: '📹', label: 'Камер (CCTV)', href: '/admin/cctv' },
   { icon: '📤', label: 'Файл импорт', href: '/admin/import' },
 ];
 
