@@ -49,7 +49,7 @@ export default function LoginPage() {
       <div className="px-4 py-6">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-2"><TootLogo size={56} showText={false} /></div>
+          <div className="flex justify-center mb-2"><TootLogo size={168} showText={false} /></div>
           <p className="text-sm text-gray-500">Тоот апп-д нэвтрэх</p>
         </div>
 

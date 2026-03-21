@@ -68,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm mx-4">
           <div className="text-center mb-6">
-            <div className="flex justify-center mb-2"><TootLogo size={48} showText={false} /></div>
+            <div className="flex justify-center mb-2"><TootLogo size={144} showText={false} /></div>
             <h1 className="text-xl font-bold">Тоот Админ</h1>
             <p className="text-sm text-gray-500 mt-1">Удирдлагын панелд нэвтрэх</p>
           </div>
@@ -119,7 +119,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <aside className="w-56 bg-gray-900 text-white flex-shrink-0 min-h-screen flex flex-col">
         <div className="p-4 border-b border-gray-700">
-          <TootLogo size={28} textColor="text-white" />
+          <TootLogo size={84} textColor="text-white" />
           <p className="text-xs text-gray-400 mt-1">Удирдлагын панел</p>
         </div>
         <nav className="p-2 flex-1">

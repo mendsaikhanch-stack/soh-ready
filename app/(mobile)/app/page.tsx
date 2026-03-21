@@ -33,7 +33,7 @@ export default function WelcomePage() {
   if (checking) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center">
-        <div className="animate-pulse"><TootLogo size={64} showText={false} /></div>
+        <div className="animate-pulse"><TootLogo size={192} showText={false} /></div>
       </div>
     );
   }
@@ -48,7 +48,7 @@ export default function WelcomePage() {
       <div className={`flex-1 flex flex-col items-center justify-center px-6 text-white relative z-10 transition-all duration-700 ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         {/* Logo */}
         <div className="mb-5">
-          <TootLogo size={72} showText={false} />
+          <TootLogo size={216} showText={false} />
         </div>
 
         <h1 className="text-3xl font-bold tracking-tight mb-1">Тоот</h1>
