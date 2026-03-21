@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import TootLogo from '@/app/components/TootLogo';
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -10,9 +11,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <button onClick={() => router.push('/')} className="flex items-center gap-2">
-            <span className="text-2xl">🏠</span>
-            <span className="font-bold text-lg">Тоот</span>
+          <button onClick={() => router.push('/')}>
+            <TootLogo size={36} />
           </button>
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <a href="#features" className="text-gray-600 hover:text-gray-900 transition">Боломжууд</a>
@@ -38,9 +38,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl">🏠</span>
-                <span className="font-bold text-lg">Тоот</span>
+              <div className="mb-3">
+                <TootLogo size={32} textColor="text-white" />
               </div>
               <p className="text-gray-400 text-sm">Таны байрны бүх зүйл нэг дор</p>
             </div>

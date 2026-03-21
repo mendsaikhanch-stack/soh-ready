@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import TootLogo from '@/app/components/TootLogo';
 
 const features = [
   { icon: '💰', title: 'Төлбөр', desc: 'Онлайнаар төлбөр төлөх, үлдэгдэл шалгах', delay: '0.1s' },
@@ -32,7 +33,7 @@ export default function WelcomePage() {
   if (checking) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center">
-        <div className="animate-pulse text-5xl">🏠</div>
+        <div className="animate-pulse"><TootLogo size={64} showText={false} /></div>
       </div>
     );
   }
@@ -46,8 +47,8 @@ export default function WelcomePage() {
       {/* Top section */}
       <div className={`flex-1 flex flex-col items-center justify-center px-6 text-white relative z-10 transition-all duration-700 ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         {/* Logo */}
-        <div className="w-20 h-20 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-5 shadow-lg border border-white/20">
-          <span className="text-4xl">🏠</span>
+        <div className="mb-5">
+          <TootLogo size={72} showText={false} />
         </div>
 
         <h1 className="text-3xl font-bold tracking-tight mb-1">Тоот</h1>
