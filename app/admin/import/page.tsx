@@ -21,17 +21,143 @@ interface ColumnMapping {
 }
 
 export default function ImportPage() {
-  const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'importing' | 'done'>('upload');
+  const [step, setStep] = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
   const [fileName, setFileName] = useState('');
-  const [headers, setHeaders] = useState<string[]>([]);
   const [rawData, setRawData] = useState<string[][]>([]);
   const [mapping, setMapping] = useState<ColumnMapping>({ name: null, apartment: null, phone: null, debt: null, payments: null });
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [importResult, setImportResult] = useState({ success: 0, failed: 0 });
   const [error, setError] = useState('');
+  const [detectedFormat, setDetectedFormat] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Файл уншиж задлах
+  // Тоо эсэхийг шалгах
+  const looksLikeNumber = (val: string): boolean => {
+    if (!val) return false;
+    const cleaned = String(val).replace(/[,\s₮%.]/g, '').replace(/[-]/g, '');
+    return /^\d+(\.\d+)?$/.test(cleaned) && parseFloat(cleaned) > 0;
+  };
+
+  // Утасны дугаар эсэхийг шалгах
+  const looksLikePhone = (val: string): boolean => {
+    if (!val) return false;
+    const cleaned = String(val).replace(/[\s\-()+ ]/g, '');
+    return /^\d{7,11}$/.test(cleaned);
+  };
+
+  // Байр/тоот эсэхийг шалгах
+  const looksLikeApartment = (val: string): boolean => {
+    if (!val) return false;
+    const s = String(val).trim();
+    // "101", "12-34", "А-101", "1а", "3/45" гэх мэт
+    return /^[\dА-Яа-яA-Za-z\-\/\.]{1,10}$/.test(s) && /\d/.test(s) && s.length <= 10;
+  };
+
+  // Нэр эсэхийг шалгах
+  const looksLikeName = (val: string): boolean => {
+    if (!val) return false;
+    const s = String(val).trim();
+    // Кирилл үсэг, зай, цэг байх, тоо бараг байхгүй
+    if (s.length < 2 || s.length > 60) return false;
+    const hasLetters = /[А-Яа-яӨөҮүЁё]/.test(s) || /[A-Za-z]/.test(s);
+    const digitRatio = (s.match(/\d/g) || []).length / s.length;
+    return hasLetters && digitRatio < 0.2;
+  };
+
+  // Баганыг header + data pattern-аар автомат таних
+  const smartAutoMap = (hdrs: string[], rows: string[][]): ColumnMapping => {
+    const m: ColumnMapping = { name: null, apartment: null, phone: null, debt: null, payments: null };
+    const sampleRows = rows.slice(0, Math.min(20, rows.length));
+    const colCount = hdrs.length;
+
+    // Header-ээр таних (keyword matching)
+    const headerKeywords: Record<keyof ColumnMapping, string[]> = {
+      name: ['нэр', 'name', 'овог', 'оршин суугч', 'эзэн', 'өрхийн тэргүүн', 'иргэн', 'ажилтан'],
+      apartment: ['байр', 'тоот', 'apartment', 'хаяг', 'орц', 'room', 'давхар', 'өрөө', 'гэр', 'хаалга'],
+      phone: ['утас', 'phone', 'дугаар', 'холбоо', 'tel', 'mobile'],
+      debt: ['өр', 'debt', 'үлдэгдэл', 'balance', 'төлөх', 'авлага', 'нийт өр', 'өглөг'],
+      payments: ['төлсөн', 'paid', 'payment', 'төлбөр', 'орлого', 'төлөлт'],
+    };
+
+    // 1-р шат: Header keyword-аар таних
+    hdrs.forEach((h, i) => {
+      const lower = h.toLowerCase();
+      for (const [field, keywords] of Object.entries(headerKeywords)) {
+        if (m[field as keyof ColumnMapping] === null && keywords.some(kw => lower.includes(kw))) {
+          m[field as keyof ColumnMapping] = i;
+          break;
+        }
+      }
+    });
+
+    // 2-р шат: Тодорхойлогдоогүй баганыг data pattern-аар таних
+    if (sampleRows.length > 0) {
+      for (let col = 0; col < colCount; col++) {
+        // Аль хэдийн хуваарилагдсан баганыг алгасах
+        if (Object.values(m).includes(col)) continue;
+
+        const colValues = sampleRows.map(r => String(r[col] || '').trim()).filter(Boolean);
+        if (colValues.length === 0) continue;
+
+        const nameScore = colValues.filter(v => looksLikeName(v)).length / colValues.length;
+        const phoneScore = colValues.filter(v => looksLikePhone(v)).length / colValues.length;
+        const aptScore = colValues.filter(v => looksLikeApartment(v)).length / colValues.length;
+        const numScore = colValues.filter(v => looksLikeNumber(v)).length / colValues.length;
+
+        // Утас (70%+ утас шиг)
+        if (m.phone === null && phoneScore > 0.5) {
+          m.phone = col;
+        }
+        // Нэр (60%+ нэр шиг)
+        else if (m.name === null && nameScore > 0.5 && numScore < 0.3) {
+          m.name = col;
+        }
+        // Байр/Тоот
+        else if (m.apartment === null && aptScore > 0.4 && nameScore < 0.5) {
+          m.apartment = col;
+        }
+      }
+
+      // Тоон баганууд (өр, төлсөн) - хамгийн том дүнтэй нь өр, бага нь төлсөн
+      const numericCols: { col: number; avg: number }[] = [];
+      for (let col = 0; col < colCount; col++) {
+        if (Object.values(m).includes(col)) continue;
+        const colValues = sampleRows.map(r => String(r[col] || '').trim()).filter(Boolean);
+        const numScore = colValues.filter(v => looksLikeNumber(v)).length / Math.max(colValues.length, 1);
+        if (numScore > 0.4) {
+          const avg = colValues.reduce((s, v) => {
+            const cleaned = String(v).replace(/[,\s₮%]/g, '');
+            return s + (parseFloat(cleaned) || 0);
+          }, 0) / Math.max(colValues.length, 1);
+          numericCols.push({ col, avg });
+        }
+      }
+
+      numericCols.sort((a, b) => b.avg - a.avg);
+      if (numericCols.length >= 2) {
+        if (m.debt === null) m.debt = numericCols[0].col;
+        if (m.payments === null) m.payments = numericCols[1].col;
+      } else if (numericCols.length === 1) {
+        if (m.debt === null) m.debt = numericCols[0].col;
+      }
+    }
+
+    // №, #, Д/д зэрэг дугаарлалт баганыг хасах
+    hdrs.forEach((h, i) => {
+      const lower = h.toLowerCase().trim();
+      if (['№', '#', 'д/д', 'no', 'index', 'row'].includes(lower) || lower === '№') {
+        for (const [field, val] of Object.entries(m)) {
+          if (val === i) {
+            (m as any)[field] = null;
+          }
+        }
+      }
+    });
+
+    return m;
+  };
+
+  // Файл уншиж задлах → шууд preview рүү
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -39,73 +165,116 @@ export default function ImportPage() {
     setFileName(file.name);
 
     try {
+      let hdrs: string[] = [];
+      let rows: string[][] = [];
+
       if (file.name.endsWith('.pdf')) {
-        await parsePDF(file);
+        ({ hdrs, rows } = await parsePDF(file));
       } else if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
-        await parseCSV(file);
+        ({ hdrs, rows } = await parseCSV(file));
       } else {
-        await parseExcel(file);
+        ({ hdrs, rows } = await parseExcel(file));
       }
+
+      if (rows.length === 0) {
+        setError('Файлд өгөгдөл байхгүй');
+        return;
+      }
+
+      // Автомат таних
+      const autoMapping = smartAutoMap(hdrs, rows);
+      setMapping(autoMapping);
+      setRawData(rows);
+
+      // Шууд preview үүсгэх
+      const mapped = applyMapping(autoMapping, rows);
+      if (mapped.length === 0) {
+        setError('Нэрийн багана тодорхойлогдсонгүй. Файлын формат шалгана уу.');
+        return;
+      }
+
+      setParsedRows(mapped);
+
+      // Ямар формат илрүүлснийг тэмдэглэх
+      const detected: string[] = [];
+      if (autoMapping.name !== null) detected.push(`Нэр: "${hdrs[autoMapping.name] || `Багана ${autoMapping.name + 1}`}"`);
+      if (autoMapping.apartment !== null) detected.push(`Байр: "${hdrs[autoMapping.apartment] || `Багана ${autoMapping.apartment + 1}`}"`);
+      if (autoMapping.phone !== null) detected.push(`Утас: "${hdrs[autoMapping.phone] || `Багана ${autoMapping.phone + 1}`}"`);
+      if (autoMapping.debt !== null) detected.push(`Өр: "${hdrs[autoMapping.debt] || `Багана ${autoMapping.debt + 1}`}"`);
+      if (autoMapping.payments !== null) detected.push(`Төлсөн: "${hdrs[autoMapping.payments] || `Багана ${autoMapping.payments + 1}`}"`);
+      setDetectedFormat(detected.join(' · '));
+
+      setStep('preview');
     } catch (err) {
       setError('Файл уншихад алдаа гарлаа. Формат шалгана уу.');
       console.error(err);
     }
   };
 
-  // Excel задлах (.xlsx, .xls)
-  const parseExcel = async (file: File) => {
+  // Mapping ашиглаж мөрүүдийг бэлдэх
+  const applyMapping = (m: ColumnMapping, rows: string[][]): ParsedRow[] => {
+    if (m.name === null) return [];
+    return rows.map(row => ({
+      name: m.name !== null ? String(row[m.name] || '').trim() : '',
+      apartment: m.apartment !== null ? String(row[m.apartment] || '').trim() : '',
+      phone: m.phone !== null ? String(row[m.phone] || '').trim() : '',
+      debt: m.debt !== null ? parseNum(row[m.debt]) : 0,
+      payments: m.payments !== null ? parseNum(row[m.payments]) : 0,
+    })).filter(r => r.name.trim() && r.name.length > 1);
+  };
+
+  // Excel задлах
+  const parseExcel = async (file: File): Promise<{ hdrs: string[]; rows: string[][] }> => {
     const buffer = await file.arrayBuffer();
     const wb = XLSX.read(buffer, { type: 'array' });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, defval: '' });
 
-    if (data.length < 2) {
-      setError('Файлд хангалттай өгөгдөл байхгүй');
-      return;
+    if (data.length < 2) throw new Error('Хангалттай өгөгдөл байхгүй');
+
+    // Header мөрийг олох — эхний хоосон биш мөр
+    let headerIdx = 0;
+    for (let i = 0; i < Math.min(5, data.length); i++) {
+      const row = data[i];
+      const nonEmpty = row.filter(c => String(c).trim()).length;
+      if (nonEmpty >= 2) {
+        headerIdx = i;
+        break;
+      }
     }
 
-    const headerRow = data[0].map(h => String(h).trim());
-    const rows = data.slice(1).filter(row => row.some(cell => String(cell).trim()));
+    const hdrs = data[headerIdx].map(h => String(h).trim());
+    const rows = data.slice(headerIdx + 1)
+      .filter(row => row.some(cell => String(cell).trim()))
+      .map(row => row.map(cell => String(cell)));
 
-    setHeaders(headerRow);
-    setRawData(rows.map(row => row.map(cell => String(cell))));
-    autoMapColumns(headerRow);
-    setStep('mapping');
+    return { hdrs, rows };
   };
 
   // CSV задлах
-  const parseCSV = async (file: File) => {
+  const parseCSV = async (file: File): Promise<{ hdrs: string[]; rows: string[][] }> => {
     const text = await file.text();
     const lines = text.split('\n').filter(l => l.trim());
-    const rows = lines.map(line => {
-      // Handle quoted CSV
+    const allRows = lines.map(line => {
       const result: string[] = [];
       let current = '';
       let inQuotes = false;
       for (const char of line) {
         if (char === '"') { inQuotes = !inQuotes; }
-        else if ((char === ',' || char === '\t') && !inQuotes) { result.push(current.trim()); current = ''; }
+        else if ((char === ',' || char === '\t' || char === ';') && !inQuotes) { result.push(current.trim()); current = ''; }
         else { current += char; }
       }
       result.push(current.trim());
       return result;
     });
 
-    if (rows.length < 2) {
-      setError('Файлд хангалттай өгөгдөл байхгүй');
-      return;
-    }
-
-    setHeaders(rows[0]);
-    setRawData(rows.slice(1));
-    autoMapColumns(rows[0]);
-    setStep('mapping');
+    if (allRows.length < 2) throw new Error('Хангалттай өгөгдөл байхгүй');
+    return { hdrs: allRows[0], rows: allRows.slice(1) };
   };
 
-  // PDF задлах (хүснэгт хэлбэрийн текст)
-  const parsePDF = async (file: File) => {
+  // PDF задлах
+  const parsePDF = async (file: File): Promise<{ hdrs: string[]; rows: string[][] }> => {
     const buffer = await file.arrayBuffer();
-    // PDF-ийн текстийг pdjs ашиглан задлах
     const pdfjsLib = await import('pdfjs-dist');
     pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
@@ -119,60 +288,16 @@ export default function ImportPage() {
       fullText += lines + '\n';
     }
 
-    // Мөр мөрөөр задлах - табуляц эсвэл олон зайгаар тусгаарлагдсан
     const lines = fullText.split('\n').filter(l => l.trim());
-    const rows = lines.map(line => line.split(/\t|\s{2,}/).map(s => s.trim()).filter(Boolean));
-    const validRows = rows.filter(r => r.length >= 2);
+    const allRows = lines.map(line => line.split(/\t|\s{2,}/).map(s => s.trim()).filter(Boolean));
+    const validRows = allRows.filter(r => r.length >= 2);
 
-    if (validRows.length < 2) {
-      setError('PDF-ээс хүснэгт олдсонгүй. Excel файл ашиглана уу.');
-      return;
-    }
-
-    setHeaders(validRows[0]);
-    setRawData(validRows.slice(1));
-    autoMapColumns(validRows[0]);
-    setStep('mapping');
+    if (validRows.length < 2) throw new Error('PDF-ээс хүснэгт олдсонгүй');
+    return { hdrs: validRows[0], rows: validRows.slice(1) };
   };
 
-  // Баганыг автоматаар таних
-  const autoMapColumns = (hdrs: string[]) => {
-    const m: ColumnMapping = { name: null, apartment: null, phone: null, debt: null, payments: null };
-
-    hdrs.forEach((h, i) => {
-      const lower = h.toLowerCase();
-      if (lower.includes('нэр') || lower.includes('name') || lower.includes('овог')) m.name = i;
-      else if (lower.includes('байр') || lower.includes('тоот') || lower.includes('apartment') || lower.includes('хаяг') || lower.includes('орц') || lower.includes('room')) m.apartment = i;
-      else if (lower.includes('утас') || lower.includes('phone') || lower.includes('дугаар')) m.phone = i;
-      else if (lower.includes('өр') || lower.includes('debt') || lower.includes('үлдэгдэл') || lower.includes('balance') || lower.includes('төлөх')) m.debt = i;
-      else if (lower.includes('төлсөн') || lower.includes('paid') || lower.includes('payment') || lower.includes('төлбөр')) m.payments = i;
-    });
-
-    setMapping(m);
-  };
-
-  // Preview үүсгэх
-  const generatePreview = () => {
-    if (mapping.name === null) {
-      setError('Нэрийн багана заавал сонгоно уу');
-      return;
-    }
-
-    const rows: ParsedRow[] = rawData.map(row => ({
-      name: mapping.name !== null ? row[mapping.name] || '' : '',
-      apartment: mapping.apartment !== null ? row[mapping.apartment] || '' : '',
-      phone: mapping.phone !== null ? row[mapping.phone] || '' : '',
-      debt: mapping.debt !== null ? parseNumber(row[mapping.debt]) : 0,
-      payments: mapping.payments !== null ? parseNumber(row[mapping.payments]) : 0,
-    })).filter(r => r.name.trim());
-
-    setParsedRows(rows);
-    setError('');
-    setStep('preview');
-  };
-
-  // Тоо задлах (1,200,000 эсвэл 1200000 гэх мэт)
-  const parseNumber = (val: string): number => {
+  // Тоо задлах
+  const parseNum = (val: string): number => {
     if (!val) return 0;
     const cleaned = String(val).replace(/[,\s₮%]/g, '');
     const num = parseFloat(cleaned);
@@ -198,8 +323,6 @@ export default function ImportPage() {
         console.error('Import error:', error.message, row);
       } else {
         success++;
-
-        // Төлсөн мэдээлэл байвал payments хүснэгтэд нэмэх
         if (row.payments > 0) {
           await supabase.from('payments').insert([{
             amount: row.payments,
@@ -216,19 +339,11 @@ export default function ImportPage() {
   const reset = () => {
     setStep('upload');
     setFileName('');
-    setHeaders([]);
     setRawData([]);
     setParsedRows([]);
     setError('');
+    setDetectedFormat('');
     if (fileRef.current) fileRef.current.value = '';
-  };
-
-  const fieldLabels: Record<string, string> = {
-    name: 'Нэр',
-    apartment: 'Байр/Тоот',
-    phone: 'Утас',
-    debt: 'Өр',
-    payments: 'Төлсөн',
   };
 
   return (
@@ -247,8 +362,11 @@ export default function ImportPage() {
           <div className="bg-white border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center hover:border-blue-400 transition">
             <div className="text-5xl mb-4">📁</div>
             <h2 className="text-lg font-semibold mb-2">Файл оруулах</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              Excel (.xlsx, .xls), CSV (.csv), PDF (.pdf) файл дэмжинэ
+            <p className="text-sm text-gray-500 mb-2">
+              Excel, CSV, PDF файл дэмжинэ
+            </p>
+            <p className="text-xs text-gray-400 mb-6">
+              Баганыг автоматаар таниж, шууд харуулна
             </p>
             <label className="inline-block px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-semibold cursor-pointer hover:bg-blue-700 transition">
               Файл сонгох
@@ -263,108 +381,42 @@ export default function ImportPage() {
           </div>
 
           <div className="mt-6 bg-gray-50 rounded-xl p-4">
-            <h3 className="font-semibold text-sm mb-2">Файлын формат</h3>
-            <p className="text-xs text-gray-500 mb-3">
-              Файлд дараах баганууд байж болно (баганы нэр чөлөөтэй):
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-white rounded-lg p-2 border">
-                <span className="font-semibold">Нэр</span> — Оршин суугчийн нэр
+            <h3 className="font-semibold text-sm mb-3">Ямар ч загвар ажиллана</h3>
+            <div className="space-y-2 text-xs text-gray-600">
+              <div className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">✓</span>
+                <span>Нэр, утас, байр/тоот, өр, төлсөн зэрэг баганыг <strong>автоматаар таньна</strong></span>
               </div>
-              <div className="bg-white rounded-lg p-2 border">
-                <span className="font-semibold">Байр/Тоот</span> — Хаяг мэдээлэл
+              <div className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">✓</span>
+                <span>Header нэр өөр байсан ч <strong>мэдээллийн төрлөөр</strong> нь илрүүлнэ</span>
               </div>
-              <div className="bg-white rounded-lg p-2 border">
-                <span className="font-semibold">Утас</span> — Утасны дугаар
-              </div>
-              <div className="bg-white rounded-lg p-2 border">
-                <span className="font-semibold">Өр</span> — Өрийн үлдэгдэл
-              </div>
-              <div className="bg-white rounded-lg p-2 border col-span-2">
-                <span className="font-semibold">Төлсөн</span> — Одоог хүртэл төлсөн дүн
+              <div className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">✓</span>
+                <span>СӨХ болгоны <strong>өөр өөр загвар</strong> дэмжинэ</span>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Step 2: Column Mapping */}
-      {step === 'mapping' && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold">Багана тохируулах</h2>
-              <p className="text-sm text-gray-500">📄 {fileName} · {rawData.length} мөр</p>
-            </div>
-            <button onClick={reset} className="text-sm text-gray-500 hover:underline">Дахин сонгох</button>
-          </div>
-
-          {/* Файлын эхний мөрүүд */}
-          <div className="bg-white border rounded-xl overflow-x-auto mb-6">
-            <table className="w-full text-xs">
-              <thead className="bg-gray-50">
-                <tr>
-                  {headers.map((h, i) => (
-                    <th key={i} className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
-                      #{i + 1}: {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rawData.slice(0, 3).map((row, ri) => (
-                  <tr key={ri} className="border-t">
-                    {row.map((cell, ci) => (
-                      <td key={ci} className="px-3 py-2 whitespace-nowrap text-gray-600">
-                        {cell || <span className="text-gray-300">—</span>}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mapping */}
-          <div className="space-y-3">
-            {(Object.keys(mapping) as Array<keyof ColumnMapping>).map((field) => (
-              <div key={field} className="flex items-center gap-3 bg-white border rounded-xl p-3">
-                <span className="text-sm font-medium w-24">{fieldLabels[field]} {field === 'name' && '*'}</span>
-                <select
-                  value={mapping[field] ?? ''}
-                  onChange={(e) => setMapping({ ...mapping, [field]: e.target.value === '' ? null : Number(e.target.value) })}
-                  className="flex-1 border rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="">— Сонгоогүй —</option>
-                  {headers.map((h, i) => (
-                    <option key={i} value={i}>#{i + 1}: {h}</option>
-                  ))}
-                </select>
-                {mapping[field] !== null && (
-                  <span className="text-green-500 text-sm">✓</span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={generatePreview}
-            className="w-full mt-6 bg-blue-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-blue-700 transition"
-          >
-            Урьдчилж харах →
-          </button>
-        </div>
-      )}
-
-      {/* Step 3: Preview */}
+      {/* Step 2: Preview (auto-detected) */}
       {step === 'preview' && (
         <div>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold">Урьдчилсан харагдац</h2>
-              <p className="text-sm text-gray-500">{parsedRows.length} оршин суугч импортлогдоно</p>
+              <h2 className="text-lg font-semibold">📄 {fileName}</h2>
+              <p className="text-sm text-gray-500">{parsedRows.length} оршин суугч илэрлээ</p>
             </div>
-            <button onClick={() => setStep('mapping')} className="text-sm text-blue-600 hover:underline">← Буцах</button>
+            <button onClick={reset} className="text-sm text-gray-500 hover:underline">Өөр файл</button>
+          </div>
+
+          {/* Илрүүлсэн формат */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-blue-600 text-sm font-semibold">🔍 Автомат илрүүлсэн</span>
+            </div>
+            <p className="text-xs text-blue-700">{detectedFormat}</p>
           </div>
 
           {/* Stats */}
@@ -435,7 +487,7 @@ export default function ImportPage() {
         </div>
       )}
 
-      {/* Step 4: Importing */}
+      {/* Importing */}
       {step === 'importing' && (
         <div className="text-center py-16">
           <div className="text-5xl mb-4 animate-bounce">⏳</div>
@@ -444,7 +496,7 @@ export default function ImportPage() {
         </div>
       )}
 
-      {/* Step 5: Done */}
+      {/* Done */}
       {step === 'done' && (
         <div className="text-center py-16">
           <div className="text-5xl mb-4">✅</div>
