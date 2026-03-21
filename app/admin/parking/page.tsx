@@ -137,8 +137,28 @@ export default function AdminParking() {
     localStorage.setItem(STORAGE_KEYS.guests, JSON.stringify(g));
   };
 
+  // Мэдэгдэл хадгалах (админ мессеж түүхэнд)
+  const sendNotification = (toName: string, toApartment: string, content: string, type: 'guest-enter' | 'guest-overdue' | 'guest-charge') => {
+    const stored = localStorage.getItem('sokh-sent-messages');
+    const msgs = stored ? JSON.parse(stored) : [];
+    msgs.unshift({
+      id: `msg-${Date.now()}-${type}`,
+      to: toApartment,
+      toName,
+      content,
+      type: 'custom',
+      sentAt: new Date().toISOString(),
+      status: 'sent',
+    });
+    localStorage.setItem('sokh-sent-messages', JSON.stringify(msgs));
+  };
+
   const addGuest = () => {
     if (!guestForm.plateNumber || !guestForm.hostName) return;
+    const timeLabel = guestForm.allowedMinutes >= 60
+      ? `${Math.floor(guestForm.allowedMinutes / 60)} цаг`
+      : `${guestForm.allowedMinutes} минут`;
+
     const guest: GuestVehicle = {
       id: Date.now().toString(),
       plateNumber: guestForm.plateNumber,
@@ -151,8 +171,18 @@ export default function AdminParking() {
       charged: false,
     };
     saveGuests([guest, ...guests]);
+
+    // Айлд мсж илгээх
+    sendNotification(
+      guestForm.hostName,
+      guestForm.hostApartment,
+      `Таны зочны машин (${guestForm.plateNumber}) зогсоолд бүртгэгдлээ. Зөвшөөрсөн хугацаа: ${timeLabel}. Хугацаа хэтрэхэд цаг тутам ${gateSettings.overchargePerHour.toLocaleString()}₮ торгууль тооцогдоно.`,
+      'guest-enter'
+    );
+
     setGuestForm({ plateNumber: '', hostName: '', hostApartment: '', allowedMinutes: 60 });
     setShowGuestForm(false);
+    alert(`✅ Зочин бүртгэгдлээ. ${guestForm.hostName} (${guestForm.hostApartment}) руу мэдэгдэл илгээгдлээ.`);
   };
 
   const exitGuest = (id: string) => {
@@ -164,6 +194,24 @@ export default function AdminParking() {
       const overMinutes = Math.max(0, minutesPassed - g.allowedMinutes);
       const overHours = Math.ceil(overMinutes / 60);
       const charge = overHours * gateSettings.overchargePerHour;
+
+      // Хугацаа хэтэрсэн бол айлд мсж
+      if (charge > 0) {
+        sendNotification(
+          g.hostName,
+          g.hostApartment,
+          `Таны зочны машин (${g.plateNumber}) зогсоолоос гарлаа. Хугацаа ${overHours} цагаар хэтэрсэн тул ${charge.toLocaleString()}₮ торгууль тооцогдлоо. Энэ дүн таны төлбөр дээр нэмэгдэнэ.`,
+          'guest-overdue'
+        );
+      } else {
+        sendNotification(
+          g.hostName,
+          g.hostApartment,
+          `Таны зочны машин (${g.plateNumber}) зогсоолоос хугацаандаа гарлаа. Нэмэлт төлбөргүй.`,
+          'guest-enter'
+        );
+      }
+
       return { ...g, exitedAt: now.toISOString(), overCharge: charge };
     });
     saveGuests(updated);
@@ -174,7 +222,13 @@ export default function AdminParking() {
     saveGuests(updated);
     const guest = guests.find(g => g.id === id);
     if (guest) {
-      alert(`${guest.hostName} (${guest.hostApartment} тоот)-ийн төлбөр дээр ${guest.overCharge.toLocaleString()}₮ нэмэгдлээ`);
+      sendNotification(
+        guest.hostName,
+        guest.hostApartment,
+        `Зогсоолын торгууль ${guest.overCharge.toLocaleString()}₮ таны энэ сарын төлбөр дээр нэмэгдлээ. Машины дугаар: ${guest.plateNumber}.`,
+        'guest-charge'
+      );
+      alert(`${guest.hostName} (${guest.hostApartment})-д мэдэгдэл илгээгдэж, төлбөр дээр ${guest.overCharge.toLocaleString()}₮ нэмэгдлээ.`);
     }
   };
 
