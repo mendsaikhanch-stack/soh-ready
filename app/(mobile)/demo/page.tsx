@@ -78,6 +78,27 @@ export default function DemoPage() {
         {/* Tab: Нүүр */}
         {activeTab === 0 && (
           <div className="px-4 py-4">
+            {/* Pricing */}
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-4 mb-4 text-white shadow-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">🎁</span>
+                <h3 className="font-bold text-sm">Эхний 1 сар ҮНЭГҮЙ туршилт</h3>
+              </div>
+              <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 mb-2">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-blue-200">Сарын хураамж (2-р сараас)</p>
+                    <p className="text-2xl font-bold">50,000₮<span className="text-sm font-normal text-blue-200">/сар</span></p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-blue-200">Айл тус бүр</p>
+                    <p className="text-2xl font-bold">1,000₮<span className="text-sm font-normal text-blue-200">/сар</span></p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-blue-200 text-center">Жишээ: 100 айлтай СӨХ → 50,000 + 100×1,000 = <span className="text-white font-semibold">150,000₮/сар</span></p>
+            </div>
+
             {/* Stats */}
             <div className="grid grid-cols-3 gap-2 mb-4">
               <div className="bg-white rounded-xl p-3 text-center shadow-sm">
