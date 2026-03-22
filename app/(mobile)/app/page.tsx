@@ -44,11 +44,14 @@ export default function WelcomePage() {
       <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
       <div className="absolute bottom-32 left-0 w-48 h-48 bg-white/5 rounded-full -translate-x-1/2" />
 
+      {/* Spacer to push logo down */}
+      <div className="h-12" />
+
       {/* Top section */}
-      <div className={`flex-1 flex flex-col items-center justify-center px-6 text-white relative z-10 transition-all duration-700 ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      <div className={`flex-1 flex flex-col items-center px-6 text-white relative z-10 transition-all duration-700 ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         {/* Logo */}
         <div className="mb-5">
-          <TootLogo size={216} showText={false} />
+          <TootLogo size={180} showText={false} />
         </div>
 
         <h1 className="text-3xl font-bold tracking-tight mb-1">Тоот</h1>
