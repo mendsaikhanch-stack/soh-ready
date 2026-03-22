@@ -27,9 +27,6 @@ const navItems = [
   { icon: '📤', label: 'Файл импорт', href: '/admin/import' },
 ];
 
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'sokh2024';
-
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -38,26 +35,57 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const token = sessionStorage.getItem('admin-auth');
-    if (token === 'true') setAuthed(true);
-    setChecking(false);
+    checkAuth();
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (username === ADMIN_USER && password === ADMIN_PASS) {
-      sessionStorage.setItem('admin-auth', 'true');
-      setAuthed(true);
-    } else {
-      setError('Нэвтрэх нэр эсвэл нууц үг буруу');
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/auth/check?type=admin');
+      const data = await res.json();
+      setAuthed(data.authenticated);
+    } catch {
+      setAuthed(false);
     }
+    setChecking(false);
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('admin-auth');
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, type: 'admin' }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setAuthed(true);
+        setUsername('');
+        setPassword('');
+      } else {
+        setError(data.error || 'Нэвтрэх нэр эсвэл нууц үг буруу');
+      }
+    } catch {
+      setError('Сервертэй холбогдож чадсангүй');
+    }
+
+    setLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'admin' }),
+    });
     setAuthed(false);
     setUsername('');
     setPassword('');
@@ -71,7 +99,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // Нэвтрэх хуудас
   if (!authed) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -89,9 +116,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                placeholder="admin"
+                placeholder="Нэвтрэх нэр"
                 className="w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
+                autoComplete="username"
               />
             </div>
             <div>
@@ -102,6 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoComplete="current-password"
               />
             </div>
 
@@ -113,11 +142,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition disabled:opacity-50"
             >
-              Нэвтрэх
+              {loading ? 'Нэвтэрч байна...' : 'Нэвтрэх'}
             </button>
           </form>
+
+          <div className="mt-4 p-3 bg-gray-50 rounded-xl">
+            <p className="text-xs text-gray-500 text-center">
+              🔒 Нэвтрэлт серверээр хамгаалагдсан
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -125,13 +161,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
       <aside className="w-56 bg-gray-900 text-white flex-shrink-0 min-h-screen flex flex-col">
         <div className="p-4 border-b border-gray-700">
           <TootLogo size={84} textColor="text-white" />
           <p className="text-xs text-gray-400 mt-1">Удирдлагын панел</p>
         </div>
-        <nav className="p-2 flex-1">
+        <nav className="p-2 flex-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -159,7 +194,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Main */}
       <main className="flex-1 overflow-auto">
         {children}
       </main>
