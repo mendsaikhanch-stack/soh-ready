@@ -11,6 +11,7 @@ const navItems = [
   { icon: '📢', label: 'Зарлал', href: '/admin/announcements' },
   { icon: '🔧', label: 'Засвар', href: '/admin/maintenance' },
   { icon: '📋', label: 'Тайлан', href: '/admin/reports' },
+  { icon: '📝', label: 'Гомдол / Санал', href: '/admin/complaints' },
   { icon: '🗳', label: 'Санал хураалт', href: '/admin/polls' },
   { icon: '💬', label: 'Мессеж', href: '/admin/messages' },
   { icon: '🚗', label: 'Зогсоол', href: '/admin/parking' },

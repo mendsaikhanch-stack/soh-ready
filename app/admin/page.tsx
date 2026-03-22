@@ -11,6 +11,7 @@ export default function AdminDashboard() {
     totalPaid: 0,
     announcements: 0,
     pendingMaintenance: 0,
+    pendingComplaints: 0,
     activePolls: 0,
     unreadMessages: 0,
   });
@@ -34,6 +35,11 @@ export default function AdminDashboard() {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
 
+      const { count: complaintCount } = await supabase
+        .from('complaints')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+
       const { count: pollCount } = await supabase
         .from('polls')
         .select('*', { count: 'exact', head: true })
@@ -48,6 +54,7 @@ export default function AdminDashboard() {
         totalPaid,
         announcements: annCount || 0,
         pendingMaintenance: maintCount || 0,
+        pendingComplaints: complaintCount || 0,
         activePolls: pollCount || 0,
         unreadMessages: msgCount || 0,
       });
@@ -65,6 +72,7 @@ export default function AdminDashboard() {
     { label: 'Нийт төлбөр цуглуулсан', value: `${stats.totalPaid.toLocaleString()}₮`, icon: '💰', color: 'bg-green-50 border-green-200 text-green-700' },
     { label: 'Зарлал', value: stats.announcements, icon: '📢', color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
     { label: 'Хүлээгдэж буй засвар', value: stats.pendingMaintenance, icon: '🔧', color: 'bg-orange-50 border-orange-200 text-orange-700' },
+    { label: 'Шинэ гомдол/санал', value: stats.pendingComplaints, icon: '📝', color: 'bg-violet-50 border-violet-200 text-violet-700' },
     { label: 'Идэвхтэй санал хураалт', value: stats.activePolls, icon: '🗳', color: 'bg-pink-50 border-pink-200 text-pink-700' },
     { label: 'Мессеж', value: stats.unreadMessages, icon: '💬', color: 'bg-teal-50 border-teal-200 text-teal-700' },
   ];
