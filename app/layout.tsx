@@ -10,6 +10,12 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Тоот",
   description: "Таны байрны бүх зүйл нэг дор",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Тоот",
+  },
 };
 
 export const viewport = {
