@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Space { id: number; name: string; type: string; capacity: number; description: string; }
 interface Booking {
@@ -44,8 +45,9 @@ export default function AdminBooking() {
   const addSpace = async () => {
     if (!spName) return;
     setSaving(true);
+    const sokhId = await getAdminSokhId();
     await supabase.from('common_spaces').insert([{
-      sokh_id: 1, name: spName, type: spType, capacity: spCapacity ? Number(spCapacity) : 0, description: spDesc,
+      sokh_id: sokhId, name: spName, type: spType, capacity: spCapacity ? Number(spCapacity) : 0, description: spDesc,
     }]);
     setSpName(''); setSpDesc(''); setSpCapacity('');
     setShowSpaceForm(false); setSaving(false);

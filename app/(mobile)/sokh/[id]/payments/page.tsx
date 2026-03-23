@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 
 interface BillItem {
-  id: string;
+  id: number;
   name: string;
   icon: string;
   amount: number;
@@ -29,6 +29,12 @@ const bankApps = [
   { id: 'hipay', name: 'Hi-Pay', color: 'bg-teal-500', scheme: 'hipay://payment' },
 ];
 
+const BILL_COLORS: Record<string, string> = {
+  'service': 'bg-blue-50 border-blue-200',
+  'utility': 'bg-orange-50 border-orange-200',
+  'other': 'bg-gray-50 border-gray-200',
+};
+
 export default function PaymentsPage() {
   const params = useParams();
   const router = useRouter();
@@ -39,20 +45,38 @@ export default function PaymentsPage() {
   const [payingBill, setPayingBill] = useState<BillItem | null>(null);
   const [paySuccess, setPaySuccess] = useState(false);
   const [payments, setPayments] = useState<any[]>([]);
-
-  // Нийтийн үйлчилгээний төлбөрүүд
-  const [bills, setBills] = useState<BillItem[]>([
-    { id: 'sokh', name: 'СӨХ хураамж', icon: '🏢', amount: 15000, paid: false, color: 'bg-blue-50 border-blue-200' },
-    { id: 'water', name: 'Ус', icon: '💧', amount: 8500, paid: false, color: 'bg-cyan-50 border-cyan-200' },
-    { id: 'heating', name: 'Дулаан', icon: '🔥', amount: 35000, paid: false, color: 'bg-orange-50 border-orange-200' },
-    { id: 'electric', name: 'Цахилгаан', icon: '⚡', amount: 12000, paid: false, color: 'bg-yellow-50 border-yellow-200' },
-    { id: 'maintenance', name: 'Ашиглалт', icon: '🔧', amount: 5000, paid: false, color: 'bg-gray-50 border-gray-200' },
-    { id: 'cable', name: 'Кабелийн ТВ', icon: '📺', amount: 8000, paid: true, color: 'bg-purple-50 border-purple-200' },
-    { id: 'internet', name: 'Интернет', icon: '🌐', amount: 25000, paid: true, color: 'bg-indigo-50 border-indigo-200' },
-  ]);
+  const [bills, setBills] = useState<BillItem[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
+      // Төлбөрийн нэр төрөл Supabase-с татах
+      const { data: billingItems } = await supabase
+        .from('billing_items')
+        .select('*')
+        .eq('sokh_id', params.id)
+        .eq('is_active', true)
+        .order('sort_order');
+
+      if (billingItems && billingItems.length > 0) {
+        setBills(billingItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          icon: item.icon || '💰',
+          amount: Number(item.amount) || 0,
+          paid: false,
+          color: BILL_COLORS[item.category] || BILL_COLORS['other'],
+        })));
+      } else {
+        // Fallback: хэрэв billing_items хоосон бол default утгууд
+        setBills([
+          { id: 1, name: 'СӨХ хураамж', icon: '🏢', amount: 15000, paid: false, color: 'bg-blue-50 border-blue-200' },
+          { id: 2, name: 'Ус', icon: '💧', amount: 8500, paid: false, color: 'bg-cyan-50 border-cyan-200' },
+          { id: 3, name: 'Дулаан', icon: '🔥', amount: 35000, paid: false, color: 'bg-orange-50 border-orange-200' },
+          { id: 4, name: 'Цахилгаан', icon: '⚡', amount: 12000, paid: false, color: 'bg-yellow-50 border-yellow-200' },
+          { id: 5, name: 'Ашиглалт', icon: '🔧', amount: 5000, paid: false, color: 'bg-gray-50 border-gray-200' },
+        ]);
+      }
+
       // Оршин суугчийн өр татах
       const { data: residents } = await supabase
         .from('residents')
@@ -88,7 +112,7 @@ export default function PaymentsPage() {
   };
 
   const payAll = () => {
-    setPayingBill({ id: 'all', name: 'Бүх төлбөр', icon: '💰', amount: unpaidTotal, paid: false, color: '' });
+    setPayingBill({ id: 0, name: 'Бүх төлбөр', icon: '💰', amount: unpaidTotal, paid: false, color: '' });
     setPayMethod(null);
     setPaySuccess(false);
   };
@@ -97,7 +121,7 @@ export default function PaymentsPage() {
     if (!payMethod || !payingBill) return;
     setPaySuccess(true);
 
-    if (payingBill.id === 'all') {
+    if (payingBill.id === 0) {
       setBills(prev => prev.map(b => ({ ...b, paid: true })));
     } else {
       setBills(prev => prev.map(b => b.id === payingBill.id ? { ...b, paid: true } : b));
@@ -273,7 +297,6 @@ export default function PaymentsPage() {
                   key={bank.id}
                   onClick={() => {
                     window.location.href = bank.scheme;
-                    // Апп нээгдэхгүй бол 1.5 секундын дараа store руу чиглүүлнэ
                     setTimeout(() => {
                       setPayMethod('bank');
                     }, 1500);

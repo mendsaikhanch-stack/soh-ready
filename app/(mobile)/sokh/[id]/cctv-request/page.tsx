@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { supabase } from '@/app/lib/supabase';
 
 const CATEGORIES = [
   { id: 'parking_incident', label: 'Зогсоолын осол', icon: '🚗', desc: 'Мөргөлдсөн, шүргэсэн, шүргэлцсэн' },
@@ -18,6 +19,7 @@ export default function CCTVRequestPage() {
   const router = useRouter();
   const [step, setStep] = useState<'category' | 'form' | 'success'>('category');
   const [category, setCategory] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: '',
     apartment: '',
@@ -33,28 +35,30 @@ export default function CCTVRequestPage() {
     setStep('form');
   };
 
-  const submitRequest = () => {
+  const submitRequest = async () => {
     if (!form.name || !form.apartment || !form.description) return;
+    setSubmitting(true);
 
-    // Хүсэлт хадгалах (admin CCTV хуудаст харагдана)
-    const requests = JSON.parse(localStorage.getItem('sokh-cctv-footage-requests') || '[]');
-    requests.unshift({
-      id: Date.now().toString(),
-      residentName: form.name,
+    const { error } = await supabase.from('cctv_requests').insert([{
+      sokh_id: Number(params.id),
+      resident_name: form.name,
       apartment: form.apartment,
       phone: form.phone,
       category,
       description: form.description,
-      dateFrom: form.dateFrom,
-      dateTo: form.dateTo,
       location: form.location,
+      date_from: form.dateFrom,
+      date_to: form.dateTo,
       status: 'pending',
-      createdAt: new Date().toISOString(),
-      adminNote: '',
-    });
-    localStorage.setItem('sokh-cctv-footage-requests', JSON.stringify(requests));
+    }]);
 
-    setStep('success');
+    setSubmitting(false);
+
+    if (!error) {
+      setStep('success');
+    } else {
+      alert('Алдаа гарлаа. Дахин оролдоно уу.');
+    }
   };
 
   const cat = CATEGORIES.find(c => c.id === category);
@@ -190,14 +194,14 @@ export default function CCTVRequestPage() {
 
             <button
               onClick={submitRequest}
-              disabled={!form.name || !form.apartment || !form.description}
+              disabled={!form.name || !form.apartment || !form.description || submitting}
               className={`w-full py-3 rounded-xl font-semibold text-sm transition ${
-                form.name && form.apartment && form.description
+                form.name && form.apartment && form.description && !submitting
                   ? 'bg-blue-600 text-white active:bg-blue-700'
                   : 'bg-gray-200 text-gray-400'
               }`}
             >
-              Хүсэлт илгээх
+              {submitting ? 'Илгээж байна...' : 'Хүсэлт илгээх'}
             </button>
           </div>
         </div>

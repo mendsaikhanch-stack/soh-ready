@@ -2,28 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { supabase } from '@/app/lib/supabase';
 
 interface MyVehicle {
-  id: string;
-  plateNumber: string;
-  carModel: string;
+  id: number;
+  plate_number: string;
+  car_model: string;
   color: string;
-  registeredAt: string;
+  created_at: string;
 }
 
 interface BlockingReport {
-  id: string;
-  blockedPlate: string;
-  blockingPlate: string;
-  timestamp: string;
+  id: number;
+  blocked_plate: string;
+  blocking_plate: string;
   status: 'pending' | 'notified' | 'resolved';
+  created_at: string;
 }
-
-const STORAGE_KEYS = {
-  myVehicles: 'sokh-my-vehicles',
-  blockingReports: 'sokh-my-blocking-reports',
-  parkingVehicles: 'sokh-parking-vehicles',
-};
 
 const TOTAL_SPOTS = 30;
 
@@ -35,8 +30,9 @@ export default function MobileParkingPage() {
   const params = useParams();
   const router = useRouter();
   const [myVehicles, setMyVehicles] = useState<MyVehicle[]>([]);
+  const [allVehicles, setAllVehicles] = useState<{ plate_number: string; parking_spot: string }[]>([]);
   const [blockingReports, setBlockingReports] = useState<BlockingReport[]>([]);
-  const [allVehicles, setAllVehicles] = useState<{ plateNumber: string; parkingSpot: string }[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showBlockingForm, setShowBlockingForm] = useState(false);
   const [showSpotMap, setShowSpotMap] = useState(false);
@@ -46,65 +42,81 @@ export default function MobileParkingPage() {
 
   const sokhId = params.id as string;
 
-  useEffect(() => {
-    const savedMyVehicles = localStorage.getItem(`${STORAGE_KEYS.myVehicles}-${sokhId}`);
-    const savedReports = localStorage.getItem(`${STORAGE_KEYS.blockingReports}-${sokhId}`);
-    const savedAllVehicles = localStorage.getItem(STORAGE_KEYS.parkingVehicles);
+  const fetchData = async () => {
+    const [{ data: vehicles }, { data: allV }, { data: reports }] = await Promise.all([
+      supabase
+        .from('parking_vehicles')
+        .select('*')
+        .eq('sokh_id', sokhId)
+        .eq('status', 'active')
+        .eq('resident_name', localStorage.getItem(`parking-user-${sokhId}`) || '')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('parking_vehicles')
+        .select('plate_number, parking_spot')
+        .eq('sokh_id', sokhId)
+        .eq('status', 'active')
+        .not('parking_spot', 'is', null),
+      supabase
+        .from('blocking_reports')
+        .select('*')
+        .eq('sokh_id', sokhId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ]);
 
-    if (savedMyVehicles) setMyVehicles(JSON.parse(savedMyVehicles));
-    if (savedReports) setBlockingReports(JSON.parse(savedReports));
-    if (savedAllVehicles) {
-      const parsed = JSON.parse(savedAllVehicles);
-      setAllVehicles(parsed.map((v: { plateNumber: string; parkingSpot: string }) => ({
-        plateNumber: v.plateNumber,
-        parkingSpot: v.parkingSpot,
-      })));
-    }
+    setMyVehicles(vehicles || []);
+    setAllVehicles(allV || []);
+    setBlockingReports(reports || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [sokhId]);
 
-  const saveMyVehicles = (v: MyVehicle[]) => {
-    setMyVehicles(v);
-    localStorage.setItem(`${STORAGE_KEYS.myVehicles}-${sokhId}`, JSON.stringify(v));
-  };
-
-  const saveReports = (r: BlockingReport[]) => {
-    setBlockingReports(r);
-    localStorage.setItem(`${STORAGE_KEYS.blockingReports}-${sokhId}`, JSON.stringify(r));
-  };
-
-  const registerVehicle = () => {
+  const registerVehicle = async () => {
     if (!form.plateNumber) return;
-    const newVehicle: MyVehicle = {
-      id: Date.now().toString(),
-      plateNumber: form.plateNumber,
-      carModel: form.carModel,
+    const userName = localStorage.getItem(`parking-user-${sokhId}`) || 'Оршин суугч';
+
+    const { error } = await supabase.from('parking_vehicles').insert([{
+      sokh_id: Number(sokhId),
+      plate_number: form.plateNumber,
+      car_model: form.carModel,
       color: form.color,
-      registeredAt: new Date().toISOString(),
-    };
-    saveMyVehicles([...myVehicles, newVehicle]);
-    setForm({ plateNumber: '', carModel: '', color: 'Цагаан' });
-    setShowForm(false);
+      resident_name: userName,
+    }]);
+
+    if (!error) {
+      setForm({ plateNumber: '', carModel: '', color: 'Цагаан' });
+      setShowForm(false);
+      await fetchData();
+    }
   };
 
-  const deleteVehicle = (id: string) => {
+  const deleteVehicle = async (id: number) => {
     if (!confirm('Машин устгах уу?')) return;
-    saveMyVehicles(myVehicles.filter(v => v.id !== id));
+    await supabase.from('parking_vehicles').update({ status: 'removed' }).eq('id', id);
+    await fetchData();
   };
 
-  const submitBlockingReport = () => {
+  const submitBlockingReport = async () => {
     if (!selectedBlockedCar) return;
 
-    const report: BlockingReport = {
-      id: Date.now().toString(),
-      blockedPlate: selectedBlockedCar,
-      blockingPlate: '',
-      timestamp: new Date().toISOString(),
+    const { error } = await supabase.from('blocking_reports').insert([{
+      sokh_id: Number(sokhId),
+      blocked_plate: selectedBlockedCar,
+      blocking_plate: '',
+      reporter_name: localStorage.getItem(`parking-user-${sokhId}`) || '',
       status: 'pending',
-    };
-    saveReports([report, ...blockingReports]);
-    setSelectedBlockedCar('');
-    setShowBlockingForm(false);
-    alert('Мэдэгдэл амжилттай илгээгдлээ! СӨХ удирдлагад хүргэгдэх болно.');
+    }]);
+
+    if (!error) {
+      setSelectedBlockedCar('');
+      setShowBlockingForm(false);
+      alert('Мэдэгдэл амжилттай илгээгдлээ! СӨХ удирдлагад хүргэгдэх болно.');
+      await fetchData();
+    }
   };
 
   const requestGateOpen = () => {
@@ -119,7 +131,15 @@ export default function MobileParkingPage() {
     }, 1500);
   };
 
-  const occupiedSpots = allVehicles.filter(v => v.parkingSpot).map(v => v.parkingSpot);
+  const occupiedSpots = allVehicles.filter(v => v.parking_spot).map(v => v.parking_spot);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-400">Ачаалж байна...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -216,9 +236,9 @@ export default function MobileParkingPage() {
                     <span className="text-2xl">🚗</span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-blue-700">{v.plateNumber}</p>
+                    <p className="text-sm font-bold text-blue-700">{v.plate_number}</p>
                     <p className="text-xs text-gray-500">
-                      {v.carModel && `${v.carModel} • `}{v.color}
+                      {v.car_model && `${v.car_model} • `}{v.color}
                     </p>
                   </div>
                   <button
@@ -279,8 +299,8 @@ export default function MobileParkingPage() {
                   >
                     <option value="">-- Машин сонгох --</option>
                     {myVehicles.map(v => (
-                      <option key={v.id} value={v.plateNumber}>
-                        {v.plateNumber} ({v.carModel || v.color})
+                      <option key={v.id} value={v.plate_number}>
+                        {v.plate_number} ({v.car_model || v.color})
                       </option>
                     ))}
                   </select>
@@ -314,7 +334,7 @@ export default function MobileParkingPage() {
               {blockingReports.map(report => (
                 <div key={report.id} className="bg-white rounded-xl p-3 shadow-sm">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">{report.blockedPlate}</span>
+                    <span className="text-sm font-medium">{report.blocked_plate}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       report.status === 'resolved'
                         ? 'bg-green-100 text-green-700'
@@ -326,11 +346,11 @@ export default function MobileParkingPage() {
                        report.status === 'notified' ? 'Мэдэгдсэн' : 'Хүлээгдэж буй'}
                     </span>
                   </div>
-                  {report.blockingPlate && (
-                    <p className="text-xs text-gray-500">Хаасан: {report.blockingPlate}</p>
+                  {report.blocking_plate && (
+                    <p className="text-xs text-gray-500">Хаасан: {report.blocking_plate}</p>
                   )}
                   <p className="text-xs text-gray-400 mt-1">
-                    {new Date(report.timestamp).toLocaleString('mn-MN')}
+                    {new Date(report.created_at).toLocaleString('mn-MN')}
                   </p>
                 </div>
               ))}
@@ -365,7 +385,7 @@ export default function MobileParkingPage() {
                 {Array.from({ length: TOTAL_SPOTS }, (_, i) => {
                   const spot = String(i + 1);
                   const isOccupied = occupiedSpots.includes(spot);
-                  const vehicle = allVehicles.find(v => v.parkingSpot === spot);
+                  const vehicle = allVehicles.find(v => v.parking_spot === spot);
 
                   return (
                     <div
@@ -378,7 +398,7 @@ export default function MobileParkingPage() {
                     >
                       <div className="text-sm font-bold text-gray-700">{spot}</div>
                       {isOccupied ? (
-                        <div className="text-[9px] text-red-500 truncate">🚗{vehicle?.plateNumber ? ` ${vehicle.plateNumber.substring(0, 4)}` : ''}</div>
+                        <div className="text-[9px] text-red-500 truncate">🚗{vehicle?.plate_number ? ` ${vehicle.plate_number.substring(0, 4)}` : ''}</div>
                       ) : (
                         <div className="text-[9px] text-green-500">Сул</div>
                       )}

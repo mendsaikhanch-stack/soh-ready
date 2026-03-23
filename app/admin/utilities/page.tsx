@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Usage {
   id: number;
@@ -53,8 +54,9 @@ export default function AdminUtilities() {
     if (!formAmount || !formCost) return;
     setSaving(true);
 
+    const sokhId = await getAdminSokhId();
     await supabase.from('utility_usage').insert([{
-      sokh_id: 1,
+      sokh_id: sokhId,
       type: formType,
       amount: Number(formAmount),
       cost: Number(formCost),

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Poll { id: number; title: string; description: string; status: string; yes_count: number; no_count: number; total_voters: number; created_at: string; }
 
@@ -25,8 +26,9 @@ export default function AdminPolls() {
   const createPoll = async () => {
     if (!title) return;
     setSaving(true);
+    const sokhId = await getAdminSokhId();
     await supabase.from('polls').insert([{
-      sokh_id: 7, title, description, status: 'active',
+      sokh_id: sokhId, title, description, status: 'active',
       yes_count: 0, no_count: 0, total_voters: Number(totalVoters) || 50,
     }]);
     setShowForm(false);

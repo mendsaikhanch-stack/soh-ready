@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Announcement { id: number; title: string; content: string; type: string; created_at: string; }
 
@@ -25,7 +26,8 @@ export default function AdminAnnouncements() {
   const createAnnouncement = async () => {
     if (!title) return;
     setSaving(true);
-    await supabase.from('announcements').insert([{ sokh_id: 7, title, content, type }]);
+    const sokhId = await getAdminSokhId();
+    await supabase.from('announcements').insert([{ sokh_id: sokhId, title, content, type }]);
     setShowForm(false);
     setTitle(''); setContent(''); setType('info');
     setSaving(false);
