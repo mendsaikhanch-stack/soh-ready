@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface Request { id: number; title: string; description: string; status: string; created_at: string; }
 
@@ -26,13 +27,13 @@ export default function AdminMaintenance() {
   };
 
   const updateStatus = async (id: number, status: string) => {
-    await supabase.from('maintenance_requests').update({ status }).eq('id', id);
+    await adminFrom('maintenance_requests').update({ status }).eq('id', id);
     await fetchRequests();
   };
 
   const deleteRequest = async (id: number) => {
     if (!confirm('Устгах уу?')) return;
-    await supabase.from('maintenance_requests').delete().eq('id', id);
+    await adminFrom('maintenance_requests').delete().eq('id', id);
     await fetchRequests();
   };
 

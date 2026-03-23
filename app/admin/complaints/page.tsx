@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface Complaint {
   id: number;
@@ -50,7 +51,7 @@ export default function AdminComplaints() {
   };
 
   const updateStatus = async (id: number, status: string) => {
-    await supabase.from('complaints').update({ status }).eq('id', id);
+    await adminFrom('complaints').update({ status }).eq('id', id);
     await fetchComplaints();
   };
 
@@ -58,7 +59,7 @@ export default function AdminComplaints() {
     if (!replyText.trim()) return;
     setSaving(true);
 
-    await supabase.from('complaints').update({
+    await adminFrom('complaints').update({
       admin_reply: replyText,
       replied_at: new Date().toISOString(),
       status: 'resolved',
@@ -72,7 +73,7 @@ export default function AdminComplaints() {
 
   const deleteComplaint = async (id: number) => {
     if (!confirm('Устгах уу?')) return;
-    await supabase.from('complaints').delete().eq('id', id);
+    await adminFrom('complaints').delete().eq('id', id);
     await fetchComplaints();
   };
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface Staff {
   id: number;
@@ -59,9 +60,9 @@ export default function AdminStaff() {
     const record = { sokh_id: 1, name, role, phone, schedule, status: 'active' };
 
     if (editId) {
-      await supabase.from('staff').update(record).eq('id', editId);
+      await adminFrom('staff').update(record).eq('id', editId);
     } else {
-      await supabase.from('staff').insert([record]);
+      await adminFrom('staff').insert([record]);
     }
 
     resetForm();
@@ -80,13 +81,13 @@ export default function AdminStaff() {
 
   const toggleStatus = async (id: number, current: string) => {
     const newStatus = current === 'active' ? 'inactive' : 'active';
-    await supabase.from('staff').update({ status: newStatus }).eq('id', id);
+    await adminFrom('staff').update({ status: newStatus }).eq('id', id);
     await fetchStaff();
   };
 
   const deleteStaff = async (id: number) => {
     if (!confirm('Устгах уу?')) return;
-    await supabase.from('staff').delete().eq('id', id);
+    await adminFrom('staff').delete().eq('id', id);
     await fetchStaff();
   };
 

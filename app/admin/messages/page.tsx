@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface Resident {
   id: number;
@@ -82,7 +83,7 @@ export default function AdminMessages() {
     const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
 
     // sokh_id = 7 (одоогоор hardcoded, дараа dynamic болгоно)
-    const { error } = await supabase.from('scheduled_notifications').insert({
+    const { error } = await adminFrom('scheduled_notifications').insert({
       sokh_id: 7,
       title: defaults.title,
       message: defaults.message,
@@ -117,7 +118,7 @@ export default function AdminMessages() {
     setSending(true);
     setSendResult(null);
 
-    const { error } = await supabase.from('scheduled_notifications').insert({
+    const { error } = await adminFrom('scheduled_notifications').insert({
       sokh_id: 7,
       title: defaults.title,
       message: defaults.message,
@@ -141,13 +142,13 @@ export default function AdminMessages() {
 
   // Мэдэгдэл цуцлах
   const cancelNotification = async (id: number) => {
-    await supabase.from('scheduled_notifications').update({ status: 'cancelled' }).eq('id', id);
+    await adminFrom('scheduled_notifications').update({ status: 'cancelled' }).eq('id', id);
     fetchData();
   };
 
   // Мэдэгдэл устгах
   const deleteNotification = async (id: number) => {
-    await supabase.from('scheduled_notifications').delete().eq('id', id);
+    await adminFrom('scheduled_notifications').delete().eq('id', id);
     fetchData();
   };
 

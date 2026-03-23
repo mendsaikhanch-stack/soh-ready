@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface Alert {
   id: number;
@@ -59,7 +60,7 @@ export default function AdminEmergency() {
     if (!formTitle) return;
     setSaving(true);
 
-    await supabase.from('emergency_alerts').insert([{
+    await adminFrom('emergency_alerts').insert([{
       sokh_id: 1,
       type: formType,
       title: formTitle,
@@ -75,13 +76,13 @@ export default function AdminEmergency() {
   };
 
   const resolveAlert = async (id: number) => {
-    await supabase.from('emergency_alerts').update({ status: 'resolved' }).eq('id', id);
+    await adminFrom('emergency_alerts').update({ status: 'resolved' }).eq('id', id);
     await fetchAlerts();
   };
 
   const deleteAlert = async (id: number) => {
     if (!confirm('Устгах уу?')) return;
-    await supabase.from('emergency_alerts').delete().eq('id', id);
+    await adminFrom('emergency_alerts').delete().eq('id', id);
     await fetchAlerts();
   };
 
