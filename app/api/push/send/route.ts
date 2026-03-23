@@ -3,12 +3,17 @@ import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import webpush from 'web-push';
 
-// VAPID тохиргоо
-webpush.setVapidDetails(
-  'mailto:info@toot.mn',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
-  process.env.VAPID_PRIVATE_KEY || ''
-);
+// VAPID тохиргоо — runtime-д lazy init
+let vapidConfigured = false;
+function ensureVapid() {
+  if (vapidConfigured) return;
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  if (publicKey && privateKey) {
+    webpush.setVapidDetails('mailto:info@toot.mn', publicKey, privateKey);
+    vapidConfigured = true;
+  }
+}
 
 // Admin session шалгах
 async function isAdmin(): Promise<boolean> {
@@ -26,6 +31,8 @@ export async function POST(request: NextRequest) {
   if (!(await isAdmin())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  ensureVapid();
 
   try {
     const { title, body, url, sokh_id } = await request.json();
