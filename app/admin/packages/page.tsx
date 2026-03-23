@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface Package {
   id: number; resident_name: string; unit_number: string; carrier: string;
@@ -31,7 +32,7 @@ export default function AdminPackages() {
   const addPackage = async () => {
     if (!name || !unit) return;
     setSaving(true);
-    await supabase.from('packages').insert([{
+    await adminFrom('packages').insert([{
       sokh_id: 1, resident_name: name, unit_number: unit, carrier, description: desc,
       pickup_code: generateCode(), status: 'delivered', delivered_at: new Date().toISOString(),
     }]);
@@ -41,13 +42,13 @@ export default function AdminPackages() {
   };
 
   const markPickedUp = async (id: number) => {
-    await supabase.from('packages').update({ status: 'picked_up', picked_up_at: new Date().toISOString() }).eq('id', id);
+    await adminFrom('packages').update({ status: 'picked_up', picked_up_at: new Date().toISOString() }).eq('id', id);
     await fetch();
   };
 
   const del = async (id: number) => {
     if (!confirm('Устгах уу?')) return;
-    await supabase.from('packages').delete().eq('id', id);
+    await adminFrom('packages').delete().eq('id', id);
     await fetch();
   };
 

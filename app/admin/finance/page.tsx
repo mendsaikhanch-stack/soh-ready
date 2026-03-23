@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface BudgetItem { id: number; category: string; amount: number; month: number; year: number; description: string; }
 
@@ -42,14 +43,14 @@ export default function AdminFinance() {
   const add = async () => {
     if (!fAmount) return;
     setSaving(true);
-    await supabase.from('budget_items').insert([{ sokh_id: 1, category: fCat, amount: Number(fAmount), month, year, description: fDesc }]);
+    await adminFrom('budget_items').insert([{ sokh_id: 1, category: fCat, amount: Number(fAmount), month, year, description: fDesc }]);
     setFAmount(''); setFDesc(''); setShowForm(false); setSaving(false);
     await fetch();
   };
 
   const del = async (id: number) => {
     if (!confirm('Устгах уу?')) return;
-    await supabase.from('budget_items').delete().eq('id', id);
+    await adminFrom('budget_items').delete().eq('id', id);
     await fetch();
   };
 

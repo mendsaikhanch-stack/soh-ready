@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Space { id: number; name: string; type: string; capacity: number; description: string; }
@@ -46,7 +47,7 @@ export default function AdminBooking() {
     if (!spName) return;
     setSaving(true);
     const sokhId = await getAdminSokhId();
-    await supabase.from('common_spaces').insert([{
+    await adminFrom('common_spaces').insert([{
       sokh_id: sokhId, name: spName, type: spType, capacity: spCapacity ? Number(spCapacity) : 0, description: spDesc,
     }]);
     setSpName(''); setSpDesc(''); setSpCapacity('');
@@ -56,12 +57,12 @@ export default function AdminBooking() {
 
   const deleteSpace = async (id: number) => {
     if (!confirm('Устгах уу?')) return;
-    await supabase.from('common_spaces').delete().eq('id', id);
+    await adminFrom('common_spaces').delete().eq('id', id);
     await fetchAll();
   };
 
   const cancelBooking = async (id: number) => {
-    await supabase.from('space_bookings').update({ status: 'cancelled' }).eq('id', id);
+    await adminFrom('space_bookings').update({ status: 'cancelled' }).eq('id', id);
     await fetchAll();
   };
 

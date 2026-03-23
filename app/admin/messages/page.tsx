@@ -94,7 +94,7 @@ export default function AdminMessages() {
     });
 
     if (error) {
-      setSendResult('Алдаа: ' + error.message);
+      setSendResult('Алдаа: ' + error);
     } else {
       setSendResult('Мэдэгдэл амжилттай товлогдлоо!');
       setTitle('');
@@ -129,7 +129,7 @@ export default function AdminMessages() {
     });
 
     if (error) {
-      setSendResult('Алдаа: ' + error.message);
+      setSendResult('Алдаа: ' + error);
     } else {
       setSendResult('Мэдэгдэл амжилттай илгээгдлээ!');
       setTitle('');

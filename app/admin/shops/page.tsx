@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface Shop { id: number; name: string; type: string; location: string; phone: string; hours: string; description: string; status: string; }
 interface VendingMachine { id: number; name: string; type: string; location: string; status: string; description: string; operator_name: string; operator_phone: string; }
@@ -59,7 +60,7 @@ export default function AdminShops() {
 
   const addShop = async () => {
     if (!sName) return; setSaving(true);
-    await supabase.from('local_shops').insert([{
+    await adminFrom('local_shops').insert([{
       sokh_id: 1, name: sName, type: sType, location: sLocation, phone: sPhone, hours: sHours, description: sDesc, status: 'active',
     }]);
     setSName(''); setSLocation(''); setSPhone(''); setSHours(''); setSDesc('');
@@ -68,7 +69,7 @@ export default function AdminShops() {
 
   const addVending = async () => {
     if (!vLocation) return; setSaving(true);
-    await supabase.from('vending_machines').insert([{
+    await adminFrom('vending_machines').insert([{
       sokh_id: 1, name: vName || null, type: vType, location: vLocation, description: vDesc,
       operator_name: vOperator, operator_phone: vOpPhone, status: 'active',
     }]);
@@ -77,17 +78,17 @@ export default function AdminShops() {
   };
 
   const toggleShop = async (id: number, status: string) => {
-    await supabase.from('local_shops').update({ status: status === 'active' ? 'inactive' : 'active' }).eq('id', id);
+    await adminFrom('local_shops').update({ status: status === 'active' ? 'inactive' : 'active' }).eq('id', id);
     await fetchAll();
   };
 
   const toggleVend = async (id: number, status: string) => {
-    await supabase.from('vending_machines').update({ status: status === 'active' ? 'maintenance' : 'active' }).eq('id', id);
+    await adminFrom('vending_machines').update({ status: status === 'active' ? 'maintenance' : 'active' }).eq('id', id);
     await fetchAll();
   };
 
-  const delShop = async (id: number) => { if (!confirm('Устгах уу?')) return; await supabase.from('local_shops').delete().eq('id', id); await fetchAll(); };
-  const delVend = async (id: number) => { if (!confirm('Устгах уу?')) return; await supabase.from('vending_machines').delete().eq('id', id); await fetchAll(); };
+  const delShop = async (id: number) => { if (!confirm('Устгах уу?')) return; await adminFrom('local_shops').delete().eq('id', id); await fetchAll(); };
+  const delVend = async (id: number) => { if (!confirm('Устгах уу?')) return; await adminFrom('vending_machines').delete().eq('id', id); await fetchAll(); };
 
   const getShopType = (t: string) => shopTypes.find(o => o.value === t) || shopTypes[10];
   const getVendType = (t: string) => vendingTypes.find(o => o.value === t) || vendingTypes[5];

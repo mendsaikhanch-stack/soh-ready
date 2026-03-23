@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface Resident {
   id: number;
@@ -59,9 +60,9 @@ export default function AdminResidents() {
     };
 
     if (editId) {
-      await supabase.from('residents').update(payload).eq('id', editId);
+      await adminFrom('residents').update(payload).eq('id', editId);
     } else {
-      await supabase.from('residents').insert([payload]);
+      await adminFrom('residents').insert([payload]);
     }
 
     setShowForm(false);
@@ -71,7 +72,7 @@ export default function AdminResidents() {
 
   const deleteResident = async (id: number) => {
     if (!confirm('Устгах уу?')) return;
-    await supabase.from('residents').delete().eq('id', id);
+    await adminFrom('residents').delete().eq('id', id);
     await fetchResidents();
   };
 
@@ -94,9 +95,9 @@ export default function AdminResidents() {
       return;
     }
 
-    const { error } = await supabase.from('residents').insert(newResidents);
+    const { error } = await adminFrom('residents').insert(newResidents);
     if (error) {
-      alert('Алдаа: ' + error.message);
+      alert('Алдаа: ' + error);
     } else {
       alert(`${newResidents.length} оршин суугч амжилттай нэмэгдлээ!`);
       await fetchResidents();

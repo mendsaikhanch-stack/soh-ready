@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface Resident { id: number; name: string; apartment: string; debt: number; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
@@ -55,10 +56,10 @@ export default function AdminPayments() {
     const resId = Number(selectedResident);
     const amt = Number(amount);
 
-    await supabase.from('payments').insert([{ resident_id: resId, amount: amt, description }]);
+    await adminFrom('payments').insert([{ resident_id: resId, amount: amt, description }]);
     const resident = residents.find(r => r.id === resId);
     if (resident) {
-      await supabase.from('residents').update({ debt: Math.max(0, resident.debt - amt) }).eq('id', resId);
+      await adminFrom('residents').update({ debt: Math.max(0, resident.debt - amt) }).eq('id', resId);
     }
 
     setShowForm(false);

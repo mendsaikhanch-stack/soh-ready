@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Announcement { id: number; title: string; content: string; type: string; created_at: string; }
@@ -27,7 +28,7 @@ export default function AdminAnnouncements() {
     if (!title) return;
     setSaving(true);
     const sokhId = await getAdminSokhId();
-    await supabase.from('announcements').insert([{ sokh_id: sokhId, title, content, type }]);
+    await adminFrom('announcements').insert([{ sokh_id: sokhId, title, content, type }]);
     setShowForm(false);
     setTitle(''); setContent(''); setType('info');
     setSaving(false);
@@ -36,7 +37,7 @@ export default function AdminAnnouncements() {
 
   const deleteItem = async (id: number) => {
     if (!confirm('Устгах уу?')) return;
-    await supabase.from('announcements').delete().eq('id', id);
+    await adminFrom('announcements').delete().eq('id', id);
     await fetchItems();
   };
 

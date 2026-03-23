@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface Listing {
   id: number;
@@ -34,13 +35,13 @@ export default function AdminMarketplace() {
   };
 
   const toggle = async (id: number, status: string) => {
-    await supabase.from('marketplace_listings').update({ status: status === 'active' ? 'inactive' : 'active' }).eq('id', id);
+    await adminFrom('marketplace_listings').update({ status: status === 'active' ? 'inactive' : 'active' }).eq('id', id);
     await fetch();
   };
 
   const del = async (id: number) => {
     if (!confirm('Устгах уу?')) return;
-    await supabase.from('marketplace_listings').delete().eq('id', id);
+    await adminFrom('marketplace_listings').delete().eq('id', id);
     await fetch();
   };
 

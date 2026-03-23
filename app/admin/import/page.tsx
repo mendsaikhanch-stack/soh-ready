@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface ParsedRow {
   name: string;
@@ -289,8 +290,8 @@ export default function ImportPage() {
       if (row.phone) insertData.phone = row.phone;
       if (sokhId) insertData.sokh_id = sokhId;
 
-      const { error } = await supabase.from('residents').insert([insertData]);
-      if (error) { failed++; console.error('Import error:', error.message, row); }
+      const { error } = await adminFrom('residents').insert([insertData]);
+      if (error) { failed++; console.error('Import error:', error, row); }
       else success++;
     }
 
