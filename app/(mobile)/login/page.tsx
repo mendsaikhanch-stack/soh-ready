@@ -1,16 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { useAuth } from '@/app/lib/auth-context';
 import TootLogo from '@/app/components/TootLogo';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, profile, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Аль хэдийн нэвтэрсэн бол sokh руу шилжих
+  useEffect(() => {
+    if (!authLoading && user && profile?.sokh_id) {
+      router.replace(`/sokh/${profile.sokh_id}`);
+    }
+  }, [authLoading, user, profile, router]);
 
   const handleLogin = async () => {
     setError('');
@@ -33,8 +42,36 @@ export default function LoginPage() {
       return;
     }
 
+    // Auth context profile-г хүлээх — onAuthStateChange trigger хийнэ
+    // Profile ачаалагдсны дараа useEffect redirect хийнэ
+    // Түр хүлээх: resident мэдээлэл авах
+    const { data: { user: loggedInUser } } = await supabase.auth.getUser();
+    if (loggedInUser) {
+      const phone = loggedInUser.user_metadata?.phone;
+      let query = supabase.from('residents').select('sokh_id');
+      if (phone) {
+        query = query.eq('phone', phone);
+      }
+      const { data: resident } = await query.limit(1).single();
+
+      if (resident?.sokh_id) {
+        router.replace(`/sokh/${resident.sokh_id}`);
+        return;
+      }
+    }
+
+    // sokh_id олдохгүй бол select хуудас руу
     router.replace('/select');
   };
+
+  // Аль хэдийн нэвтэрсэн бол loading харуулна
+  if (authLoading || (user && profile)) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-400">Ачаалж байна...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

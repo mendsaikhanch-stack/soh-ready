@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { useAuth } from '@/app/lib/auth-context';
 
 interface SokhOrg {
   id: number;
@@ -37,6 +38,7 @@ const menuItems = [
 export default function SokhDashboard() {
   const params = useParams();
   const router = useRouter();
+  const { profile, signOut } = useAuth();
   const [sokh, setSokh] = useState<SokhOrg | null>(null);
   const [stats, setStats] = useState({ residents: 0, totalDebt: 0, announcements: 0 });
   const [notifCount, setNotifCount] = useState(0);
@@ -110,11 +112,28 @@ export default function SokhDashboard() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-blue-600 text-white px-4 py-4">
+        {/* Хэрэглэгчийн мэдээлэл */}
+        {profile && (
+          <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/20">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">
+                {profile.name.charAt(0)}
+              </div>
+              <div>
+                <p className="text-sm font-medium">{profile.name}</p>
+                <p className="text-xs text-white/60">{profile.apartment}</p>
+              </div>
+            </div>
+            <button
+              onClick={async () => { await signOut(); router.replace('/login'); }}
+              className="text-xs text-white/70 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10"
+            >
+              Гарах
+            </button>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div>
-            <button onClick={() => router.push('/')} className="text-white/80 text-sm mb-1">
-              ← Буцах
-            </button>
             <h1 className="text-lg font-bold">{sokh?.name}</h1>
             <p className="text-sm text-white/70">{sokh?.address}</p>
           </div>
