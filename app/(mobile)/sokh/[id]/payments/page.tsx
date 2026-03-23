@@ -13,21 +13,11 @@ interface BillItem {
   color: string;
 }
 
-type PayMethod = 'qpay' | 'bank' | 'card' | null;
-
-const bankApps = [
-  { id: 'khan', name: 'Хаан банк', color: 'bg-green-600', scheme: 'khanbank://payment' },
-  { id: 'golomt', name: 'Голомт', color: 'bg-blue-700', scheme: 'golomtbank://payment' },
-  { id: 'tdb', name: 'ХХБ', color: 'bg-red-600', scheme: 'tdbm://payment' },
-  { id: 'state', name: 'Төрийн банк', color: 'bg-sky-600', scheme: 'statebank://payment' },
-  { id: 'xac', name: 'Хас банк', color: 'bg-emerald-600', scheme: 'xacbank://payment' },
-  { id: 'bogd', name: 'Богд банк', color: 'bg-amber-600', scheme: 'bogdbank://payment' },
-  { id: 'ckbank', name: 'Капитрон', color: 'bg-purple-600', scheme: 'capitronbank://payment' },
-  { id: 'most', name: 'Most Money', color: 'bg-orange-500', scheme: 'mostmoney://payment' },
-  { id: 'social', name: 'SocialPay', color: 'bg-pink-600', scheme: 'socialpay://payment' },
-  { id: 'monpay', name: 'MonPay', color: 'bg-indigo-600', scheme: 'monpay://payment' },
-  { id: 'hipay', name: 'Hi-Pay', color: 'bg-teal-500', scheme: 'hipay://payment' },
-];
+interface QPayInvoice {
+  invoice_id: string;
+  qr_image: string;
+  urls: { name: string; logo: string; link: string }[];
+}
 
 const BILL_COLORS: Record<string, string> = {
   'service': 'bg-blue-50 border-blue-200',
@@ -41,11 +31,13 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [totalDebt, setTotalDebt] = useState(0);
   const [activeTab, setActiveTab] = useState<'bills' | 'history'>('bills');
-  const [payMethod, setPayMethod] = useState<PayMethod>(null);
   const [payingBill, setPayingBill] = useState<BillItem | null>(null);
   const [paySuccess, setPaySuccess] = useState(false);
   const [payments, setPayments] = useState<any[]>([]);
   const [bills, setBills] = useState<BillItem[]>([]);
+  const [qpayInvoice, setQpayInvoice] = useState<QPayInvoice | null>(null);
+  const [qpayLoading, setQpayLoading] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,32 +97,84 @@ export default function PaymentsPage() {
   const paidBills = bills.filter(b => b.paid);
   const unpaidTotal = unpaidBills.reduce((s, b) => s + b.amount, 0);
 
-  const startPay = (bill: BillItem) => {
+  const startPay = async (bill: BillItem) => {
     setPayingBill(bill);
-    setPayMethod(null);
+    setQpayInvoice(null);
     setPaySuccess(false);
+    setQpayLoading(true);
+
+    try {
+      const res = await fetch('/api/qpay/invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: bill.amount,
+          description: `Тоот — ${bill.name}`,
+          orderId: `${params.id}-${bill.id}-${Date.now()}`,
+        }),
+      });
+      const data = await res.json();
+      if (data.invoice_id) {
+        setQpayInvoice(data);
+        startPolling(data.invoice_id, bill);
+      }
+    } catch (err) {
+      console.error('QPay error:', err);
+    }
+    setQpayLoading(false);
   };
 
   const payAll = () => {
-    setPayingBill({ id: 0, name: 'Бүх төлбөр', icon: '💰', amount: unpaidTotal, paid: false, color: '' });
-    setPayMethod(null);
-    setPaySuccess(false);
+    startPay({ id: 0, name: 'Бүх төлбөр', icon: '💰', amount: unpaidTotal, paid: false, color: '' });
   };
 
-  const confirmPay = () => {
-    if (!payMethod || !payingBill) return;
-    setPaySuccess(true);
+  const startPolling = (invoiceId: string, bill: BillItem) => {
+    setChecking(true);
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/qpay/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invoice_id: invoiceId }),
+        });
+        const data = await res.json();
+        if (data.paid) {
+          clearInterval(interval);
+          setChecking(false);
+          setPaySuccess(true);
 
-    if (payingBill.id === 0) {
-      setBills(prev => prev.map(b => ({ ...b, paid: true })));
-    } else {
-      setBills(prev => prev.map(b => b.id === payingBill.id ? { ...b, paid: true } : b));
-    }
+          if (bill.id === 0) {
+            setBills(prev => prev.map(b => ({ ...b, paid: true })));
+          } else {
+            setBills(prev => prev.map(b => b.id === bill.id ? { ...b, paid: true } : b));
+          }
 
+          // Суубаас-д төлбөр бүртгэх
+          await supabase.from('payments').insert([{
+            amount: bill.amount,
+            description: `QPay — ${bill.name}`,
+          }]);
+
+          setTimeout(() => {
+            setPayingBill(null);
+            setPaySuccess(false);
+            setQpayInvoice(null);
+          }, 2500);
+        }
+      } catch {}
+    }, 3000);
+
+    // 5 минутын дараа polling зогсоох
     setTimeout(() => {
-      setPayingBill(null);
-      setPaySuccess(false);
-    }, 2000);
+      clearInterval(interval);
+      setChecking(false);
+    }, 5 * 60 * 1000);
+  };
+
+  const closePayModal = () => {
+    setPayingBill(null);
+    setQpayInvoice(null);
+    setChecking(false);
   };
 
   const timeAgo = (dateStr: string) => {
@@ -278,9 +322,9 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      {/* Төлбөр төлөх modal */}
+      {/* QPay төлбөр төлөх modal */}
       {payingBill && !paySuccess && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50" onClick={() => setPayingBill(null)}>
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50" onClick={closePayModal}>
           <div
             className="bg-white w-full max-w-[430px] rounded-t-2xl p-6 max-h-[85vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
@@ -289,112 +333,70 @@ export default function PaymentsPage() {
             <h2 className="text-lg font-bold mb-1">Төлбөр төлөх</h2>
             <p className="text-sm text-gray-500 mb-4">{payingBill.name} — {payingBill.amount.toLocaleString()}₮</p>
 
-            {/* Банкны апп-аар төлөх */}
-            <h3 className="text-sm font-semibold text-gray-500 mb-3">БАНКНЫ АПП-ААР ТӨЛӨХ</h3>
-            <div className="grid grid-cols-5 gap-2 mb-6">
-              {bankApps.map(bank => (
-                <button
-                  key={bank.id}
-                  onClick={() => {
-                    window.location.href = bank.scheme;
-                    setTimeout(() => {
-                      setPayMethod('bank');
-                    }, 1500);
-                  }}
-                  className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-gray-50 active:scale-95 transition"
-                >
-                  <div className={`w-11 h-11 ${bank.color} rounded-xl flex items-center justify-center`}>
-                    <span className="text-white text-xs font-bold">
-                      {bank.name.slice(0, 2)}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-gray-600 text-center leading-tight">{bank.name}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Бусад арга */}
-            <h3 className="text-sm font-semibold text-gray-500 mb-3">БУСАД АРГА</h3>
-            <div className="space-y-2 mb-4">
-              <button
-                onClick={() => setPayMethod('bank')}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition ${
-                  payMethod === 'bank' ? 'border-green-500 bg-green-50' : 'border-gray-200'
-                }`}
-              >
-                <span className="text-xl">🏦</span>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">Дансаар шилжүүлэх</p>
-                  <p className="text-xs text-gray-500">Дансны мэдээлэл харах</p>
-                </div>
-                {payMethod === 'bank' && <span className="text-green-500">✓</span>}
-              </button>
-
-              <button
-                onClick={() => setPayMethod('card')}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition ${
-                  payMethod === 'card' ? 'border-green-500 bg-green-50' : 'border-gray-200'
-                }`}
-              >
-                <span className="text-xl">💳</span>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">Карт</p>
-                  <p className="text-xs text-gray-500">Visa, Mastercard</p>
-                </div>
-                {payMethod === 'card' && <span className="text-green-500">✓</span>}
-              </button>
-            </div>
-
-            {/* Банк данс */}
-            {payMethod === 'bank' && (
-              <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Банк:</span>
-                    <span className="font-medium">Хаан банк</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Данс:</span>
-                    <span className="font-medium font-mono">5012345678</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Нэр:</span>
-                    <span className="font-medium">СӨХ нэр</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Гүйлгээний утга:</span>
-                    <span className="font-medium">{payingBill.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Дүн:</span>
-                    <span className="font-bold text-green-600">{payingBill.amount.toLocaleString()}₮</span>
-                  </div>
-                </div>
+            {/* QPay ачаалж байна */}
+            {qpayLoading && (
+              <div className="text-center py-8">
+                <div className="animate-spin text-3xl mb-3">⏳</div>
+                <p className="text-gray-500 text-sm">QPay invoice үүсгэж байна...</p>
               </div>
             )}
 
-            {/* Карт */}
-            {payMethod === 'card' && (
-              <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3">
-                <input type="text" placeholder="Картын дугаар" maxLength={19}
-                  className="w-full border rounded-lg px-3 py-2.5 text-sm" />
-                <div className="flex gap-2">
-                  <input type="text" placeholder="MM/YY" maxLength={5}
-                    className="flex-1 border rounded-lg px-3 py-2.5 text-sm" />
-                  <input type="text" placeholder="CVV" maxLength={3}
-                    className="w-20 border rounded-lg px-3 py-2.5 text-sm" />
+            {/* QPay QR код */}
+            {qpayInvoice && !qpayLoading && (
+              <>
+                {/* QR код */}
+                <div className="text-center mb-4">
+                  <div className="bg-white border-2 border-gray-200 rounded-2xl p-4 inline-block">
+                    <img
+                      src={`data:image/png;base64,${qpayInvoice.qr_image}`}
+                      alt="QPay QR"
+                      className="w-48 h-48 mx-auto"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">QR кодыг банкны апп-аар уншуулна уу</p>
                 </div>
-              </div>
+
+                {/* Төлбөр шалгаж байна */}
+                {checking && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 flex items-center gap-2">
+                    <div className="animate-spin text-lg">⏳</div>
+                    <p className="text-sm text-blue-700">Төлбөр хүлээж байна...</p>
+                  </div>
+                )}
+
+                {/* Банкны апп-ийн товчлуурууд (QPay deeplinks) */}
+                {qpayInvoice.urls && qpayInvoice.urls.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-semibold text-gray-500 mb-3">БАНКНЫ АПП-ААР ТӨЛӨХ</h3>
+                    <div className="grid grid-cols-4 gap-2 mb-4">
+                      {qpayInvoice.urls.slice(0, 12).map((bank, i) => (
+                        <a
+                          key={i}
+                          href={bank.link}
+                          className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-gray-50 active:scale-95 transition"
+                        >
+                          {bank.logo ? (
+                            <img src={bank.logo} alt={bank.name} className="w-11 h-11 rounded-xl" />
+                          ) : (
+                            <div className="w-11 h-11 bg-blue-600 rounded-xl flex items-center justify-center">
+                              <span className="text-white text-xs font-bold">{bank.name.slice(0, 2)}</span>
+                            </div>
+                          )}
+                          <span className="text-[10px] text-gray-600 text-center leading-tight">{bank.name}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
             )}
 
-            {payMethod && (
-              <button
-                onClick={confirmPay}
-                className="w-full py-3 rounded-xl font-semibold text-sm bg-green-600 text-white active:bg-green-700 transition"
-              >
-                Төлсөн ({payingBill.amount.toLocaleString()}₮)
-              </button>
-            )}
+            <button
+              onClick={closePayModal}
+              className="w-full py-3 rounded-xl font-semibold text-sm border border-gray-300 text-gray-600 mt-2"
+            >
+              Цуцлах
+            </button>
           </div>
         </div>
       )}
