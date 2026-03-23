@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import TootLogo from '@/app/components/TootLogo';
+import { supabase } from '@/app/lib/supabase';
+import Image from 'next/image';
 
 const navItems = [
   { icon: '📊', label: 'Хянах самбар', href: '/admin' },
@@ -25,6 +27,7 @@ const navItems = [
   { icon: '🚗', label: 'Зогсоол', href: '/admin/parking' },
   { icon: '📹', label: 'Камер (CCTV)', href: '/admin/cctv' },
   { icon: '📤', label: 'Файл импорт', href: '/admin/import' },
+  { icon: '🎨', label: 'Брэнд тохиргоо', href: '/admin/branding' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -36,9 +39,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [orgLogo, setOrgLogo] = useState<string | null>(null);
+  const [orgName, setOrgName] = useState('');
 
   useEffect(() => {
     checkAuth();
+    const fetchOrg = async () => {
+      const { data } = await supabase
+        .from('sokh_organizations')
+        .select('name, logo_url')
+        .limit(1)
+        .single();
+      if (data) {
+        setOrgLogo(data.logo_url || null);
+        setOrgName(data.name || '');
+      }
+    };
+    fetchOrg();
   }, []);
 
   const checkAuth = async () => {
@@ -163,8 +180,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-gray-100 flex">
       <aside className="w-56 bg-gray-900 text-white flex-shrink-0 min-h-screen flex flex-col">
         <div className="p-4 border-b border-gray-700">
-          <TootLogo size={84} textColor="text-white" />
-          <p className="text-xs text-gray-400 mt-1">Удирдлагын панел</p>
+          {orgLogo ? (
+            <div className="flex items-center gap-2">
+              <Image src={orgLogo} alt={orgName} width={40} height={40} className="w-10 h-10 rounded-lg object-contain" />
+              <div>
+                <p className="text-sm font-bold text-white truncate">{orgName}</p>
+                <p className="text-xs text-gray-400">Удирдлагын панел</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <TootLogo size={84} textColor="text-white" />
+              <p className="text-xs text-gray-400 mt-1">Удирдлагын панел</p>
+            </>
+          )}
         </div>
         <nav className="p-2 flex-1 overflow-y-auto">
           {navItems.map((item) => {

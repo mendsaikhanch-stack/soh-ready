@@ -5,12 +5,16 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
 import { isPushSupported, requestPermission, subscribeToPush } from '@/app/lib/push';
+import { getTheme } from '@/app/lib/themes';
+import Image from 'next/image';
 
 interface SokhOrg {
   id: number;
   name: string;
   address: string;
   phone: string;
+  logo_url: string | null;
+  theme: string | null;
 }
 
 const menuItems = [
@@ -110,6 +114,8 @@ export default function SokhDashboard() {
     }
   }, [params.id]);
 
+  const theme = getTheme(sokh?.theme || 'classic');
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -121,7 +127,7 @@ export default function SokhDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-blue-600 text-white px-4 py-4">
+      <div className={`${theme.header} ${theme.headerText} px-4 py-4`}>
         {/* Хэрэглэгчийн мэдээлэл */}
         {profile && (
           <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/20">
@@ -143,9 +149,24 @@ export default function SokhDashboard() {
           </div>
         )}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold">{sokh?.name}</h1>
-            <p className="text-sm text-white/70">{sokh?.address}</p>
+          <div className="flex items-center gap-3">
+            {sokh?.logo_url ? (
+              <Image
+                src={sokh.logo_url}
+                alt={sokh.name}
+                width={40}
+                height={40}
+                className="w-10 h-10 rounded-xl object-contain bg-white/20"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-lg font-bold">
+                {sokh?.name?.charAt(0)}
+              </div>
+            )}
+            <div>
+              <h1 className="text-lg font-bold">{sokh?.name}</h1>
+              <p className="text-sm text-white/70">{sokh?.address}</p>
+            </div>
           </div>
           {/* Мэдэгдлийн хонх */}
           <button
@@ -154,7 +175,7 @@ export default function SokhDashboard() {
           >
             <span className="text-2xl">🔔</span>
             {notifCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+              <span className={`absolute -top-0.5 -right-0.5 ${theme.badge} text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center`}>
                 {notifCount > 9 ? '9+' : notifCount}
               </span>
             )}
@@ -202,7 +223,7 @@ export default function SokhDashboard() {
           {/* Мэдэгдэл цэс */}
           <button
             onClick={() => router.push(`/sokh/${params.id}/notifications`)}
-            className="w-full flex items-center gap-3 p-4 rounded-xl border bg-red-50 border-red-200 text-left active:scale-[0.98] transition"
+            className={`w-full flex items-center gap-3 p-4 rounded-xl border ${theme.cardBg} ${theme.cardBorder} text-left active:scale-[0.98] transition`}
           >
             <span className="text-2xl">🔔</span>
             <div className="flex-1">
