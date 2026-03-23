@@ -131,7 +131,23 @@ export default function AdminMessages() {
     if (error) {
       setSendResult('Алдаа: ' + error);
     } else {
-      setSendResult('Мэдэгдэл амжилттай илгээгдлээ!');
+      // Push notification илгээх
+      try {
+        const pushRes = await fetch('/api/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: defaults.title,
+            body: defaults.message,
+            sokh_id: 7,
+            url: '/sokh/7/notifications',
+          }),
+        });
+        const pushData = await pushRes.json();
+        setSendResult(`Мэдэгдэл илгээгдлээ! (Push: ${pushData.sent || 0} хүнд)`);
+      } catch {
+        setSendResult('Мэдэгдэл хадгалагдлаа (Push илгээхэд алдаа)');
+      }
       setTitle('');
       setCustomText('');
       fetchData();

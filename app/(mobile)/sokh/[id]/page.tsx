@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
+import { isPushSupported, requestPermission, subscribeToPush } from '@/app/lib/push';
 
 interface SokhOrg {
   id: number;
@@ -98,6 +99,15 @@ export default function SokhDashboard() {
       setLoading(false);
     };
     fetchData();
+
+    // Push notification бүртгэх
+    if (isPushSupported()) {
+      requestPermission().then(perm => {
+        if (perm === 'granted') {
+          subscribeToPush(Number(params.id));
+        }
+      });
+    }
   }, [params.id]);
 
   if (loading) {
