@@ -8,6 +8,7 @@ import { isPushSupported, requestPermission, subscribeToPush } from '@/app/lib/p
 import { getTheme } from '@/app/lib/themes';
 import Image from 'next/image';
 import { useDarkMode } from '@/app/lib/dark-mode';
+import { useI18n } from '@/app/lib/i18n';
 
 interface SokhOrg {
   id: number;
@@ -66,6 +67,7 @@ export default function SokhDashboard() {
   const router = useRouter();
   const { profile, signOut } = useAuth();
   const { dark, toggle: toggleDark } = useDarkMode();
+  const { locale, setLocale, t } = useI18n();
   const [sokh, setSokh] = useState<SokhOrg | null>(null);
   const [stats, setStats] = useState({ residents: 0, totalDebt: 0, announcements: 0 });
   const [notifCount, setNotifCount] = useState(0);
@@ -258,6 +260,12 @@ export default function SokhDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => setLocale(locale === 'mn' ? 'en' : 'mn')}
+                className="text-[10px] px-2 py-1 rounded-lg hover:bg-white/10 font-bold"
+              >
+                {locale === 'mn' ? 'EN' : 'MN'}
+              </button>
               <button
                 onClick={toggleDark}
                 className="text-xs px-2 py-1 rounded-lg hover:bg-white/10"
