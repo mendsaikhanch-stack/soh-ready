@@ -237,6 +237,25 @@ export default function SokhDashboard() {
         </div>
       )}
 
+      {/* Quick Actions */}
+      <div className="flex gap-2 px-4 mt-3 overflow-x-auto scrollbar-hide">
+        {[
+          { icon: '💳', label: 'Төлбөр төлөх', href: 'payments' },
+          { icon: '🔧', label: 'Засвар хүсэлт', href: 'maintenance' },
+          { icon: '📊', label: 'Тоолуур', href: 'utilities' },
+          { icon: '🚨', label: 'Яаралтай', href: 'emergency' },
+        ].map(a => (
+          <button
+            key={a.href}
+            onClick={() => router.push(`/sokh/${params.id}/${a.href}`)}
+            className="flex-shrink-0 flex flex-col items-center gap-1 bg-white rounded-xl shadow-sm px-4 py-3 active:scale-95 transition"
+          >
+            <span className="text-xl">{a.icon}</span>
+            <span className="text-[11px] font-medium text-gray-600 whitespace-nowrap">{a.label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-2 px-4 mt-3">
         <div className="bg-white rounded-xl shadow-sm p-3 text-center">
