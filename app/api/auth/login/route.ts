@@ -4,6 +4,7 @@ const USERS: Record<string, { password: string; role: string }> = {
   admin: { password: process.env.ADMIN_PASSWORD || 'Toot@2024!Secure', role: 'admin' },
   superadmin: { password: process.env.SUPER_PASSWORD || 'Super@Toot2024!', role: 'superadmin' },
   osnaa: { password: process.env.OSNAA_PASSWORD || 'Osnaa@Toot2024!', role: 'osnaa' },
+  // inspector хэрэглэгчид DB-ээс шалгана (доорх кодонд)
 };
 
 // Rate limiting
@@ -25,6 +26,38 @@ export async function POST(request: Request) {
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Нэр, нууц үг оруулна уу' }, { status: 400 });
+    }
+
+    // Байцаагч — DB-ээс шалгана
+    if (type === 'inspector') {
+      const { createClient } = await import('@supabase/supabase-js');
+      const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      const { data: inspector } = await sb
+        .from('inspectors')
+        .select('*')
+        .eq('username', username)
+        .eq('status', 'active')
+        .single();
+
+      if (!inspector || inspector.password !== password) {
+        const rec = attempts.get(ip) || { count: 0, lockUntil: 0 };
+        rec.count++;
+        if (rec.count >= 5) rec.lockUntil = now + 15 * 60 * 1000;
+        attempts.set(ip, rec);
+        return NextResponse.json({ error: 'Нэвтрэх нэр эсвэл нууц үг буруу' }, { status: 401 });
+      }
+
+      attempts.delete(ip);
+      const token = `${now}:${inspector.id}:${Math.random().toString(36).slice(2)}`;
+      const response = NextResponse.json({ success: true, role: 'inspector', inspectorId: inspector.id, name: inspector.name });
+      response.cookies.set('inspector-session', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 86400,
+        path: '/',
+      });
+      return response;
     }
 
     const user = USERS[username];

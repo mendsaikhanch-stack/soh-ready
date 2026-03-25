@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   const { type } = await request.json().catch(() => ({ type: 'admin' }));
 
-  const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : 'admin-session';
+  const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : type === 'inspector' ? 'inspector-session' : 'admin-session';
 
   const response = NextResponse.json({ success: true });
   response.cookies.set(cookieName, '', {
