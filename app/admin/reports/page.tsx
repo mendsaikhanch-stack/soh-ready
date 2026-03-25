@@ -85,7 +85,60 @@ export default function AdminReports() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">📋 Тайлан — Орц орцоор</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">📋 Тайлан — Орц орцоор</h1>
+        <button
+          onClick={() => {
+            const printArea = document.getElementById('report-print-area');
+            if (!printArea) return;
+            const win = window.open('', '_blank');
+            if (!win) return;
+            win.document.write(`
+              <html><head><title>Тайлан</title>
+              <style>
+                body { font-family: sans-serif; padding: 20px; color: #111; }
+                table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+                th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 13px; }
+                th { background: #f5f5f5; font-weight: 600; }
+                .text-right { text-align: right; }
+                .text-red { color: #dc2626; }
+                .text-green { color: #16a34a; }
+                h2 { margin-top: 24px; }
+                .stats { display: flex; gap: 16px; margin-bottom: 16px; }
+                .stat-box { border: 1px solid #ddd; border-radius: 8px; padding: 12px; flex: 1; }
+                .stat-label { font-size: 11px; color: #666; }
+                .stat-value { font-size: 20px; font-weight: bold; }
+                @media print { body { padding: 0; } }
+              </style></head><body>
+              <h1>СӨХ Тайлан — ${new Date().toLocaleDateString('mn-MN')}</h1>
+              <div class="stats">
+                <div class="stat-box"><div class="stat-label">Нийт айл</div><div class="stat-value">${totalResidents}</div></div>
+                <div class="stat-box"><div class="stat-label">Өртэй</div><div class="stat-value text-red">${totalDebtors}</div></div>
+                <div class="stat-box"><div class="stat-label">Нийт өр</div><div class="stat-value text-red">${totalDebt.toLocaleString()}₮</div></div>
+                <div class="stat-box"><div class="stat-label">Цуглуулалт</div><div class="stat-value text-green">${overallRate}%</div></div>
+              </div>
+              ${entrances.map(ent => `
+                <h2>Орц ${ent.entrance} (${ent.total} айл, өр: ${ent.totalDebt.toLocaleString()}₮)</h2>
+                <table>
+                  <thead><tr><th>№</th><th>Нэр</th><th>Тоот</th><th>Утас</th><th class="text-right">Өр</th></tr></thead>
+                  <tbody>
+                    ${ent.residents.map((r, i) => `<tr>
+                      <td>${i + 1}</td><td>${r.name}</td><td>${r.apartment}</td><td>${r.phone || '-'}</td>
+                      <td class="text-right ${Number(r.debt) > 0 ? 'text-red' : ''}">${Number(r.debt) > 0 ? Number(r.debt).toLocaleString() + '₮' : '0₮'}</td>
+                    </tr>`).join('')}
+                  </tbody>
+                </table>
+              `).join('')}
+              </body></html>
+            `);
+            win.document.close();
+            win.print();
+          }}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 print:hidden"
+        >
+          📄 PDF татах
+        </button>
+      </div>
 
       {/* Нийт тоймлол */}
       <div className="grid grid-cols-5 gap-3 mb-6">
