@@ -129,6 +129,18 @@ export default function LoginPage() {
           {loading ? 'Нэвтэрж байна...' : 'Нэвтрэх'}
         </button>
 
+        {/* QR кодоор нэвтрэх */}
+        <div className="mt-6 pt-6 border-t">
+          <p className="text-center text-xs text-gray-400 mb-3">ЭСВЭЛ</p>
+          <button
+            onClick={() => router.push('/qr-login')}
+            className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 py-3.5 rounded-xl text-sm font-medium text-gray-600 active:bg-gray-50 transition"
+          >
+            <span className="text-lg">📷</span>
+            QR кодоор нэвтрэх
+          </button>
+        </div>
+
         <p className="text-center text-sm text-gray-500 mt-4">
           Бүртгэлгүй юу?{' '}
           <button onClick={() => router.push('/register')} className="text-blue-600 font-medium">
