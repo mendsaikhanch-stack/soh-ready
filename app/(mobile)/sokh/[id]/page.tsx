@@ -155,8 +155,42 @@ export default function SokhDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400">Ачаалж байна...</p>
+      <div className="min-h-screen bg-gray-50 animate-pulse">
+        {/* Header skeleton */}
+        <div className="bg-gray-200 px-4 py-4">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-300/30">
+            <div className="w-8 h-8 bg-gray-300 rounded-full" />
+            <div className="space-y-1">
+              <div className="h-3 w-20 bg-gray-300 rounded" />
+              <div className="h-2 w-14 bg-gray-300 rounded" />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-300 rounded-xl" />
+            <div className="space-y-1">
+              <div className="h-4 w-32 bg-gray-300 rounded" />
+              <div className="h-3 w-24 bg-gray-300 rounded" />
+            </div>
+          </div>
+        </div>
+        {/* Quick actions skeleton */}
+        <div className="flex gap-2 px-4 mt-3">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="flex-shrink-0 w-20 h-16 bg-white rounded-xl shadow-sm" />
+          ))}
+        </div>
+        {/* Stats skeleton */}
+        <div className="grid grid-cols-3 gap-2 px-4 mt-3">
+          {[1,2,3].map(i => (
+            <div key={i} className="bg-white rounded-xl shadow-sm p-3 h-16" />
+          ))}
+        </div>
+        {/* Menu skeleton */}
+        <div className="px-4 mt-4 space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="h-16 bg-white rounded-xl shadow-sm" />
+          ))}
+        </div>
       </div>
     );
   }
