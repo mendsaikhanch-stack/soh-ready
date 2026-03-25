@@ -43,16 +43,14 @@ export default function NotificationsPage() {
     if (scheduledNotifs) {
       const readIds = getReadNotifications();
 
-      // pending → sent болгох (хугацаа нь болсон)
-      const pendingIds = scheduledNotifs
-        .filter(n => n.status === 'pending')
-        .map(n => n.id);
-
-      if (pendingIds.length > 0) {
-        await supabase
-          .from('scheduled_notifications')
-          .update({ status: 'sent' })
-          .in('id', pendingIds);
+      // pending → sent болгох + push илгээх (хугацаа нь болсон)
+      const hasPending = scheduledNotifs.some(n => n.status === 'pending');
+      if (hasPending) {
+        await fetch('/api/push/trigger-scheduled', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sokh_id: sokhId }),
+        });
       }
 
       scheduledNotifs.forEach(n => {

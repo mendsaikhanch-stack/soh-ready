@@ -24,5 +24,6 @@
   ],
   "screenshots": [],
   "categories": ["utilities", "lifestyle"],
-  "lang": "mn"
+  "lang": "mn",
+  "permissions": ["notifications", "push"]
 }

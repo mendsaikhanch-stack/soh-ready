@@ -3,6 +3,7 @@
 import { useAuth } from '@/app/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import NotificationToast from '@/app/components/NotificationToast';
 
 export default function SokhLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -29,5 +30,10 @@ export default function SokhLayout({ children }: { children: React.ReactNode }) 
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <NotificationToast />
+      {children}
+    </>
+  );
 }

@@ -10,6 +10,7 @@ const navItems = [
   { icon: '📊', label: 'Тоолуур заалт', href: '/osnaa/readings' },
   { icon: '🧾', label: 'Нэхэмжлэх', href: '/osnaa/bills' },
   { icon: '💳', label: 'Төлбөр', href: '/osnaa/payments' },
+  { icon: '🔍', label: 'Байцаагч даалгавар', href: '/osnaa/inspector-tasks' },
   { icon: '📋', label: 'Тайлан', href: '/osnaa/reports' },
 ];
 

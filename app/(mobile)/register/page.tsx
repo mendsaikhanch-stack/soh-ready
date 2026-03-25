@@ -35,11 +35,11 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
   const stepLabels = ['Хот', 'Дүүрэг', 'Хороо', 'СӨХ', 'Мэдээлэл'];
 
@@ -97,54 +97,39 @@ export default function RegisterPage() {
     setError('');
     if (!name || !phone) { setError('Нэр, утас заавал бөглөнө'); return; }
     if (!email || !password) { setError('Имэйл, нууц үг заавал бөглөнө'); return; }
-    if (password.length < 6) { setError('Нууц үг хамгийн багадаа 6 тэмдэгт'); return; }
-    if (password !== confirmPassword) { setError('Нууц үг таарахгүй байна'); return; }
+    if (password.trim().length < 6) { setError('Нууц үг хамгийн багадаа 6 тэмдэгт'); return; }
+    if (password.trim() !== confirmPassword.trim()) { setError('Нууц үг таарахгүй байна'); return; }
 
     setLoading(true);
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name, phone },
-      },
-    });
-
-    if (authError) { setError(authError.message); setLoading(false); return; }
-
-    // Оршин суугчийн мэдээлэл хадгалах
     const fullAddress = [apartment, entrance ? `${entrance}-р орц` : '', floor ? `${floor} давхар` : '', door].filter(Boolean).join(', ');
 
-    await supabase.from('residents').insert([{
-      name,
-      phone,
-      apartment: fullAddress,
-      debt: 0,
-      sokh_id: selectedSokh?.id,
-    }]);
+    // Серверт бүртгэх — имэйл шууд баталгаажна
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email, password, name, phone,
+        apartment: fullAddress,
+        sokh_id: selectedSokh?.id,
+      }),
+    });
 
-    setSuccess(true);
-    setLoading(false);
+    const result = await res.json();
+    if (!res.ok) { setError(result.error); setLoading(false); return; }
+
+    // Шууд нэвтрэх
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) { setError('Бүртгэл амжилттай. Нэвтрэхэд алдаа гарлаа.'); setLoading(false); return; }
+
+    // СӨХ хуудас руу шилжих
+    if (selectedSokh?.id) {
+      router.replace(`/sokh/${selectedSokh.id}`);
+    } else {
+      router.replace('/select');
+    }
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
-        <div className="text-5xl mb-4">✅</div>
-        <h2 className="text-lg font-bold mb-2">Бүртгэл амжилттай!</h2>
-        <p className="text-sm text-gray-500 text-center mb-2">
-          {selectedSokh?.name}-д бүртгэгдлээ
-        </p>
-        <p className="text-xs text-gray-400 text-center mb-6">
-          Имэйл хаягаа шалгаж баталгаажуулсны дараа нэвтрэх боломжтой.
-        </p>
-        <button onClick={() => router.push('/login')}
-          className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold text-sm">
-          Нэвтрэх
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -297,14 +282,28 @@ export default function RegisterPage() {
 
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Нууц үг *</label>
-                <input type="password" placeholder="6+ тэмдэгт" value={password} onChange={e => setPassword(e.target.value)}
-                  className="w-full border rounded-xl px-4 py-3 text-sm bg-white" />
+                <div className="relative">
+                  <input type={showPassword ? 'text' : 'password'} placeholder="6+ тэмдэгт" value={password} onChange={e => setPassword(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-3 text-sm bg-white pr-12" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                    {showPassword ? 'Нуух' : 'Харах'}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Нууц үг давтах *</label>
-                <input type="password" placeholder="Дахин оруулна уу" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                  className="w-full border rounded-xl px-4 py-3 text-sm bg-white" />
+                <div className="relative">
+                  <input type={showPassword ? 'text' : 'password'} placeholder="Дахин оруулна уу" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm bg-white pr-12 ${confirmPassword && (password.trim() === confirmPassword.trim() ? 'border-green-400' : 'border-red-400')}`} />
+                </div>
+                {confirmPassword && password.trim() !== confirmPassword.trim() && (
+                  <p className="text-xs text-red-500 mt-1">Нууц үг таарахгүй байна</p>
+                )}
+                {confirmPassword && password.trim() === confirmPassword.trim() && (
+                  <p className="text-xs text-green-500 mt-1">Таарч байна</p>
+                )}
               </div>
             </div>
 
