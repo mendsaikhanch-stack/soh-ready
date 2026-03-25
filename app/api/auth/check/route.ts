@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const type = url.searchParams.get('type') || 'admin';
-  const cookieName = type === 'superadmin' ? 'superadmin-session' : 'admin-session';
+  const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : 'admin-session';
 
   const cookieStore = await cookies();
   const token = cookieStore.get(cookieName)?.value;

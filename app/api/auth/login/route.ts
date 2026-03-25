@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 const USERS: Record<string, { password: string; role: string }> = {
   admin: { password: process.env.ADMIN_PASSWORD || 'Toot@2024!Secure', role: 'admin' },
   superadmin: { password: process.env.SUPER_PASSWORD || 'Super@Toot2024!', role: 'superadmin' },
+  osnaa: { password: process.env.OSNAA_PASSWORD || 'Osnaa@Toot2024!', role: 'osnaa' },
 };
 
 // Rate limiting
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     }
 
     const user = USERS[username];
-    const isCorrectType = type === 'superadmin' ? username === 'superadmin' : username === 'admin';
+    const isCorrectType = type === 'superadmin' ? username === 'superadmin' : type === 'osnaa' ? username === 'osnaa' : username === 'admin';
 
     if (!user || user.password !== password || !isCorrectType) {
       // Бүртгэх
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     // Амжилттай — cookie тохируулах
     attempts.delete(ip);
     const token = `${now}:${Math.random().toString(36).slice(2)}`;
-    const cookieName = type === 'superadmin' ? 'superadmin-session' : 'admin-session';
+    const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : 'admin-session';
     const maxAge = type === 'superadmin' ? 43200 : 86400;
 
     const response = NextResponse.json({ success: true, role: user.role });

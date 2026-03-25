@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 
 // Admin session шалгах
-async function isAdminAuthenticated(type: 'admin' | 'superadmin' = 'admin'): Promise<boolean> {
+async function isAdminAuthenticated(type: 'admin' | 'superadmin' | 'osnaa' = 'admin'): Promise<boolean> {
   const cookieStore = await cookies();
   const token = cookieStore.get(`${type}-session`)?.value;
   if (!token) return false;
@@ -23,8 +23,9 @@ export async function POST(request: NextRequest) {
   // Admin session шалгах
   const isAdmin = await isAdminAuthenticated('admin');
   const isSuperAdmin = await isAdminAuthenticated('superadmin');
+  const isOsnaa = await isAdminAuthenticated('osnaa');
 
-  if (!isAdmin && !isSuperAdmin) {
+  if (!isAdmin && !isSuperAdmin && !isOsnaa) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
