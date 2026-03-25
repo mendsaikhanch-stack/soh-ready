@@ -25,7 +25,7 @@ const menuItems = [
   { icon: '👥', label: 'Оршин суугчид', desc: 'Айл өрхийн жагсаалт', href: 'residents', color: 'bg-purple-50 border-purple-200' },
   { icon: '🚗', label: 'Зогсоол', desc: 'Машин бүртгэл, зогсоолын мэдээлэл', href: 'parking', color: 'bg-indigo-50 border-indigo-200' },
   { icon: '🎬', label: 'Камер бичлэг', desc: 'Бичлэг шүүх хүсэлт илгээх', href: 'cctv-request', color: 'bg-gray-50 border-gray-300' },
-  { icon: '📊', label: 'Ашиглалт', desc: 'Цахилгаан, ус, дулааны хэрэглээ', href: 'utilities', color: 'bg-emerald-50 border-emerald-200' },
+  { icon: '📊', label: 'Тоолуур & Ашиглалт', desc: 'Заалт оруулах, хэрэглээ харах', href: 'utilities', color: 'bg-emerald-50 border-emerald-200' },
   { icon: '💬', label: 'Хөрш чат', desc: 'Оршин суугчидтай ярилцах', href: 'chat', color: 'bg-sky-50 border-sky-200' },
   { icon: '👷', label: 'Ажилчид', desc: 'Ажилтнуудын мэдээлэл, хуваарь', href: 'staff', color: 'bg-amber-50 border-amber-200' },
   { icon: '🚨', label: 'Яаралтай', desc: 'Онцгой байдлын мэдэгдэл', href: 'emergency', color: 'bg-red-50 border-red-200' },
