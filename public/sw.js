@@ -46,11 +46,61 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
-// Background sync - offline үед мэдэгдэл хадгалах
+var CACHE_NAME = 'toot-cache-v1';
+var OFFLINE_URL = '/offline';
+var CACHED_URLS = [
+  '/',
+  '/offline',
+  '/login',
+  '/icons/icon-192.png',
+];
+
 self.addEventListener('install', function(event) {
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(function(cache) {
+      return cache.addAll(CACHED_URLS);
+    }).then(function() {
+      return self.skipWaiting();
+    })
+  );
 });
 
 self.addEventListener('activate', function(event) {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then(function(names) {
+      return Promise.all(
+        names.filter(function(name) { return name !== CACHE_NAME; })
+          .map(function(name) { return caches.delete(name); })
+      );
+    }).then(function() {
+      return clients.claim();
+    })
+  );
+});
+
+self.addEventListener('fetch', function(event) {
+  // API хүсэлтүүдийг cache хийхгүй
+  if (event.request.url.includes('/api/')) return;
+
+  event.respondWith(
+    fetch(event.request).then(function(response) {
+      // Амжилттай бол cache-д хадгалах
+      if (response.status === 200) {
+        var clone = response.clone();
+        caches.open(CACHE_NAME).then(function(cache) {
+          cache.put(event.request, clone);
+        });
+      }
+      return response;
+    }).catch(function() {
+      // Offline — cache-с авах
+      return caches.match(event.request).then(function(cached) {
+        if (cached) return cached;
+        // HTML хүсэлт бол offline хуудас харуулах
+        if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
+          return caches.match(OFFLINE_URL);
+        }
+      });
+    })
+  );
 });
