@@ -49,7 +49,10 @@ export async function POST(request: Request) {
 
       attempts.delete(ip);
       const token = `${now}:${inspector.id}:${Math.random().toString(36).slice(2)}`;
-      const response = NextResponse.json({ success: true, role: 'inspector', inspectorId: inspector.id, name: inspector.name });
+      const response = NextResponse.json({
+        success: true, role: 'inspector', inspectorId: inspector.id, name: inspector.name,
+        kontorNumber: inspector.kontor_number || null,
+      });
       response.cookies.set('inspector-session', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

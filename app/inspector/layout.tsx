@@ -3,7 +3,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
-interface InspectorUser { id: number; name: string; }
+interface InspectorUser { id: number; name: string; kontorNumber: number | null; }
 const InspectorCtx = createContext<InspectorUser | null>(null);
 export const useInspector = () => useContext(InspectorCtx);
 
@@ -51,7 +51,7 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        const user = { id: data.inspectorId, name: data.name };
+        const user = { id: data.inspectorId, name: data.name, kontorNumber: data.kontorNumber || null };
         setInspector(user);
         localStorage.setItem('inspector_user', JSON.stringify(user));
       } else {
@@ -112,10 +112,12 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
         {/* Top bar */}
         <div className="bg-indigo-600 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-40">
           <div className="flex items-center gap-2">
-            <span className="text-lg">🔍</span>
+            <div className="w-9 h-9 bg-indigo-500 rounded-lg flex items-center justify-center text-white text-lg font-bold">
+              {inspector.kontorNumber || '?'}
+            </div>
             <div>
-              <p className="text-sm font-bold">{inspector.name}</p>
-              <p className="text-[10px] text-indigo-200">Байцаагч</p>
+              <p className="text-sm font-bold">№{inspector.kontorNumber} контор</p>
+              <p className="text-[10px] text-indigo-200">{inspector.name}</p>
             </div>
           </div>
           <button onClick={handleLogout} className="text-xs text-indigo-200 hover:text-white px-2 py-1 rounded-lg hover:bg-indigo-500">
