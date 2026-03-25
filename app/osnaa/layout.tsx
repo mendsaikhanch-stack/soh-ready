@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 
 const navItems = [
   { icon: '📊', label: 'Хянах самбар', href: '/osnaa' },
+  { icon: '🏢', label: 'Байгууллагууд', href: '/osnaa/organizations' },
   { icon: '💰', label: 'Тариф', href: '/osnaa/tariffs' },
   { icon: '📊', label: 'Тоолуур заалт', href: '/osnaa/readings' },
   { icon: '🧾', label: 'Нэхэмжлэх', href: '/osnaa/bills' },
