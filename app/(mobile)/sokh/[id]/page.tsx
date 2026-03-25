@@ -69,6 +69,7 @@ export default function SokhDashboard() {
   const [notifCount, setNotifCount] = useState(0);
   const [recentAnnouncements, setRecentAnnouncements] = useState<{ id: number; title: string; type: string; created_at: string }[]>([]);
   const [myDebt, setMyDebt] = useState(0);
+  const [myRequests, setMyRequests] = useState<{ id: number; title: string; status: string; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -136,6 +137,15 @@ export default function SokhDashboard() {
       if (profile) {
         setMyDebt(Number(profile.debt) || 0);
       }
+
+      // Миний засвар хүсэлтүүд
+      const { data: reqData } = await supabase
+        .from('maintenance_requests')
+        .select('id, title, status, created_at')
+        .eq('sokh_id', params.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      setMyRequests(reqData || []);
 
       setLoading(false);
     };
@@ -348,6 +358,45 @@ export default function SokhDashboard() {
                   <p className="text-xs text-gray-400">{new Date(a.created_at).toLocaleDateString('mn-MN')}</p>
                 </div>
                 <span className="text-gray-300">›</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Сүүлийн засвар хүсэлтүүд */}
+      {myRequests.length > 0 && (
+        <div className="px-4 mt-3">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-gray-500">ЗАСВАР ХҮСЭЛТ</h2>
+            <button
+              onClick={() => router.push(`/sokh/${params.id}/maintenance`)}
+              className="text-xs text-blue-500"
+            >
+              Бүгдийг харах
+            </button>
+          </div>
+          <div className="space-y-2">
+            {myRequests.map(r => (
+              <div
+                key={r.id}
+                onClick={() => router.push(`/sokh/${params.id}/maintenance`)}
+                className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-3 active:scale-[0.98] transition cursor-pointer"
+              >
+                <span className="text-lg">
+                  {r.status === 'done' ? '✅' : r.status === 'in_progress' ? '🔨' : '🕐'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{r.title}</p>
+                  <p className="text-xs text-gray-400">{new Date(r.created_at).toLocaleDateString('mn-MN')}</p>
+                </div>
+                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                  r.status === 'done' ? 'bg-green-100 text-green-700' :
+                  r.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {r.status === 'done' ? 'Дууссан' : r.status === 'in_progress' ? 'Хийгдэж байна' : 'Хүлээгдэж байна'}
+                </span>
               </div>
             ))}
           </div>
