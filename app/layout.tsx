@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { DarkModeProvider } from "@/app/lib/dark-mode";
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
@@ -33,7 +34,9 @@ export default function RootLayout({
   return (
     <html lang="mn" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full" style={{ fontFamily: 'var(--font-inter), sans-serif' }}>
-        {children}
+        <DarkModeProvider>
+          {children}
+        </DarkModeProvider>
       </body>
     </html>
   );

@@ -7,6 +7,7 @@ import { useAuth } from '@/app/lib/auth-context';
 import { isPushSupported, requestPermission, subscribeToPush } from '@/app/lib/push';
 import { getTheme } from '@/app/lib/themes';
 import Image from 'next/image';
+import { useDarkMode } from '@/app/lib/dark-mode';
 
 interface SokhOrg {
   id: number;
@@ -64,6 +65,7 @@ export default function SokhDashboard() {
   const params = useParams();
   const router = useRouter();
   const { profile, signOut } = useAuth();
+  const { dark, toggle: toggleDark } = useDarkMode();
   const [sokh, setSokh] = useState<SokhOrg | null>(null);
   const [stats, setStats] = useState({ residents: 0, totalDebt: 0, announcements: 0 });
   const [notifCount, setNotifCount] = useState(0);
@@ -255,12 +257,20 @@ export default function SokhDashboard() {
                 <p className="text-xs text-white/60">{profile.apartment}</p>
               </div>
             </div>
-            <button
-              onClick={async () => { await signOut(); router.replace('/login'); }}
-              className="text-xs text-white/70 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10"
-            >
-              Гарах
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={toggleDark}
+                className="text-xs px-2 py-1 rounded-lg hover:bg-white/10"
+              >
+                {dark ? '☀️' : '🌙'}
+              </button>
+              <button
+                onClick={async () => { await signOut(); router.replace('/login'); }}
+                className="text-xs text-white/70 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10"
+              >
+                Гарах
+              </button>
+            </div>
           </div>
         )}
         <div className="flex items-center justify-between">
