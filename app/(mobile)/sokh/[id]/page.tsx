@@ -72,6 +72,7 @@ export default function SokhDashboard() {
   const [myRequests, setMyRequests] = useState<{ id: number; title: string; status: string; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Pull-to-refresh
   const touchStartY = useRef(0);
@@ -297,6 +298,20 @@ export default function SokhDashboard() {
         </div>
       </div>
 
+      {/* Хайлт */}
+      <div className="px-4 mt-3">
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Үйлчилгээ хайх..."
+            className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+          />
+        </div>
+      </div>
+
       {/* Өрийн сануулга banner */}
       {stats.totalDebt > 0 && (
         <div
@@ -456,27 +471,34 @@ export default function SokhDashboard() {
           <span className="text-gray-300">›</span>
         </button>
 
-        {menuCategories.map((cat) => (
-          <div key={cat.title}>
-            <h2 className="text-sm font-semibold text-gray-500 mb-2">{cat.title}</h2>
-            <div className="space-y-2">
-              {cat.items.map((item) => (
-                <button
-                  key={item.href}
-                  onClick={() => router.push(`/sokh/${params.id}/${item.href}`)}
-                  className={`w-full flex items-center gap-3 p-4 rounded-xl border ${item.color} text-left active:scale-[0.98] transition`}
-                >
-                  <span className="text-2xl">{item.icon}</span>
-                  <div>
-                    <p className="font-medium text-sm">{item.label}</p>
-                    <p className="text-xs text-gray-500">{item.desc}</p>
-                  </div>
-                  <span className="ml-auto text-gray-300">›</span>
-                </button>
-              ))}
+        {menuCategories.map((cat) => {
+          const q = searchQuery.toLowerCase();
+          const filteredItems = q
+            ? cat.items.filter(item => item.label.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q))
+            : cat.items;
+          if (filteredItems.length === 0) return null;
+          return (
+            <div key={cat.title}>
+              <h2 className="text-sm font-semibold text-gray-500 mb-2">{cat.title}</h2>
+              <div className="space-y-2">
+                {filteredItems.map((item) => (
+                  <button
+                    key={item.href}
+                    onClick={() => router.push(`/sokh/${params.id}/${item.href}`)}
+                    className={`w-full flex items-center gap-3 p-4 rounded-xl border ${item.color} text-left active:scale-[0.98] transition`}
+                  >
+                    <span className="text-2xl">{item.icon}</span>
+                    <div>
+                      <p className="font-medium text-sm">{item.label}</p>
+                      <p className="text-xs text-gray-500">{item.desc}</p>
+                    </div>
+                    <span className="ml-auto text-gray-300">›</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
