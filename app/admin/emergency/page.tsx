@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Alert {
   id: number;
@@ -60,8 +61,9 @@ export default function AdminEmergency() {
     if (!formTitle) return;
     setSaving(true);
 
+    const sokhId = await getAdminSokhId();
     await adminFrom('emergency_alerts').insert([{
-      sokh_id: 1,
+      sokh_id: sokhId,
       type: formType,
       title: formTitle,
       description: formDesc,

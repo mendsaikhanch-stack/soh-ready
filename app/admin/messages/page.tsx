@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Resident {
   id: number;
@@ -82,9 +83,9 @@ export default function AdminMessages() {
 
     const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
 
-    // sokh_id = 7 (одоогоор hardcoded, дараа dynamic болгоно)
+    const sokhId = await getAdminSokhId();
     const { error } = await adminFrom('scheduled_notifications').insert({
-      sokh_id: 7,
+      sokh_id: sokhId,
       title: defaults.title,
       message: defaults.message,
       type: msgType,
@@ -118,8 +119,9 @@ export default function AdminMessages() {
     setSending(true);
     setSendResult(null);
 
+    const sokhId = await getAdminSokhId();
     const { error } = await adminFrom('scheduled_notifications').insert({
-      sokh_id: 7,
+      sokh_id: sokhId,
       title: defaults.title,
       message: defaults.message,
       type: msgType,
@@ -139,8 +141,8 @@ export default function AdminMessages() {
           body: JSON.stringify({
             title: defaults.title,
             body: defaults.message,
-            sokh_id: 7,
-            url: '/sokh/7/notifications',
+            sokh_id: sokhId,
+            url: `/sokh/${sokhId}/notifications`,
           }),
         });
         const pushData = await pushRes.json();

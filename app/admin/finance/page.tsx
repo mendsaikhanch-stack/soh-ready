@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface BudgetItem { id: number; category: string; amount: number; month: number; year: number; description: string; }
 
@@ -43,7 +44,8 @@ export default function AdminFinance() {
   const add = async () => {
     if (!fAmount) return;
     setSaving(true);
-    await adminFrom('budget_items').insert([{ sokh_id: 1, category: fCat, amount: Number(fAmount), month, year, description: fDesc }]);
+    const sokhId = await getAdminSokhId();
+    await adminFrom('budget_items').insert([{ sokh_id: sokhId, category: fCat, amount: Number(fAmount), month, year, description: fDesc }]);
     setFAmount(''); setFDesc(''); setShowForm(false); setSaving(false);
     await fetch();
   };

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Package {
   id: number; resident_name: string; unit_number: string; carrier: string;
@@ -32,8 +33,9 @@ export default function AdminPackages() {
   const addPackage = async () => {
     if (!name || !unit) return;
     setSaving(true);
+    const sokhId = await getAdminSokhId();
     await adminFrom('packages').insert([{
-      sokh_id: 1, resident_name: name, unit_number: unit, carrier, description: desc,
+      sokh_id: sokhId, resident_name: name, unit_number: unit, carrier, description: desc,
       pickup_code: generateCode(), status: 'delivered', delivered_at: new Date().toISOString(),
     }]);
     setName(''); setUnit(''); setCarrier(''); setDesc('');

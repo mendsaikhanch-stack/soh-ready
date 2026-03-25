@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Shop { id: number; name: string; type: string; location: string; phone: string; hours: string; description: string; status: string; }
 interface VendingMachine { id: number; name: string; type: string; location: string; status: string; description: string; operator_name: string; operator_phone: string; }
@@ -60,8 +61,9 @@ export default function AdminShops() {
 
   const addShop = async () => {
     if (!sName) return; setSaving(true);
+    const sokhId = await getAdminSokhId();
     await adminFrom('local_shops').insert([{
-      sokh_id: 1, name: sName, type: sType, location: sLocation, phone: sPhone, hours: sHours, description: sDesc, status: 'active',
+      sokh_id: sokhId, name: sName, type: sType, location: sLocation, phone: sPhone, hours: sHours, description: sDesc, status: 'active',
     }]);
     setSName(''); setSLocation(''); setSPhone(''); setSHours(''); setSDesc('');
     setShowShopForm(false); setSaving(false); await fetchAll();
@@ -69,8 +71,9 @@ export default function AdminShops() {
 
   const addVending = async () => {
     if (!vLocation) return; setSaving(true);
+    const sokhId = await getAdminSokhId();
     await adminFrom('vending_machines').insert([{
-      sokh_id: 1, name: vName || null, type: vType, location: vLocation, description: vDesc,
+      sokh_id: sokhId, name: vName || null, type: vType, location: vLocation, description: vDesc,
       operator_name: vOperator, operator_phone: vOpPhone, status: 'active',
     }]);
     setVName(''); setVLocation(''); setVDesc(''); setVOperator(''); setVOpPhone('');

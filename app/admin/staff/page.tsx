@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Staff {
   id: number;
@@ -57,7 +58,8 @@ export default function AdminStaff() {
     if (!name) return;
     setSaving(true);
 
-    const record = { sokh_id: 1, name, role, phone, schedule, status: 'active' };
+    const sokhId = await getAdminSokhId();
+    const record = { sokh_id: sokhId, name, role, phone, schedule, status: 'active' };
 
     if (editId) {
       await adminFrom('staff').update(record).eq('id', editId);
