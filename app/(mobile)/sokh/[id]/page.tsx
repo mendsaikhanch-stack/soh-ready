@@ -17,27 +17,47 @@ interface SokhOrg {
   theme: string | null;
 }
 
-const menuItems = [
-  { icon: '💰', label: 'Төлбөр', desc: 'Төлбөр төлөх, үлдэгдэл шалгах', href: 'payments', color: 'bg-green-50 border-green-200' },
-  { icon: '📋', label: 'Тайлан', desc: 'Санхүүгийн тайлан, зардал', href: 'reports', color: 'bg-blue-50 border-blue-200' },
-  { icon: '📢', label: 'Зарлал', desc: 'Мэдэгдэл, мэдээлэл', href: 'announcements', color: 'bg-yellow-50 border-yellow-200' },
-  { icon: '🔧', label: 'Засвар', desc: 'Засвар үйлчилгээний хүсэлт', href: 'maintenance', color: 'bg-orange-50 border-orange-200' },
-  { icon: '👥', label: 'Оршин суугчид', desc: 'Айл өрхийн жагсаалт', href: 'residents', color: 'bg-purple-50 border-purple-200' },
-  { icon: '🚗', label: 'Зогсоол', desc: 'Машин бүртгэл, зогсоолын мэдээлэл', href: 'parking', color: 'bg-indigo-50 border-indigo-200' },
-  { icon: '🎬', label: 'Камер бичлэг', desc: 'Бичлэг шүүх хүсэлт илгээх', href: 'cctv-request', color: 'bg-gray-50 border-gray-300' },
-  { icon: '📊', label: 'Тоолуур & Ашиглалт', desc: 'Заалт оруулах, хэрэглээ харах', href: 'utilities', color: 'bg-emerald-50 border-emerald-200' },
-  { icon: '💬', label: 'Хөрш чат', desc: 'Оршин суугчидтай ярилцах', href: 'chat', color: 'bg-sky-50 border-sky-200' },
-  { icon: '👷', label: 'Ажилчид', desc: 'Ажилтнуудын мэдээлэл, хуваарь', href: 'staff', color: 'bg-amber-50 border-amber-200' },
-  { icon: '🚨', label: 'Яаралтай', desc: 'Онцгой байдлын мэдэгдэл', href: 'emergency', color: 'bg-red-50 border-red-200' },
-  { icon: '📝', label: 'Гомдол / Санал', desc: 'Гомдол, санал, асуулт илгээх', href: 'complaints', color: 'bg-violet-50 border-violet-200' },
-  { icon: '🏪', label: 'Хөрш маркет', desc: 'Зар, худалдаа, солилцоо', href: 'marketplace', color: 'bg-teal-50 border-teal-200' },
-  { icon: '🏢', label: 'Зай захиалга', desc: 'Хурлын өрөө, спорт заал', href: 'booking', color: 'bg-indigo-50 border-indigo-200' },
-  { icon: '💰', label: 'Санхүү', desc: 'Төлбөр хаашаа зарцуулагдаж байна', href: 'finance', color: 'bg-cyan-50 border-cyan-200' },
-  { icon: '🏆', label: 'Оноо & Шагнал', desc: 'Идэвхтэй оршин суугчийн урамшуулал', href: 'points', color: 'bg-amber-50 border-amber-200' },
-  { icon: '📦', label: 'Илгээмж', desc: 'Ачаа, бандероль хүлээн авах', href: 'packages', color: 'bg-orange-50 border-orange-200' },
-  { icon: '🏪', label: 'Дэлгүүр', desc: 'Хотхоны дэлгүүр, үйлчилгээ', href: 'shops', color: 'bg-rose-50 border-rose-200' },
-  { icon: '🗳', label: 'Санал хураалт', desc: 'Хурал, санал асуулга', href: 'voting', color: 'bg-pink-50 border-pink-200' },
-  { icon: '📞', label: 'Холбоо барих', desc: 'СӨХ-тэй холбогдох', href: 'contact', color: 'bg-teal-50 border-teal-200' },
+const menuCategories = [
+  {
+    title: '💵 Санхүү',
+    items: [
+      { icon: '💰', label: 'Төлбөр', desc: 'Төлбөр төлөх, үлдэгдэл шалгах', href: 'payments', color: 'bg-green-50 border-green-200' },
+      { icon: '📋', label: 'Тайлан', desc: 'Санхүүгийн тайлан, зардал', href: 'reports', color: 'bg-blue-50 border-blue-200' },
+      { icon: '💰', label: 'Санхүү', desc: 'Төлбөр хаашаа зарцуулагдаж байна', href: 'finance', color: 'bg-cyan-50 border-cyan-200' },
+      { icon: '📊', label: 'Тоолуур & Ашиглалт', desc: 'Заалт оруулах, хэрэглээ харах', href: 'utilities', color: 'bg-emerald-50 border-emerald-200' },
+    ],
+  },
+  {
+    title: '🏠 Амьдрал',
+    items: [
+      { icon: '📢', label: 'Зарлал', desc: 'Мэдэгдэл, мэдээлэл', href: 'announcements', color: 'bg-yellow-50 border-yellow-200' },
+      { icon: '💬', label: 'Хөрш чат', desc: 'Оршин суугчидтай ярилцах', href: 'chat', color: 'bg-sky-50 border-sky-200' },
+      { icon: '🗳', label: 'Санал хураалт', desc: 'Хурал, санал асуулга', href: 'voting', color: 'bg-pink-50 border-pink-200' },
+      { icon: '🏪', label: 'Хөрш маркет', desc: 'Зар, худалдаа, солилцоо', href: 'marketplace', color: 'bg-teal-50 border-teal-200' },
+      { icon: '📝', label: 'Гомдол / Санал', desc: 'Гомдол, санал, асуулт илгээх', href: 'complaints', color: 'bg-violet-50 border-violet-200' },
+    ],
+  },
+  {
+    title: '🔧 Үйлчилгээ',
+    items: [
+      { icon: '🔧', label: 'Засвар', desc: 'Засвар үйлчилгээний хүсэлт', href: 'maintenance', color: 'bg-orange-50 border-orange-200' },
+      { icon: '🚗', label: 'Зогсоол', desc: 'Машин бүртгэл, зогсоолын мэдээлэл', href: 'parking', color: 'bg-indigo-50 border-indigo-200' },
+      { icon: '🎬', label: 'Камер бичлэг', desc: 'Бичлэг шүүх хүсэлт илгээх', href: 'cctv-request', color: 'bg-gray-50 border-gray-300' },
+      { icon: '🏢', label: 'Зай захиалга', desc: 'Хурлын өрөө, спорт заал', href: 'booking', color: 'bg-indigo-50 border-indigo-200' },
+      { icon: '📦', label: 'Илгээмж', desc: 'Ачаа, бандероль хүлээн авах', href: 'packages', color: 'bg-orange-50 border-orange-200' },
+    ],
+  },
+  {
+    title: '📌 Бусад',
+    items: [
+      { icon: '👥', label: 'Оршин суугчид', desc: 'Айл өрхийн жагсаалт', href: 'residents', color: 'bg-purple-50 border-purple-200' },
+      { icon: '👷', label: 'Ажилчид', desc: 'Ажилтнуудын мэдээлэл, хуваарь', href: 'staff', color: 'bg-amber-50 border-amber-200' },
+      { icon: '🚨', label: 'Яаралтай', desc: 'Онцгой байдлын мэдэгдэл', href: 'emergency', color: 'bg-red-50 border-red-200' },
+      { icon: '🏆', label: 'Оноо & Шагнал', desc: 'Идэвхтэй оршин суугчийн урамшуулал', href: 'points', color: 'bg-amber-50 border-amber-200' },
+      { icon: '🏪', label: 'Дэлгүүр', desc: 'Хотхоны дэлгүүр, үйлчилгээ', href: 'shops', color: 'bg-rose-50 border-rose-200' },
+      { icon: '📞', label: 'Холбоо барих', desc: 'СӨХ-тэй холбогдох', href: 'contact', color: 'bg-teal-50 border-teal-200' },
+    ],
+  },
 ];
 
 export default function SokhDashboard() {
@@ -282,42 +302,46 @@ export default function SokhDashboard() {
       )}
 
       {/* Menu */}
-      <div className="px-4 py-4">
-        <h2 className="text-sm font-semibold text-gray-500 mb-3">ҮЙЛЧИЛГЭЭ</h2>
-        <div className="space-y-2">
-          {/* Мэдэгдэл цэс */}
-          <button
-            onClick={() => router.push(`/sokh/${params.id}/notifications`)}
-            className={`w-full flex items-center gap-3 p-4 rounded-xl border ${theme.cardBg} ${theme.cardBorder} text-left active:scale-[0.98] transition`}
-          >
-            <span className="text-2xl">🔔</span>
-            <div className="flex-1">
-              <p className="font-medium text-sm">Мэдэгдэл</p>
-              <p className="text-xs text-gray-500">Сануулга, шинэ мэдээ</p>
-            </div>
-            {notifCount > 0 && (
-              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                {notifCount}
-              </span>
-            )}
-            <span className="text-gray-300">›</span>
-          </button>
+      <div className="px-4 py-4 space-y-4">
+        {/* Мэдэгдэл цэс */}
+        <button
+          onClick={() => router.push(`/sokh/${params.id}/notifications`)}
+          className={`w-full flex items-center gap-3 p-4 rounded-xl border ${theme.cardBg} ${theme.cardBorder} text-left active:scale-[0.98] transition`}
+        >
+          <span className="text-2xl">🔔</span>
+          <div className="flex-1">
+            <p className="font-medium text-sm">Мэдэгдэл</p>
+            <p className="text-xs text-gray-500">Сануулга, шинэ мэдээ</p>
+          </div>
+          {notifCount > 0 && (
+            <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              {notifCount}
+            </span>
+          )}
+          <span className="text-gray-300">›</span>
+        </button>
 
-          {menuItems.map((item) => (
-            <button
-              key={item.href}
-              onClick={() => router.push(`/sokh/${params.id}/${item.href}`)}
-              className={`w-full flex items-center gap-3 p-4 rounded-xl border ${item.color} text-left active:scale-[0.98] transition`}
-            >
-              <span className="text-2xl">{item.icon}</span>
-              <div>
-                <p className="font-medium text-sm">{item.label}</p>
-                <p className="text-xs text-gray-500">{item.desc}</p>
-              </div>
-              <span className="ml-auto text-gray-300">›</span>
-            </button>
-          ))}
-        </div>
+        {menuCategories.map((cat) => (
+          <div key={cat.title}>
+            <h2 className="text-sm font-semibold text-gray-500 mb-2">{cat.title}</h2>
+            <div className="space-y-2">
+              {cat.items.map((item) => (
+                <button
+                  key={item.href}
+                  onClick={() => router.push(`/sokh/${params.id}/${item.href}`)}
+                  className={`w-full flex items-center gap-3 p-4 rounded-xl border ${item.color} text-left active:scale-[0.98] transition`}
+                >
+                  <span className="text-2xl">{item.icon}</span>
+                  <div>
+                    <p className="font-medium text-sm">{item.label}</p>
+                    <p className="text-xs text-gray-500">{item.desc}</p>
+                  </div>
+                  <span className="ml-auto text-gray-300">›</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
