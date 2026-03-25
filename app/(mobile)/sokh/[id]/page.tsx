@@ -47,6 +47,8 @@ export default function SokhDashboard() {
   const [sokh, setSokh] = useState<SokhOrg | null>(null);
   const [stats, setStats] = useState({ residents: 0, totalDebt: 0, announcements: 0 });
   const [notifCount, setNotifCount] = useState(0);
+  const [recentAnnouncements, setRecentAnnouncements] = useState<{ id: number; title: string; type: string; created_at: string }[]>([]);
+  const [myDebt, setMyDebt] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -100,6 +102,21 @@ export default function SokhDashboard() {
       if (day <= 3 || (day >= 20 && day <= 25)) nc++;
 
       setNotifCount(nc);
+
+      // Сүүлийн 3 зарлал
+      const { data: recentAnns } = await supabase
+        .from('announcements')
+        .select('id, title, type, created_at')
+        .eq('sokh_id', params.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      setRecentAnnouncements(recentAnns || []);
+
+      // Миний хувийн өр
+      if (profile) {
+        setMyDebt(Number(profile.debt) || 0);
+      }
+
       setLoading(false);
     };
     fetchData();
@@ -215,6 +232,54 @@ export default function SokhDashboard() {
           <p className="text-xs text-gray-500">Зарлал</p>
         </div>
       </div>
+
+      {/* Миний өр */}
+      {profile && myDebt > 0 && (
+        <div
+          className="mx-4 mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3 active:scale-[0.98] transition cursor-pointer"
+          onClick={() => router.push(`/sokh/${params.id}/payments`)}
+        >
+          <span className="text-2xl">💳</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-700">Миний өр</p>
+            <p className="text-xs text-amber-600">{myDebt.toLocaleString()}₮ төлөгдөөгүй</p>
+          </div>
+          <span className="text-amber-300">›</span>
+        </div>
+      )}
+
+      {/* Сүүлийн зарлалууд */}
+      {recentAnnouncements.length > 0 && (
+        <div className="px-4 mt-3">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-gray-500">СҮҮЛИЙН ЗАРЛАЛ</h2>
+            <button
+              onClick={() => router.push(`/sokh/${params.id}/announcements`)}
+              className="text-xs text-blue-500"
+            >
+              Бүгдийг харах
+            </button>
+          </div>
+          <div className="space-y-2">
+            {recentAnnouncements.map(a => (
+              <div
+                key={a.id}
+                onClick={() => router.push(`/sokh/${params.id}/announcements`)}
+                className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-3 active:scale-[0.98] transition cursor-pointer"
+              >
+                <span className="text-lg">
+                  {a.type === 'urgent' ? '🚨' : a.type === 'warning' ? '⚠️' : a.type === 'event' ? '📅' : '📢'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{a.title}</p>
+                  <p className="text-xs text-gray-400">{new Date(a.created_at).toLocaleDateString('mn-MN')}</p>
+                </div>
+                <span className="text-gray-300">›</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Menu */}
       <div className="px-4 py-4">
