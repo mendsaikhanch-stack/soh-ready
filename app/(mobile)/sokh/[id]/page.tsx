@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
@@ -71,9 +71,28 @@ export default function SokhDashboard() {
   const [myDebt, setMyDebt] = useState(0);
   const [myRequests, setMyRequests] = useState<{ id: number; title: string; status: string; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  // Pull-to-refresh
+  const touchStartY = useRef(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = async (e: React.TouchEvent) => {
+    const delta = e.changedTouches[0].clientY - touchStartY.current;
+    const el = scrollRef.current;
+    if (delta > 80 && el && el.scrollTop <= 0 && !refreshing) {
+      setRefreshing(true);
+      await fetchData(false);
+      setRefreshing(false);
+    }
+  };
+
+  const fetchData = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
       const { data } = await supabase
         .from('sokh_organizations')
         .select('*')
@@ -148,7 +167,9 @@ export default function SokhDashboard() {
       setMyRequests(reqData || []);
 
       setLoading(false);
-    };
+    }, [params.id, profile]);
+
+  useEffect(() => {
     fetchData();
 
     // Push notification бүртгэх
@@ -206,7 +227,19 @@ export default function SokhDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div
+      ref={scrollRef}
+      className="min-h-screen bg-gray-50 overflow-y-auto"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      {refreshing && (
+        <div className="flex items-center justify-center py-3 bg-blue-50 text-blue-600 text-xs font-medium">
+          <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          Шинэчилж байна...
+        </div>
+      )}
       {/* Header */}
       <div className={`${theme.header} ${theme.headerText} px-4 py-4`}>
         {/* Хэрэглэгчийн мэдээлэл */}
