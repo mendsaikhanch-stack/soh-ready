@@ -179,6 +179,8 @@ export default function DevPage() {
   const [newCategory, setNewCategory] = useState('Оршин суугч');
   const [newNote, setNewNote] = useState('');
   const [localFeatures, setLocalFeatures] = useState<Feature[]>([]);
+  const [devLoggedIn, setDevLoggedIn] = useState(false);
+  const [devLogging, setDevLogging] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('dev_extra_features');
@@ -236,6 +238,29 @@ export default function DevPage() {
           </div>
           <button onClick={() => router.push('/')} className="text-sm text-gray-500 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
             Нүүр хуудас
+          </button>
+        </div>
+
+        {/* ==================== DEV LOGIN ==================== */}
+        <div className="mb-6">
+          <button
+            onClick={async () => {
+              setDevLogging(true);
+              try {
+                const res = await fetch('/api/auth/dev-login', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) setDevLoggedIn(true);
+              } catch {}
+              setDevLogging(false);
+            }}
+            disabled={devLogging || devLoggedIn}
+            className={`w-full py-4 rounded-xl font-bold text-lg transition ${
+              devLoggedIn
+                ? 'bg-green-600 text-white cursor-default'
+                : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90 active:scale-[0.99]'
+            }`}
+          >
+            {devLoggedIn ? '✅ Бүх роль-д нэвтэрсэн — аль ч хуудас руу орж болно' : devLogging ? '⏳ Нэвтэрч байна...' : '🚀 Бүгдэд нэг дор нэвтрэх (Admin, ОСНАА, SuperAdmin, Inspector)'}
           </button>
         </div>
 

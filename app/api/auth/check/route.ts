@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
   try {
     const parts = token.split(':');
-    if (parts.length !== 2) {
+    if (parts.length < 2) {
       return NextResponse.json({ authenticated: false });
     }
 
