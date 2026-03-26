@@ -41,6 +41,7 @@ export function adminFrom(table: string) {
   return {
     select: (columns?: string) => new AdminQueryBuilder(table, 'select', { select: columns }),
     insert: (data: any) => adminQuery(table, 'insert', { data }),
+    upsert: (data: any) => adminQuery(table, 'upsert', { data }),
     update: (data: any) => new AdminUpdateBuilder(table, data),
     delete: () => new AdminDeleteBuilder(table),
   };

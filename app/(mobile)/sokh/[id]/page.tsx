@@ -77,6 +77,7 @@ export default function SokhDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [electricityBill, setElectricityBill] = useState<{ id: number; amount: number; month: number; year: number } | null>(null);
 
   // Pull-to-refresh
   const touchStartY = useRef(0);
@@ -160,6 +161,20 @@ export default function SokhDashboard() {
       // Миний хувийн өр
       if (profile) {
         setMyDebt(Number(profile.debt) || 0);
+
+        // Цахилгааны төлөгдөөгүй нэхэмжлэх
+        const { data: elecBill } = await supabase
+          .from('utility_bills')
+          .select('id, amount, month, year')
+          .eq('resident_id', profile.id)
+          .eq('utility_type', 'electricity')
+          .eq('status', 'unpaid')
+          .order('year', { ascending: false })
+          .order('month', { ascending: false })
+          .limit(1)
+          .single();
+
+        setElectricityBill(elecBill || null);
       }
 
       // Миний засвар хүсэлтүүд
@@ -394,6 +409,26 @@ export default function SokhDashboard() {
             <p className="text-xs text-amber-600">{myDebt.toLocaleString()}₮ төлөгдөөгүй</p>
           </div>
           <span className="text-amber-300">›</span>
+        </div>
+      )}
+
+      {/* Цахилгааны төлбөр */}
+      {profile && electricityBill && (
+        <div
+          className="mx-4 mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-center gap-3 active:scale-[0.98] transition cursor-pointer"
+          onClick={() => router.push(`/sokh/${params.id}/utilities`)}
+        >
+          <span className="text-2xl">⚡</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-yellow-800">Цахилгааны төлбөр</p>
+            <p className="text-xs text-yellow-700">
+              {electricityBill.month}-р сар — {Number(electricityBill.amount).toLocaleString()}₮ төлөгдөөгүй
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-red-500 font-bold text-sm">{Number(electricityBill.amount).toLocaleString()}₮</span>
+            <span className="text-[10px] text-green-600 font-medium">Төлөх →</span>
+          </div>
         </div>
       )}
 

@@ -34,7 +34,7 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
       if (data.authenticated) {
         const saved = localStorage.getItem('inspector_user');
         if (saved) setInspector(JSON.parse(saved));
-        else setInspector({ id: 0, name: 'Байцаагч' });
+        else setInspector({ id: 0, name: 'Байцаагч', kontorNumber: null });
       }
     } catch {}
     setChecking(false);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
@@ -36,6 +36,12 @@ interface Bill {
   year: number;
 }
 
+interface QPayInvoice {
+  invoice_id: string;
+  qr_image: string;
+  urls: { name: string; logo: string; link: string }[];
+}
+
 const typeMap: Record<string, { label: string; icon: string; color: string; unit: string; bg: string; border: string }> = {
   electricity: { label: 'Цахилгаан', icon: '⚡', color: 'text-yellow-600', unit: 'кВт/ц', bg: 'bg-yellow-50', border: 'border-yellow-200' },
   water: { label: 'Ус', icon: '💧', color: 'text-blue-600', unit: 'м³', bg: 'bg-blue-50', border: 'border-blue-200' },
@@ -60,6 +66,15 @@ export default function UtilitiesPage() {
   const [readingValue, setReadingValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  // QPay төлбөр
+  const [payingBill, setPayingBill] = useState<Bill | null>(null);
+  const [qpayInvoice, setQpayInvoice] = useState<QPayInvoice | null>(null);
+  const [qpayLoading, setQpayLoading] = useState(false);
+  const [qpayError, setQpayError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [paySuccess, setPaySuccess] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
@@ -155,6 +170,109 @@ export default function UtilitiesPage() {
       await fetchData();
     }
     setSubmitting(false);
+  };
+
+  // Unmount-д polling зогсоох
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
+
+  // QPay төлбөр эхлүүлэх
+  const startPayBill = async (bill: Bill) => {
+    setPayingBill(bill);
+    setQpayInvoice(null);
+    setPaySuccess(false);
+    setQpayError(null);
+    setQpayLoading(true);
+
+    try {
+      const res = await fetch('/api/qpay/invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: bill.amount,
+          description: `Тоот — ${typeMap[bill.utility_type]?.label || bill.utility_type} (${months[bill.month - 1]} ${bill.year})`,
+          orderId: `UTIL-${bill.id}-${Date.now()}`,
+        }),
+      });
+      const data = await res.json();
+      if (data.invoice_id) {
+        setQpayInvoice(data);
+        startPolling(data.invoice_id, bill);
+      } else {
+        setQpayError(data.error || 'QPay нэхэмжлэх үүсгэж чадсангүй');
+      }
+    } catch (err) {
+      console.error('QPay error:', err);
+      setQpayError('Сүлжээний алдаа. Дахин оролдоно уу.');
+    }
+    setQpayLoading(false);
+  };
+
+  const startPolling = (invoiceId: string, bill: Bill) => {
+    setChecking(true);
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/qpay/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invoice_id: invoiceId }),
+        });
+        const data = await res.json();
+        if (data.paid) {
+          clearInterval(interval);
+          pollingRef.current = null;
+          setChecking(false);
+          setPaySuccess(true);
+
+          // utility_bills статус шинэчлэх
+          await supabase
+            .from('utility_bills')
+            .update({ status: 'paid', paid_at: new Date().toISOString() })
+            .eq('id', bill.id);
+
+          // payments бүртгэх
+          await supabase.from('payments').insert([{
+            resident_id: profile?.id,
+            amount: bill.amount,
+            description: `QPay — ${typeMap[bill.utility_type]?.label || bill.utility_type} (${months[bill.month - 1]} ${bill.year})`,
+          }]);
+
+          setBills(prev => prev.map(b => b.id === bill.id ? { ...b, status: 'paid' } : b));
+
+          setTimeout(() => {
+            setPayingBill(null);
+            setPaySuccess(false);
+            setQpayInvoice(null);
+          }, 2500);
+        }
+      } catch {}
+    }, 3000);
+
+    pollingRef.current = interval;
+
+    // 5 минутын дараа зогсоох
+    setTimeout(() => {
+      clearInterval(interval);
+      if (pollingRef.current === interval) {
+        pollingRef.current = null;
+        setChecking(false);
+      }
+    }, 5 * 60 * 1000);
+  };
+
+  const closePayModal = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    setPayingBill(null);
+    setQpayInvoice(null);
+    setQpayError(null);
+    setChecking(false);
+    setPaySuccess(false);
   };
 
   const filteredUsages = usages.filter(u => u.type === selectedType);
@@ -297,19 +415,31 @@ export default function UtilitiesPage() {
                   <h3 className="text-sm font-semibold text-gray-500 mb-2">НЭХЭМЖЛЭХ</h3>
                   <div className="space-y-2">
                     {typeBills.slice(0, 6).map(b => (
-                      <div key={b.id} className="bg-white rounded-xl p-3 flex items-center justify-between border">
-                        <div>
-                          <p className="text-sm font-medium">{months[b.month - 1]} {b.year}</p>
-                          <p className="text-xs text-gray-500">{Number(b.consumption)} {tp.unit} x {Number(b.rate).toLocaleString()}₮</p>
+                      <div key={b.id} className={`rounded-xl p-3 border ${b.status === 'paid' ? 'bg-green-50 border-green-200' : `${tp.bg} ${tp.border}`}`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{months[b.month - 1]} {b.year}</p>
+                            <p className="text-xs text-gray-500">{Number(b.consumption)} {tp.unit} x {Number(b.rate).toLocaleString()}₮</p>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-bold text-sm ${b.status === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
+                              {Number(b.amount).toLocaleString()}₮
+                            </p>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                              b.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {b.status === 'paid' ? 'Төлсөн ✓' : 'Төлөгдөөгүй'}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-sm">{Number(b.amount).toLocaleString()}₮</p>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                            b.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            {b.status === 'paid' ? 'Төлсөн' : 'Төлөгдөөгүй'}
-                          </span>
-                        </div>
+                        {b.status !== 'paid' && Number(b.amount) > 0 && (
+                          <button
+                            onClick={() => startPayBill(b)}
+                            className="w-full mt-2 bg-green-600 text-white py-2.5 rounded-xl font-medium text-sm active:bg-green-700 transition flex items-center justify-center gap-2"
+                          >
+                            <span>💳</span> QPay-ээр төлөх ({Number(b.amount).toLocaleString()}₮)
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -390,6 +520,114 @@ export default function UtilitiesPage() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* QPay төлбөр modal */}
+      {payingBill && !paySuccess && (
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50" onClick={closePayModal}>
+          <div
+            className="bg-white w-full max-w-[430px] rounded-t-2xl p-6 max-h-[85vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">{typeMap[payingBill.utility_type]?.icon || '⚡'}</span>
+              <div>
+                <h2 className="text-lg font-bold">{typeMap[payingBill.utility_type]?.label || payingBill.utility_type} төлбөр</h2>
+                <p className="text-sm text-gray-500">
+                  {months[payingBill.month - 1]} {payingBill.year} — {Number(payingBill.amount).toLocaleString()}₮
+                </p>
+              </div>
+            </div>
+
+            {qpayLoading && (
+              <div className="text-center py-8">
+                <div className="animate-spin text-3xl mb-3">⏳</div>
+                <p className="text-gray-500 text-sm">QPay нэхэмжлэх үүсгэж байна...</p>
+              </div>
+            )}
+
+            {qpayError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-center">
+                <p className="text-sm text-red-700 mb-2">{qpayError}</p>
+                <button
+                  onClick={() => startPayBill(payingBill!)}
+                  className="text-sm font-medium text-red-600 underline"
+                >
+                  Дахин оролдох
+                </button>
+              </div>
+            )}
+
+            {qpayInvoice && !qpayLoading && (
+              <>
+                {/* QR код */}
+                <div className="text-center mb-4">
+                  <div className="bg-white border-2 border-gray-200 rounded-2xl p-4 inline-block">
+                    <img
+                      src={`data:image/png;base64,${qpayInvoice.qr_image}`}
+                      alt="QPay QR"
+                      className="w-48 h-48 mx-auto"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">QR кодыг банкны апп-аар уншуулна уу</p>
+                </div>
+
+                {checking && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 flex items-center gap-2">
+                    <div className="animate-spin text-lg">⏳</div>
+                    <p className="text-sm text-blue-700">Төлбөр хүлээж байна...</p>
+                  </div>
+                )}
+
+                {/* Банкны апп deep link */}
+                {qpayInvoice.urls && qpayInvoice.urls.length > 0 && (
+                  <>
+                    <h3 className="text-xs font-semibold text-gray-400 mb-3">БАНКНЫ АПП-ААР ШУУД ТӨЛӨХ</h3>
+                    <div className="grid grid-cols-4 gap-2 mb-4">
+                      {qpayInvoice.urls.slice(0, 12).map((bank, i) => (
+                        <a
+                          key={i}
+                          href={bank.link}
+                          className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-gray-50 active:scale-95 transition"
+                        >
+                          {bank.logo ? (
+                            <img src={bank.logo} alt={bank.name} className="w-11 h-11 rounded-xl" />
+                          ) : (
+                            <div className="w-11 h-11 bg-blue-600 rounded-xl flex items-center justify-center">
+                              <span className="text-white text-xs font-bold">{bank.name.slice(0, 2)}</span>
+                            </div>
+                          )}
+                          <span className="text-[10px] text-gray-600 text-center leading-tight">{bank.name}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            <button
+              onClick={closePayModal}
+              className="w-full py-3 rounded-xl font-semibold text-sm border border-gray-300 text-gray-600"
+            >
+              Цуцлах
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Амжилттай */}
+      {paySuccess && payingBill && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 mx-4 text-center max-w-[350px]">
+            <div className="text-5xl mb-3">✅</div>
+            <h2 className="text-lg font-bold mb-1">Амжилттай!</h2>
+            <p className="text-sm text-gray-500">
+              {typeMap[payingBill.utility_type]?.label} — {Number(payingBill.amount).toLocaleString()}₮ төлөгдлөө
+            </p>
+          </div>
         </div>
       )}
     </div>

@@ -81,6 +81,10 @@ export async function POST(request: NextRequest) {
         query = supabaseAdmin.from(table).insert(params.data);
         break;
       }
+      case 'upsert': {
+        query = supabaseAdmin.from(table).upsert(params.data);
+        break;
+      }
       case 'update': {
         query = supabaseAdmin.from(table).update(params.data);
         if (params?.eq) {
