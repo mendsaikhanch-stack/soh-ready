@@ -6,7 +6,9 @@ import { usePathname, useRouter } from 'next/navigation';
 const navItems = [
   { icon: '📊', label: 'Хянах самбар', href: '/superadmin' },
   { icon: '🏢', label: 'СӨХ-үүд', href: '/superadmin/organizations' },
-  { icon: '💵', label: 'Орлого', href: '/superadmin/revenue' },
+  { icon: '💵', label: 'Платформ орлого', href: '/superadmin/revenue' },
+  { icon: '🏗️', label: 'ОСНАА орлого', href: '/superadmin/osnaa-revenue' },
+  { icon: '⚡', label: 'Цахилгаан орлого', href: '/superadmin/tsah-revenue' },
   { icon: '👥', label: 'Хэрэглэгчид', href: '/superadmin/users' },
   { icon: '📈', label: 'Аналитик', href: '/superadmin/analytics' },
   { icon: '🛠', label: 'Дэмжлэг', href: '/superadmin/support' },
