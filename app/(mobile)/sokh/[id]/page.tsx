@@ -87,8 +87,7 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
     {
       title: '🔧 Засвар үйлчилгээ',
       items: [
-        { icon: '🚿', label: 'Сантехникч дуудах', desc: 'Ус, канализацийн засвар үйлчилгээ', href: 'maintenance?type=plumbing', color: 'bg-blue-50 border-blue-200' },
-        { icon: '🔥', label: 'Халаалтын засвар', desc: 'Радиатор, халаалтын хоолой засвар', href: 'maintenance?type=heating', color: 'bg-red-50 border-red-200' },
+        { icon: '🚿', label: 'Сантехникч дуудах', desc: 'Ус, халаалт, канализацийн засвар', href: 'maintenance?type=plumbing', color: 'bg-blue-50 border-blue-200' },
       ],
     },
   ],
