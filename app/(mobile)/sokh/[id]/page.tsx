@@ -84,6 +84,13 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
         { icon: '🧾', label: 'Дулааны нэхэмжлэх', desc: 'Төлбөр, төлөлтийн байдал', href: 'utilities?type=heating&tab=bills', color: 'bg-red-50 border-red-200' },
       ],
     },
+    {
+      title: '🔧 Засвар үйлчилгээ',
+      items: [
+        { icon: '🚿', label: 'Сантехникч дуудах', desc: 'Ус, канализацийн засвар үйлчилгээ', href: 'maintenance?type=plumbing', color: 'bg-blue-50 border-blue-200' },
+        { icon: '🔥', label: 'Халаалтын засвар', desc: 'Радиатор, халаалтын хоолой засвар', href: 'maintenance?type=heating', color: 'bg-red-50 border-red-200' },
+      ],
+    },
   ],
   tsah: [
     {
@@ -92,6 +99,12 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
         { icon: '⚡', label: 'Тоолуурын заалт', desc: 'Цахилгааны заалт оруулах', href: 'utilities?type=electricity', color: 'bg-yellow-50 border-yellow-200' },
         { icon: '🧾', label: 'Нэхэмжлэх', desc: 'Цахилгааны нэхэмжлэх, QPay төлбөр', href: 'utilities?type=electricity&tab=bills', color: 'bg-yellow-50 border-yellow-200' },
         { icon: '📊', label: 'Хэрэглээний түүх', desc: 'Сарын кВт·ц хэрэглээ, зардал', href: 'utilities?type=electricity&tab=history', color: 'bg-yellow-50 border-yellow-200' },
+      ],
+    },
+    {
+      title: '🔧 Засвар үйлчилгээ',
+      items: [
+        { icon: '⚡', label: 'Цахилгаанчин дуудах', desc: 'Утас, залгуур, шит засвар', href: 'maintenance?type=electrical', color: 'bg-yellow-50 border-yellow-200' },
       ],
     },
   ],
