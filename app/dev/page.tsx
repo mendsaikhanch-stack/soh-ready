@@ -157,7 +157,7 @@ const features: Feature[] = [
   { name: 'Email мэдэгдэл', status: 'todo', category: 'Систем', note: 'Бүртгэл баталгаажуулалт, сануулга' },
   { name: 'Хэрэглэгчийн гарын авлага', status: 'todo', category: 'Систем', note: 'Апп доторх заавар/tutorial' },
   { name: 'Олон СӨХ дэмжлэг (multi-tenant)', status: 'todo', category: 'Систем', note: 'Нэг хэрэглэгч олон СӨХ-д бүртгэлтэй' },
-  { name: 'Засвар хүсэлтэнд зураг хавсаргах', status: 'todo', category: 'Оршин суугч', note: 'Камераар зураг авч илгээх' },
+  { name: 'Засвар хүсэлтэнд зураг хавсаргах', status: 'done', category: 'Оршин суугч', note: 'Камер/галерей-аас зураг хавсаргана' },
   { name: 'Санал хураалтын real-time үр дүн', status: 'todo', category: 'Оршин суугч', note: 'Live updating poll results' },
   { name: 'Зогсоолын QR код', status: 'todo', category: 'СӨХ Админ', note: 'Машины дугаар QR-ээр бүртгэх' },
   { name: 'Тайлан автомат email илгээх', status: 'todo', category: 'СӨХ Админ', note: 'Сар бүр тайлан PDF-ээр илгээх' },

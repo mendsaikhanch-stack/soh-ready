@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 
@@ -9,6 +9,7 @@ interface Request {
   title: string;
   description: string;
   status: string;
+  image_url: string | null;
   created_at: string;
 }
 
@@ -28,6 +29,10 @@ export default function MaintenancePage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchRequests();
@@ -44,19 +49,59 @@ export default function MaintenancePage() {
     setLoading(false);
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Зургийн хэмжээ 5MB-с бага байх ёстой');
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
   const submitRequest = async () => {
     if (!title) return;
     setSaving(true);
+
+    let imageUrl: string | null = null;
+
+    // Зураг upload
+    if (imageFile) {
+      const ext = imageFile.name.split('.').pop();
+      const fileName = `maintenance/${params.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('uploads')
+        .upload(fileName, imageFile, { contentType: imageFile.type });
+
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
+        imageUrl = urlData.publicUrl;
+      }
+    }
 
     await supabase.from('maintenance_requests').insert([{
       sokh_id: params.id,
       title,
       description,
       status: 'pending',
+      image_url: imageUrl,
     }]);
 
     setTitle('');
     setDescription('');
+    removeImage();
     setShowForm(false);
     setSaving(false);
     await fetchRequests();
@@ -94,9 +139,40 @@ export default function MaintenancePage() {
               rows={3}
               className="w-full border rounded-lg px-3 py-2 mb-2 text-sm"
             />
+
+            {/* Зураг хавсаргах */}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+
+            {imagePreview ? (
+              <div className="relative mb-2">
+                <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
+                <button
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 w-7 h-7 bg-black/60 text-white rounded-full flex items-center justify-center text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="w-full border-2 border-dashed border-gray-300 rounded-lg py-4 mb-2 flex flex-col items-center gap-1 text-gray-400 hover:border-orange-400 hover:text-orange-500 transition"
+              >
+                <span className="text-2xl">📷</span>
+                <span className="text-xs">Зураг хавсаргах</span>
+              </button>
+            )}
+
             <div className="flex gap-2">
               <button
-                onClick={() => setShowForm(false)}
+                onClick={() => { setShowForm(false); removeImage(); }}
                 className="flex-1 py-2 rounded-lg border text-sm"
               >
                 Цуцлах
@@ -136,6 +212,11 @@ export default function MaintenancePage() {
                   {r.description && (
                     <p className="text-xs text-gray-500 mt-1">{r.description}</p>
                   )}
+                  {r.image_url && (
+                    <button onClick={() => setExpandedImage(r.image_url)} className="mt-2">
+                      <img src={r.image_url} alt="Хавсралт" className="w-full h-32 object-cover rounded-lg" />
+                    </button>
+                  )}
                   <p className="text-xs text-gray-400 mt-2">
                     {new Date(r.created_at).toLocaleDateString('mn-MN')}
                   </p>
@@ -145,6 +226,16 @@ export default function MaintenancePage() {
           </div>
         )}
       </div>
+
+      {/* Зураг томруулж харах */}
+      {expandedImage && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setExpandedImage(null)}
+        >
+          <img src={expandedImage} alt="Зураг" className="max-w-full max-h-full rounded-xl" />
+        </div>
+      )}
     </div>
   );
 }
