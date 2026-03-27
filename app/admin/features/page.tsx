@@ -39,7 +39,7 @@ const allFeatures: FeatureItem[] = [
   // ОСНАА таб
   { href: 'utilities?type=water', icon: '💧', label: 'Усны тоолуур', desc: 'Заалт оруулах', tab: 'ОСНАА' },
   { href: 'utilities?type=water&tab=bills', icon: '🧾', label: 'Усны нэхэмжлэх', desc: 'Төлбөр', tab: 'ОСНАА' },
-  { href: 'utilities?type=heating', icon: '🔥', label: 'Дулааны тоолуур', desc: 'Заалт оруулах', tab: 'ОСНАА' },
+  { href: 'utilities?type=heating', icon: '🔥', label: 'Дулааны тооцоолуур', desc: 'мкв × тариф-аар тооцох', tab: 'ОСНАА' },
   { href: 'utilities?type=heating&tab=bills', icon: '🧾', label: 'Дулааны нэхэмжлэх', desc: 'Төлбөр', tab: 'ОСНАА' },
   { href: 'maintenance?type=plumbing', icon: '🚿', label: 'Сантехникч', desc: 'Ус, халаалт засвар', tab: 'ОСНАА' },
   // Цахилгаан таб

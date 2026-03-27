@@ -83,7 +83,7 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
     {
       title: '🔥 Дулаан',
       items: [
-        { icon: '🔥', label: 'Дулааны тоолуур', desc: 'Заалт оруулах, хэрэглээ харах', href: 'utilities?type=heating', color: 'bg-red-50 border-red-200' },
+        { icon: '🔥', label: 'Дулааны тооцоолуур', desc: 'мкв × тариф-аар тооцох', href: 'utilities?type=heating', color: 'bg-red-50 border-red-200' },
         { icon: '🧾', label: 'Дулааны нэхэмжлэх', desc: 'Төлбөр, төлөлтийн байдал', href: 'utilities?type=heating&tab=bills', color: 'bg-red-50 border-red-200' },
       ],
     },
