@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 
 const USERS: Record<string, { password: string; role: string }> = {
-  admin: { password: process.env.ADMIN_PASSWORD || 'Toot@2024!Secure', role: 'admin' },
-  superadmin: { password: process.env.SUPER_PASSWORD || 'Super@Toot2024!', role: 'superadmin' },
-  osnaa: { password: process.env.OSNAA_PASSWORD || 'Osnaa@Toot2024!', role: 'osnaa' },
-  // inspector хэрэглэгчид DB-ээс шалгана (доорх кодонд)
+  admin: { password: process.env.ADMIN_PASSWORD!, role: 'admin' },
+  superadmin: { password: process.env.SUPER_PASSWORD!, role: 'superadmin' },
+  osnaa: { password: process.env.OSNAA_PASSWORD!, role: 'osnaa' },
 };
 
 // Rate limiting
@@ -39,7 +39,8 @@ export async function POST(request: Request) {
         .eq('status', 'active')
         .single();
 
-      if (!inspector || inspector.password !== password) {
+      const passwordMatch = inspector ? await bcrypt.compare(password, inspector.password) : false;
+      if (!inspector || !passwordMatch) {
         const rec = attempts.get(ip) || { count: 0, lockUntil: 0 };
         rec.count++;
         if (rec.count >= 5) rec.lockUntil = now + 15 * 60 * 1000;

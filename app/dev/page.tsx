@@ -146,8 +146,8 @@ const features: Feature[] = [
 
   // ===== Хагас хийгдсэн =====
   { name: 'QPay production credentials', status: 'partial', category: 'Төлбөр', note: 'Sandbox ажиллаж байгаа, production key хэрэгтэй' },
-  { name: 'Inspector нууц үг hash-лэх', status: 'partial', category: 'Auth', note: 'Одоо plaintext, bcrypt хэрэгтэй' },
-  { name: 'OSNAA_PASSWORD env-д нэмэх', status: 'partial', category: 'Auth', note: '.env.local-д байхгүй, fallback ашиглаж байгаа' },
+  { name: 'Inspector нууц үг hash-лэх', status: 'done', category: 'Auth', note: 'bcryptjs ашиглан hash-лагдсан' },
+  { name: 'OSNAA_PASSWORD env-д нэмэх', status: 'done', category: 'Auth', note: '.env.local-д тохируулагдсан, fallback арилгасан' },
 
   // ===== Хийгдээгүй / Санал болгох =====
   { name: 'Оршин суугч profile засах', status: 'todo', category: 'Оршин суугч', note: 'Нэр, утас, зураг солих' },
