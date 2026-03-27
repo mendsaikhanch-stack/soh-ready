@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<title>ТООТ — УБЦТГ-д зориулсан танилцуулга</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; background: #fff; }
+
+  .slide {
+    width: 297mm; height: 210mm;
+    padding: 40px 50px;
+    page-break-after: always;
+    position: relative; overflow: hidden;
+  }
+  .slide:last-child { page-break-after: avoid; }
+
+  .cover {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 50%, #92400e 100%);
+    color: white; display: flex; flex-direction: column; justify-content: center;
+    align-items: center; text-align: center;
+  }
+  .cover .logo { font-size: 80px; margin-bottom: 20px; }
+  .cover h1 { font-size: 48px; font-weight: 800; margin-bottom: 10px; }
+  .cover h2 { font-size: 24px; font-weight: 400; opacity: 0.9; margin-bottom: 40px; }
+  .cover .tagline { background: rgba(255,255,255,0.15); border-radius: 12px; padding: 15px 30px; font-size: 18px; max-width: 750px; }
+  .cover .date { position: absolute; bottom: 30px; right: 50px; font-size: 14px; opacity: 0.7; }
+
+  .slide-header {
+    border-bottom: 3px solid #d97706; padding-bottom: 12px; margin-bottom: 25px;
+    display: flex; align-items: center; gap: 15px;
+  }
+  .slide-header .num {
+    background: #d97706; color: white; width: 40px; height: 40px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px;
+  }
+  .slide-header h2 { font-size: 28px; color: #92400e; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
+
+  .card {
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px;
+    padding: 18px;
+  }
+  .card .icon { font-size: 28px; margin-bottom: 8px; }
+  .card h3 { font-size: 15px; font-weight: 700; color: #92400e; margin-bottom: 6px; }
+  .card p { font-size: 12px; color: #374151; line-height: 1.5; }
+  .card.highlight { background: #d97706; color: white; border-color: #d97706; }
+  .card.highlight h3 { color: white; }
+  .card.highlight p { color: rgba(255,255,255,0.9); }
+
+  .stat { text-align: center; background: white; border-radius: 12px; padding: 20px; border: 2px solid #fde68a; }
+  .stat .value { font-size: 36px; font-weight: 800; color: #d97706; }
+  .stat .label { font-size: 13px; color: #6b7280; margin-top: 5px; }
+
+  .feature-list { list-style: none; }
+  .feature-list li {
+    padding: 10px 15px; margin-bottom: 8px;
+    background: #fffbeb; border-radius: 8px; border-left: 4px solid #d97706;
+    font-size: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .feature-list li .emoji { font-size: 20px; }
+
+  .slide-footer {
+    position: absolute; bottom: 20px; left: 50px; right: 50px;
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 10px;
+  }
+
+  .flow { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 15px 0; }
+  .flow-step { background: #fef3c7; border-radius: 10px; padding: 12px 16px; text-align: center; font-size: 12px; font-weight: 600; color: #92400e; }
+  .flow-arrow { font-size: 20px; color: #d97706; }
+
+  .section-title { font-size: 14px; font-weight: 700; color: #d97706; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+  .big-number { font-size: 64px; font-weight: 800; color: #d97706; line-height: 1; }
+
+  @media print { .slide { width: 100%; height: 100vh; } }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Cover -->
+<div class="slide cover">
+  <div class="logo">⚡</div>
+  <h1>ТООТ СИСТЕМ</h1>
+  <h2>УБЦТГ-д зориулсан Цахилгааны Хэрэглээний Модуль</h2>
+  <div class="tagline">
+    Цахилгааны тоолуурын заалт, нэхэмжлэх, төлбөр цуглуулалтыг бүрэн цахимжуулж,<br>
+    хэрэглэгчийн сэтгэл ханамж, цуглуулалтын үр ашгийг нэмэгдүүлнэ
+  </div>
+  <div class="date">2026 он — УБЦТГ-ийн удирдлагуудад зориулав</div>
+</div>
+
+<!-- SLIDE 2: Асуудал & Шийдэл -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">1</div>
+    <h2>Цахилгааны салбарын өнөөгийн асуудал</h2>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div class="section-title">❌ Өнөөгийн бэрхшээл</div>
+      <ul class="feature-list">
+        <li><span class="emoji">🏠</span> Орон сууцны тоолуурын заалтыг цуглуулахад хүн хүч их шаарддаг</li>
+        <li><span class="emoji">⏰</span> Хэрэглэгчид заалтаа мэдэгдэхгүй, хугацаа хоцордог</li>
+        <li><span class="emoji">💸</span> Цахилгааны төлбөр цуглуулалтын хувь хангалтгүй</li>
+        <li><span class="emoji">📊</span> Хэрэглээний мэдээлэл тархсан, нэгтгэхэд хүндрэлтэй</li>
+        <li><span class="emoji">📞</span> Хэрэглэгчийн гомдол, хүсэлтийг удирдахад тогтолцоо дутмаг</li>
+      </ul>
+    </div>
+    <div>
+      <div class="section-title">✅ ТООТ платформын шийдэл</div>
+      <ul class="feature-list">
+        <li><span class="emoji">📱</span> Хэрэглэгч өөрөө утаснаасаа заалт оруулна</li>
+        <li><span class="emoji">🔔</span> Автомат сануулга — заалт оруулах, төлбөр хийх</li>
+        <li><span class="emoji">💳</span> QPay-ээр шууд төлбөр хүлээн авна</li>
+        <li><span class="emoji">📈</span> Бодит цагийн хяналт — бүх мэдээлэл нэг дашбоардад</li>
+        <li><span class="emoji">🤝</span> ТООТ-СӨХ-УБЦТГ нэгдсэн экосистем</li>
+      </ul>
+    </div>
+  </div>
+  <div style="margin-top: 20px; background: #fffbeb; border: 2px solid #fde68a; border-radius: 12px; padding: 18px; text-align: center;">
+    <strong style="color: #92400e; font-size: 16px;">Гол санаа:</strong>
+    <span style="font-size: 15px;"> ТООТ платформ дээр бүртгэлтэй 10,000+ өрхийн цахилгааны заалт, нэхэмжлэх, төлбөр нэг системээр.</span>
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — УБЦТГ Модуль</span>
+    <span>2 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 3: Тоолуурын заалт -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">2</div>
+    <h2>Тоолуурын заалт — Хэрэглэгч өөрөө оруулна</h2>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div class="section-title">📱 Оршин суугчийн апп</div>
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="icon">⚡</div>
+        <h3>Заалт оруулах</h3>
+        <p>Сар бүр тоолуурын заалтыг утаснаасаа оруулна. Өмнөх заалттай автомат харьцуулна — буруу утга оруулахаас хамгаална.</p>
+      </div>
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="icon">📊</div>
+        <h3>Хэрэглээний түүх</h3>
+        <p>Сарын хэрэглээг график дээр харуулна — кВт·ц, зардал, өмнөх сартай харьцуулалт.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🧾</div>
+        <h3>Нэхэмжлэх</h3>
+        <p>Заалт оруулмагц нэхэмжлэх автомат үүснэ. Төлсөн/төлөгдөөгүй статус тодорхой.</p>
+      </div>
+    </div>
+    <div>
+      <div class="section-title">🔄 Заалтын урсгал</div>
+      <div style="background: #fffbeb; border-radius: 12px; padding: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #d97706; color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800;">1</div>
+            <div>
+              <strong style="font-size: 14px;">Сануулга ирнэ</strong>
+              <p style="font-size: 12px; color: #6b7280;">Push notification — "Тоолуурын заалт оруулах цаг болсон"</p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #d97706; color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800;">2</div>
+            <div>
+              <strong style="font-size: 14px;">Хэрэглэгч заалт оруулна</strong>
+              <p style="font-size: 12px; color: #6b7280;">Апп → Ашиглалт → Цахилгаан → тоо оруулах → Илгээх</p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #d97706; color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800;">3</div>
+            <div>
+              <strong style="font-size: 14px;">Хэрэглээ автомат тооцогдоно</strong>
+              <p style="font-size: 12px; color: #6b7280;">Одоогийн заалт − Өмнөх заалт = кВт·ц</p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #d97706; color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800;">4</div>
+            <div>
+              <strong style="font-size: 14px;">Нэхэмжлэх үүснэ</strong>
+              <p style="font-size: 12px; color: #6b7280;">кВт·ц × Тариф = Нэхэмжлэх дүн</p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #059669; color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800;">5</div>
+            <div>
+              <strong style="font-size: 14px;">QPay-ээр шууд төлнө</strong>
+              <p style="font-size: 12px; color: #6b7280;">QR код / Банкны апп → Баталгаажуулалт автомат</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — УБЦТГ Модуль</span>
+    <span>3 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 4: QPay төлбөр -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">3</div>
+    <h2>QPay төлбөрийн интеграци</h2>
+  </div>
+  <p style="font-size: 15px; color: #374151; margin-bottom: 20px;">
+    Цахилгааны төлбөрийг утаснаасаа шууд хийнэ — касс, банкны салбарт очих шаардлагагүй.
+  </p>
+  <div class="grid-3">
+    <div class="card highlight">
+      <div class="icon">📱</div>
+      <h3>QR код</h3>
+      <p>Нэхэмжлэх дээр "QPay-ээр төлөх" товч дарахад QR код гарна. Аль ч банкны апп-аар уншуулж төлнө.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🏦</div>
+      <h3>12+ банкны апп</h3>
+      <p>Хан, Голомт, ХХБ, Төрийн, Хас, Богд, Капитрон зэрэг банкуудын апп-аар шууд шилжүүлэг хийнэ.</p>
+    </div>
+    <div class="card">
+      <div class="icon">✅</div>
+      <h3>Автомат баталгаажуулалт</h3>
+      <p>Төлбөр хийгдмэгц систем автомат шалгаж, нэхэмжлэхийг "Төлсөн" болгоно. 3 секундэд шалгана.</p>
+    </div>
+  </div>
+  <div style="margin-top: 25px;">
+    <div class="grid-2">
+      <div style="background: #fffbeb; border-radius: 12px; padding: 25px; text-align: center;">
+        <div class="section-title">Өмнөх арга</div>
+        <div style="font-size: 14px; color: #6b7280; margin-bottom: 15px;">
+          Хэрэглэгч → Банкны салбар → Дугаар хайх → Мөнгө шилжүүлэх → Баримт авах → Мэдэгдэх
+        </div>
+        <div style="font-size: 48px; font-weight: 800; color: #dc2626;">30+ мин</div>
+        <div style="font-size: 13px; color: #6b7280;">Нэг төлбөрт зарцуулах хугацаа</div>
+      </div>
+      <div style="background: #ecfdf5; border-radius: 12px; padding: 25px; text-align: center;">
+        <div class="section-title">ТООТ-оор</div>
+        <div style="font-size: 14px; color: #6b7280; margin-bottom: 15px;">
+          Апп нээх → "Төлөх" дарах → QR уншуулах → Дууссан!
+        </div>
+        <div style="font-size: 48px; font-weight: 800; color: #059669;">30 сек</div>
+        <div style="font-size: 13px; color: #6b7280;">Нэг төлбөрт зарцуулах хугацаа</div>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top: 20px; background: #fffbeb; border-radius: 12px; padding: 15px 20px; text-align: center;">
+    <strong style="color: #d97706;">Үр дүн:</strong> Төлбөр хийх хялбар болоход → цуглуулалтын хувь 15-25% нэмэгдэнэ.
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — УБЦТГ Модуль</span>
+    <span>4 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 5: Dashboard дээрх хэрэглээний мэдээлэл -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">4</div>
+    <h2>УБЦТГ-д ирэх мэдээлэл & Хяналт</h2>
+  </div>
+  <div class="grid-4" style="margin-bottom: 20px;">
+    <div class="stat">
+      <div class="value">10,000+</div>
+      <div class="label">Нийт хэрэглэгч</div>
+    </div>
+    <div class="stat">
+      <div class="value">8,420</div>
+      <div class="label">Заалт оруулсан</div>
+    </div>
+    <div class="stat">
+      <div class="value">92%</div>
+      <div class="label">Цуглуулалт</div>
+    </div>
+    <div class="stat">
+      <div class="value">156M₮</div>
+      <div class="label">Энэ сарын орлого</div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div class="section-title">📊 УБЦТГ-д хүрэх мэдээлэл</div>
+      <ul class="feature-list">
+        <li><span class="emoji">⚡</span> Бүх хэрэглэгчийн сарын кВт·ц хэрэглээ — бодит цагаар</li>
+        <li><span class="emoji">📈</span> Хэрэглээний чиг хандлага — сар/жилээр, дүүрэг/хороогоор</li>
+        <li><span class="emoji">💰</span> Төлбөрийн байдал — төлсөн, өртэй, хугацаа хэтэрсэн</li>
+        <li><span class="emoji">🏢</span> СӨХ бүрийн нийт хэрэглээ, цуглуулалт</li>
+        <li><span class="emoji">📋</span> Тоолуурын заалтын түүх — хэрэглэгч бүрээр</li>
+        <li><span class="emoji">🔔</span> Хэвийн бус хэрэглээний мэдэгдэл</li>
+      </ul>
+    </div>
+    <div>
+      <div class="section-title">🔗 Интеграцийн боломж</div>
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="icon">🔌</div>
+        <h3>API интеграци</h3>
+        <p>УБЦТГ-ийн одоогийн системтэй API-аар холбогдох боломжтой. REST API — JSON формат.</p>
+      </div>
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="icon">📤</div>
+        <h3>Өгөгдөл экспорт</h3>
+        <p>Сарын заалтуудыг CSV, Excel форматаар татаж, УБЦТГ-ийн системд импортлох боломжтой.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📊</div>
+        <h3>Тайлан</h3>
+        <p>Дүүрэг, хороо, СӨХ-ээр бүлэглэсэн тайлан — PDF, Excel.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — УБЦТГ Модуль</span>
+    <span>5 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 6: Хамтын ажиллагааны загвар -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">5</div>
+    <h2>Хамтын ажиллагааны загвар</h2>
+  </div>
+  <p style="font-size: 15px; color: #374151; margin-bottom: 25px;">
+    ТООТ платформ нь УБЦТГ, ОСНАА, СӨХ гурвын хооронд мэдээлэл урсгах гүүр болно.
+  </p>
+  <div style="text-align: center; margin-bottom: 25px;">
+    <div class="flow">
+      <div class="flow-step" style="padding: 18px 25px; font-size: 14px;">👤 Оршин суугч<br><span style="font-size: 11px; font-weight: 400;">Заалт оруулна, төлбөр хийнэ</span></div>
+      <div class="flow-arrow">⇄</div>
+      <div class="flow-step" style="padding: 18px 25px; font-size: 14px; background: #fde68a;">🏢 СӨХ<br><span style="font-size: 11px; font-weight: 400;">Удирдлага, мэдэгдэл</span></div>
+      <div class="flow-arrow">⇄</div>
+      <div class="flow-step" style="padding: 18px 25px; font-size: 14px; background: #bfdbfe;">🏗️ ОСНАА<br><span style="font-size: 11px; font-weight: 400;">Хяналт, байцаагч</span></div>
+      <div class="flow-arrow">⇄</div>
+      <div class="flow-step" style="padding: 18px 25px; font-size: 14px; background: #fde68a;">⚡ УБЦТГ<br><span style="font-size: 11px; font-weight: 400;">Хэрэглээний мэдээлэл</span></div>
+    </div>
+  </div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="icon">📥</div>
+      <h3>УБЦТГ-д ирэх</h3>
+      <p>
+        • Сарын тоолуурын заалтууд<br>
+        • Хэрэглээний статистик<br>
+        • Төлбөрийн мэдээлэл<br>
+        • Хэрэглэгчийн бүртгэл
+      </p>
+    </div>
+    <div class="card highlight">
+      <div class="icon">🔄</div>
+      <h3>ТООТ-ын үүрэг</h3>
+      <p>
+        • Мэдээлэл цуглуулах<br>
+        • Нэхэмжлэх автоматжуулах<br>
+        • Төлбөр хүлээн авах<br>
+        • Тайлан бэлдэх
+      </p>
+    </div>
+    <div class="card">
+      <div class="icon">📤</div>
+      <h3>УБЦТГ-аас ирэх</h3>
+      <p>
+        • Тарифын мэдээлэл<br>
+        • Тасалтын мэдэгдэл<br>
+        • Засвар хуваарь<br>
+        • Хөнгөлөлтийн мэдээлэл
+      </p>
+    </div>
+  </div>
+  <div style="margin-top: 20px; background: #fffbeb; border: 2px solid #fde68a; border-radius: 12px; padding: 18px; text-align: center;">
+    <strong style="color: #92400e;">Давуу тал:</strong> УБЦТГ-ийн одоогийн системийг солихгүй — зөвхөн нэмэлт мэдээллийн суваг. Аажмаар интеграцийг гүнзгийрүүлэх боломжтой.
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — УБЦТГ Модуль</span>
+    <span>6 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 7: CTA -->
+<div class="slide" style="background: linear-gradient(135deg, #92400e 0%, #d97706 100%); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+  <div style="font-size: 60px; margin-bottom: 20px;">⚡</div>
+  <h1 style="font-size: 40px; margin-bottom: 15px;">Цахилгааны салбарыг хамтдаа цахимжуулцгаая</h1>
+  <p style="font-size: 20px; opacity: 0.9; max-width: 650px; margin-bottom: 40px;">
+    10,000+ өрхийн цахилгааны заалт, нэхэмжлэх, төлбөрийг нэг платформоор — УБЦТГ-ийн ажлын ачааллыг бууруулна.
+  </p>
+  <div style="display: flex; gap: 30px; margin-bottom: 40px;">
+    <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 20px 30px;">
+      <div style="font-size: 28px; font-weight: 800;">60x</div>
+      <div style="font-size: 14px; opacity: 0.8;">Төлбөр хийх хурд</div>
+    </div>
+    <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 20px 30px;">
+      <div style="font-size: 28px; font-weight: 800;">+25%</div>
+      <div style="font-size: 14px; opacity: 0.8;">Цуглуулалт нэмэгдэнэ</div>
+    </div>
+    <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 20px 30px;">
+      <div style="font-size: 28px; font-weight: 800;">API</div>
+      <div style="font-size: 14px; opacity: 0.8;">Систем интеграци</div>
+    </div>
+  </div>
+  <div style="font-size: 16px; opacity: 0.7;">
+    📧 info@toot.mn &nbsp;&nbsp;|&nbsp;&nbsp; 📞 7000-0000 &nbsp;&nbsp;|&nbsp;&nbsp; 🌐 toot.mn
+  </div>
+</div>
+
+</body>
+</html>

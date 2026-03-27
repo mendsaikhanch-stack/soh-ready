@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<title>ТООТ — ОСНАА-д зориулсан танилцуулга</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; background: #fff; }
+
+  .slide {
+    width: 297mm; height: 210mm;
+    padding: 40px 50px;
+    page-break-after: always;
+    position: relative; overflow: hidden;
+  }
+  .slide:last-child { page-break-after: avoid; }
+
+  .cover {
+    background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 50%, #1e3a8a 100%);
+    color: white; display: flex; flex-direction: column; justify-content: center;
+    align-items: center; text-align: center;
+  }
+  .cover .logo { font-size: 80px; margin-bottom: 20px; }
+  .cover h1 { font-size: 48px; font-weight: 800; margin-bottom: 10px; }
+  .cover h2 { font-size: 24px; font-weight: 400; opacity: 0.9; margin-bottom: 40px; }
+  .cover .tagline { background: rgba(255,255,255,0.15); border-radius: 12px; padding: 15px 30px; font-size: 18px; max-width: 750px; }
+  .cover .date { position: absolute; bottom: 30px; right: 50px; font-size: 14px; opacity: 0.7; }
+
+  .slide-header {
+    border-bottom: 3px solid #1d4ed8; padding-bottom: 12px; margin-bottom: 25px;
+    display: flex; align-items: center; gap: 15px;
+  }
+  .slide-header .num {
+    background: #1d4ed8; color: white; width: 40px; height: 40px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px;
+  }
+  .slide-header h2 { font-size: 28px; color: #1e3a8a; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
+
+  .card {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px;
+    padding: 18px;
+  }
+  .card .icon { font-size: 28px; margin-bottom: 8px; }
+  .card h3 { font-size: 15px; font-weight: 700; color: #1e3a8a; margin-bottom: 6px; }
+  .card p { font-size: 12px; color: #374151; line-height: 1.5; }
+  .card.highlight { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .card.highlight h3 { color: white; }
+  .card.highlight p { color: rgba(255,255,255,0.9); }
+
+  .stat { text-align: center; background: white; border-radius: 12px; padding: 20px; border: 2px solid #dbeafe; }
+  .stat .value { font-size: 36px; font-weight: 800; color: #1d4ed8; }
+  .stat .label { font-size: 13px; color: #6b7280; margin-top: 5px; }
+
+  .feature-list { list-style: none; }
+  .feature-list li {
+    padding: 10px 15px; margin-bottom: 8px;
+    background: #eff6ff; border-radius: 8px; border-left: 4px solid #1d4ed8;
+    font-size: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .feature-list li .emoji { font-size: 20px; }
+
+  .slide-footer {
+    position: absolute; bottom: 20px; left: 50px; right: 50px;
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 10px;
+  }
+
+  .flow { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 15px 0; }
+  .flow-step { background: #dbeafe; border-radius: 10px; padding: 12px 16px; text-align: center; font-size: 12px; font-weight: 600; color: #1e3a8a; }
+  .flow-arrow { font-size: 20px; color: #1d4ed8; }
+
+  .section-title { font-size: 14px; font-weight: 700; color: #1d4ed8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+  @media print { .slide { width: 100%; height: 100vh; } }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Cover -->
+<div class="slide cover">
+  <div class="logo">🏗️</div>
+  <h1>ТООТ СИСТЕМ</h1>
+  <h2>ОСНАА-д зориулсан Цахим Удирдлагын Модуль</h2>
+  <div class="tagline">
+    Орон сууц нийтийн аж ахуйн байгууллагын ашиглалт, хяналт, тоолуурын бүртгэлийг бүрэн цахимжуулна
+  </div>
+  <div class="date">2026 он — ОСНАА-ийн удирдлагуудад зориулав</div>
+</div>
+
+<!-- SLIDE 2: Асуудал & Шийдэл -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">1</div>
+    <h2>ОСНАА-ийн өнөөгийн асуудал & Шийдэл</h2>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div class="section-title">❌ Өнөөгийн байдал</div>
+      <ul class="feature-list">
+        <li><span class="emoji">📋</span> Тоолуурын заалтыг гараар бичиж, Excel-д шивж байна</li>
+        <li><span class="emoji">🚶</span> Байцаагч нар давхар тойрч, заалт бичиж цаг алддаг</li>
+        <li><span class="emoji">📊</span> Нэхэмжлэх гараар тооцож, алдаа гарах эрсдэлтэй</li>
+        <li><span class="emoji">💸</span> Төлбөр цуглуулалт удаан, өрийн мэдээлэл тодорхойгүй</li>
+        <li><span class="emoji">🏢</span> СӨХ бүртэй тус тусад нь ажилладаг, нэгдсэн систем байхгүй</li>
+        <li><span class="emoji">📉</span> Тарифын өөрчлөлт, хэрэглээний чиг хандлагыг харах боломжгүй</li>
+      </ul>
+    </div>
+    <div>
+      <div class="section-title">✅ ТООТ-ийн шийдэл</div>
+      <ul class="feature-list">
+        <li><span class="emoji">📱</span> Байцаагч утаснаасаа заалт оруулна — QR уншуулж, шууд бүртгэнэ</li>
+        <li><span class="emoji">🧮</span> Нэхэмжлэх автомат тооцогдоно — тариф x хэрэглээ</li>
+        <li><span class="emoji">💳</span> QPay-ээр шууд төлбөр хүлээн авна</li>
+        <li><span class="emoji">📈</span> Бодит цагийн тайлан, статистик Dashboard</li>
+        <li><span class="emoji">🏢</span> Бүх СӨХ-тэй нэг системээр холбогдоно</li>
+        <li><span class="emoji">🗺️</span> Байцаагчийн маршрут, даалгавар цахимаар</li>
+      </ul>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — ОСНАА Модуль</span>
+    <span>2 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 3: ОСНАА Dashboard -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">2</div>
+    <h2>ОСНАА Dashboard — Нэгдсэн хяналтын самбар</h2>
+  </div>
+  <div class="grid-4" style="margin-bottom: 20px;">
+    <div class="stat">
+      <div class="value">1,247</div>
+      <div class="label">Нийт нэхэмжлэх</div>
+    </div>
+    <div class="stat">
+      <div class="value" style="color: #dc2626;">48.2M₮</div>
+      <div class="label">Төлөгдөөгүй дүн</div>
+    </div>
+    <div class="stat">
+      <div class="value">87%</div>
+      <div class="label">Цуглуулалтын хувь</div>
+    </div>
+    <div class="stat">
+      <div class="value">342</div>
+      <div class="label">Энэ сарын заалт</div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card highlight" style="background: #1d4ed8;">
+      <div class="icon">💧</div>
+      <h3>Ус</h3>
+      <p>Усны хэрэглээ, тоолуурын заалт, нэхэмжлэх — СӨХ бүрээр ангилсан. Бодит цагаар.</p>
+    </div>
+    <div class="card" style="background: #fef2f2; border-color: #fecaca;">
+      <div class="icon">🔥</div>
+      <h3>Дулаан</h3>
+      <p>Халаалтын зардал, Гкал хэрэглээ, улирлын харьцуулалт. СӨХ бүрээр ангилсан.</p>
+    </div>
+  </div>
+  <div style="margin-top: 20px;">
+    <div class="section-title">📊 Сар бүрийн харьцуулалт</div>
+    <p style="font-size: 13px; color: #6b7280;">Dashboard дээр сар/жилээр шүүж, төрөл тус бүрийн нэхэмжлэх, цуглуулалт, тоолуурын тоог графикаар харуулна. Өмнөх сартай автомат харьцуулна.</p>
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — ОСНАА Модуль</span>
+    <span>3 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 4: Тариф & Нэхэмжлэх -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">3</div>
+    <h2>Тариф удирдлага & Автомат нэхэмжлэх</h2>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div class="section-title">💰 Тарифын удирдлага</div>
+      <div class="card" style="margin-bottom: 15px;">
+        <div class="icon">⚙️</div>
+        <h3>Уян хатан тариф тохиргоо</h3>
+        <p>Ус, цахилгаан, дулааны тарифыг СӨХ бүрээр тусад нь тохируулна. Хүчин төгөлдөр огноо, түүхийн бүртгэлтэй.</p>
+      </div>
+      <div class="card" style="margin-bottom: 15px;">
+        <div class="icon">🧮</div>
+        <h3>Автомат тооцоолол</h3>
+        <p>Заалт оруулмагц: <strong>Хэрэглээ × Тариф = Нэхэмжлэх</strong> автомат тооцогдоно. Гар тооцоо шаардлагагүй.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📋</div>
+        <h3>Нэхэмжлэх удирдлага</h3>
+        <p>Бүх нэхэмжлэхийг нэг газраас хянана — төлсөн (ногоон), төлөгдөөгүй (улаан), хугацаа хэтэрсэн.</p>
+      </div>
+    </div>
+    <div>
+      <div class="section-title">🔄 Нэхэмжлэхийн урсгал</div>
+      <div style="background: #eff6ff; border-radius: 12px; padding: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #1d4ed8; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px;">1</div>
+            <div><strong style="font-size: 14px;">Тариф тохируулах</strong><br><span style="font-size: 12px; color: #6b7280;">₮/кВт·ц, ₮/м³, ₮/Гкал</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #1d4ed8; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px;">2</div>
+            <div><strong style="font-size: 14px;">Тоолуурын заалт оруулах</strong><br><span style="font-size: 12px; color: #6b7280;">Байцаагч / Оршин суугч</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #1d4ed8; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px;">3</div>
+            <div><strong style="font-size: 14px;">Нэхэмжлэх автомат үүснэ</strong><br><span style="font-size: 12px; color: #6b7280;">Хэрэглээ × Тариф</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #1d4ed8; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px;">4</div>
+            <div><strong style="font-size: 14px;">Push мэдэгдэл илгээнэ</strong><br><span style="font-size: 12px; color: #6b7280;">Оршин суугчид автомат</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #059669; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px;">5</div>
+            <div><strong style="font-size: 14px;">QPay-ээр төлнө</strong><br><span style="font-size: 12px; color: #6b7280;">QR код / Банкны апп</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — ОСНАА Модуль</span>
+    <span>4 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 5: Байцаагчийн апп -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">4</div>
+    <h2>Байцаагчийн утасны апп</h2>
+  </div>
+  <p style="font-size: 15px; color: #374151; margin-bottom: 20px;">
+    Байцаагч нар газар дээрээс бүх ажлаа утаснаасаа гүйцэтгэнэ — цаас, Excel шаардлагагүй.
+  </p>
+  <div class="grid-3">
+    <div class="card highlight">
+      <div class="icon">📊</div>
+      <h3>Өдрийн Dashboard</h3>
+      <p>Өнөөдрийн даалгавар, хийсэн шалгалт, бүртгэсэн зөрчил, оруулсан заалт — нэг дэлгэцэнд.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🗺️</div>
+      <h3>Маршрут төлөвлөлт</h3>
+      <p>Хаана очих, ямар байрыг шалгах — маршрут даалгавар цахимаар ирнэ.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📷</div>
+      <h3>QR Скан</h3>
+      <p>Тоолуурын QR кодыг камераар уншуулж, заалтыг шууд оруулна. Хурдан, алдаагүй.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📝</div>
+      <h3>Заалт оруулах</h3>
+      <p>Ус, цахилгаан, дулааны заалтыг газар дээрээс шууд оруулна. Bulk save дэмжинэ.</p>
+    </div>
+    <div class="card">
+      <div class="icon">⚠️</div>
+      <h3>Зөрчил бүртгэх</h3>
+      <p>Барилгын гэмтэл, зөрчлийг зурагтай бүртгэж, шууд илгээнэ.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📋</div>
+      <h3>Тайлан</h3>
+      <p>Шалгалтын тайлан автомат үүсч, удирдлагад хүрнэ.</p>
+    </div>
+  </div>
+  <div style="margin-top: 20px;">
+    <div class="section-title">🔄 Байцаагчийн ажлын урсгал</div>
+    <div class="flow">
+      <div class="flow-step">📋 Даалгавар<br>хүлээн авах</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">🗺️ Маршрутаар<br>явах</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">📷 QR скан /<br>Заалт оруулах</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">⚠️ Зөрчил<br>бүртгэх</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">✅ Тайлан<br>илгээх</div>
+    </div>
+  </div>
+  <div style="margin-top: 15px; background: #eff6ff; border-radius: 12px; padding: 15px 20px; text-align: center;">
+    <strong style="color: #1d4ed8;">Үр дүн:</strong> Байцаагчийн бүтээмж 2-3 дахин нэмэгдэнэ. Цаасан бүртгэл, давхар шивэлт алга болно.
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — ОСНАА Модуль</span>
+    <span>5 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 6: Тайлан & Байгууллагын удирдлага -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">5</div>
+    <h2>Тайлан, Төлбөр & Байгууллагын удирдлага</h2>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div class="section-title">📈 Тайлан & Аналитик</div>
+      <ul class="feature-list">
+        <li><span class="emoji">📊</span> Цуглуулалтын хувь — сар/жилээр, төрлөөр</li>
+        <li><span class="emoji">📉</span> Хэрэглээний чиг хандлага — өсөлт/бууралт</li>
+        <li><span class="emoji">💰</span> Өрийн мэдээлэл — СӨХ бүрээр задаргаатай</li>
+        <li><span class="emoji">📄</span> PDF тайлан — хэвлэхэд бэлэн</li>
+        <li><span class="emoji">📋</span> Байцаагчийн ажлын тайлан</li>
+      </ul>
+      <div style="margin-top: 15px;">
+        <div class="section-title">💳 Төлбөрийн систем</div>
+        <ul class="feature-list">
+          <li><span class="emoji">💳</span> QPay — QR код + банкны апп (12+ банк)</li>
+          <li><span class="emoji">🔄</span> Бодит цагийн төлбөр баталгаажуулалт</li>
+          <li><span class="emoji">🧾</span> Төлбөрийн түүх, баримт автомат</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="section-title">🏢 СӨХ байгууллагын удирдлага</div>
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="icon">🏘️</div>
+        <h3>Олон СӨХ-тэй ажиллана</h3>
+        <p>Нэг ОСНАА дашбоардаас олон СӨХ-ийн мэдээллийг хянана. Байгууллага нэмэх, устгах.</p>
+      </div>
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="icon">📝</div>
+        <h3>Тоолуурын бүртгэл</h3>
+        <p>СӨХ бүрийн тоолуурын заалтыг bulk-аар оруулах. Өмнөх/одоогийн харьцуулалт.</p>
+      </div>
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="icon">🧾</div>
+        <h3>Нэхэмжлэх хяналт</h3>
+        <p>Бүх нэхэмжлэхийг нэг газраас хянаж, төлөлтийн байдлыг шалгана.</p>
+      </div>
+      <div class="card">
+        <div class="icon">👥</div>
+        <h3>Оршин суугчийн мэдээлэл</h3>
+        <p>СӨХ-үүдийн оршин суугчийн тоо, тоот бүрийн мэдээлэл.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — ОСНАА Модуль</span>
+    <span>6 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 7: CTA -->
+<div class="slide" style="background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+  <div style="font-size: 60px; margin-bottom: 20px;">🏗️</div>
+  <h1 style="font-size: 42px; margin-bottom: 15px;">ОСНАА-ийн ажлыг цахимжуулцгаая</h1>
+  <p style="font-size: 20px; opacity: 0.9; max-width: 650px; margin-bottom: 40px;">
+    Тоолуурын заалтаас нэхэмжлэх хүртэл бүх үйл явцыг автоматжуулж, ажлын бүтээмжийг нэмэгдүүлнэ.
+  </p>
+  <div style="display: flex; gap: 30px; margin-bottom: 40px;">
+    <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 20px 30px;">
+      <div style="font-size: 28px; font-weight: 800;">2-3x</div>
+      <div style="font-size: 14px; opacity: 0.8;">Бүтээмжийн өсөлт</div>
+    </div>
+    <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 20px 30px;">
+      <div style="font-size: 28px; font-weight: 800;">0</div>
+      <div style="font-size: 14px; opacity: 0.8;">Цаасан бүртгэл</div>
+    </div>
+    <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 20px 30px;">
+      <div style="font-size: 28px; font-weight: 800;">87%+</div>
+      <div style="font-size: 14px; opacity: 0.8;">Цуглуулалтын хувь</div>
+    </div>
+  </div>
+  <div style="font-size: 16px; opacity: 0.7;">
+    📧 info@toot.mn &nbsp;&nbsp;|&nbsp;&nbsp; 📞 7000-0000 &nbsp;&nbsp;|&nbsp;&nbsp; 🌐 toot.mn
+  </div>
+</div>
+
+</body>
+</html>

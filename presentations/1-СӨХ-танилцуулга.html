@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<title>ТООТ — СӨХ-ийн удирдлагуудад зориулсан танилцуулга</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; background: #fff; }
+
+  .slide {
+    width: 297mm; height: 210mm;
+    padding: 40px 50px;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+  .slide:last-child { page-break-after: avoid; }
+
+  /* Slide 1 - Cover */
+  .cover {
+    background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
+    color: white;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center;
+  }
+  .cover .logo { font-size: 80px; margin-bottom: 20px; }
+  .cover h1 { font-size: 48px; font-weight: 800; margin-bottom: 10px; letter-spacing: -1px; }
+  .cover h2 { font-size: 24px; font-weight: 400; opacity: 0.9; margin-bottom: 40px; }
+  .cover .tagline {
+    background: rgba(255,255,255,0.15); border-radius: 12px;
+    padding: 15px 30px; font-size: 18px; max-width: 700px;
+  }
+  .cover .date { position: absolute; bottom: 30px; right: 50px; font-size: 14px; opacity: 0.7; }
+
+  /* Common slide header */
+  .slide-header {
+    border-bottom: 3px solid #059669;
+    padding-bottom: 12px; margin-bottom: 25px;
+    display: flex; align-items: center; gap: 15px;
+  }
+  .slide-header .num {
+    background: #059669; color: white; width: 40px; height: 40px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px;
+  }
+  .slide-header h2 { font-size: 28px; color: #065f46; }
+
+  /* Grid layouts */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
+
+  /* Feature cards */
+  .card {
+    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;
+    padding: 18px; position: relative;
+  }
+  .card .icon { font-size: 28px; margin-bottom: 8px; }
+  .card h3 { font-size: 15px; font-weight: 700; color: #065f46; margin-bottom: 6px; }
+  .card p { font-size: 12px; color: #374151; line-height: 1.5; }
+  .card.highlight { background: #059669; color: white; border-color: #059669; }
+  .card.highlight h3 { color: white; }
+  .card.highlight p { color: rgba(255,255,255,0.9); }
+
+  /* Stat cards */
+  .stat {
+    text-align: center; background: white; border-radius: 12px;
+    padding: 20px; border: 2px solid #d1fae5;
+  }
+  .stat .value { font-size: 36px; font-weight: 800; color: #059669; }
+  .stat .label { font-size: 13px; color: #6b7280; margin-top: 5px; }
+
+  /* List */
+  .feature-list { list-style: none; }
+  .feature-list li {
+    padding: 10px 15px; margin-bottom: 8px;
+    background: #f0fdf4; border-radius: 8px; border-left: 4px solid #059669;
+    font-size: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .feature-list li .emoji { font-size: 20px; }
+
+  /* Footer */
+  .slide-footer {
+    position: absolute; bottom: 20px; left: 50px; right: 50px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 10px;
+  }
+
+  /* Flow diagram */
+  .flow { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 15px 0; }
+  .flow-step {
+    background: #d1fae5; border-radius: 10px; padding: 12px 16px;
+    text-align: center; font-size: 12px; font-weight: 600; color: #065f46;
+  }
+  .flow-arrow { font-size: 20px; color: #059669; }
+
+  /* Section title */
+  .section-title {
+    font-size: 14px; font-weight: 700; color: #059669;
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+  }
+
+  /* Two column with image placeholder */
+  .col-left { padding-right: 20px; }
+  .col-right { display: flex; align-items: center; justify-content: center; }
+  .phone-mock {
+    width: 200px; height: 360px; background: #1a1a2e; border-radius: 30px;
+    padding: 15px 10px; display: flex; flex-direction: column; align-items: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  }
+  .phone-screen {
+    width: 100%; flex: 1; background: #f0fdf4; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #065f46; text-align: center; padding: 10px;
+  }
+
+  @media print {
+    .slide { width: 100%; height: 100vh; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Cover -->
+<div class="slide cover">
+  <div class="logo">🏢</div>
+  <h1>ТООТ СИСТЕМ</h1>
+  <h2>СӨХ-ийн Цахим Удирдлагын Платформ</h2>
+  <div class="tagline">
+    Орон сууцны менежментийг бүрэн цахимжуулж, оршин суугчдын сэтгэл ханамжийг дээшлүүлнэ
+  </div>
+  <div class="date">2026 он — СӨХ-ийн удирдлагуудад зориулав</div>
+</div>
+
+<!-- SLIDE 2: Асуудал & Шийдэл -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">1</div>
+    <h2>Өнөөгийн асуудал & Бидний шийдэл</h2>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div class="section-title">❌ Өнөөгийн байдал</div>
+      <ul class="feature-list">
+        <li><span class="emoji">📋</span> Төлбөрийг гараар бүртгэж, Excel-д хөтөлж байна</li>
+        <li><span class="emoji">🏃</span> Оршин суугчид биечлэн ирж асуудал мэдэгддэг</li>
+        <li><span class="emoji">📞</span> Утсаар мэдээлэл дамжуулахад алдаа, саатал гардаг</li>
+        <li><span class="emoji">💸</span> Төлбөр цуглуулалт удаан, өрийн мэдээлэл тодорхойгүй</li>
+        <li><span class="emoji">📊</span> Тайлан бэлдэхэд цаг их зарцуулдаг</li>
+        <li><span class="emoji">🤷</span> Оршин суугчдын оролцоо, идэвхи бага</li>
+      </ul>
+    </div>
+    <div>
+      <div class="section-title">✅ ТООТ-ийн шийдэл</div>
+      <ul class="feature-list">
+        <li><span class="emoji">📱</span> Бүх зүйлийг утаснаасаа нэг дороос хийнэ</li>
+        <li><span class="emoji">💳</span> QPay-ээр шууд төлбөр хийнэ — QR код, банкны апп</li>
+        <li><span class="emoji">🔔</span> Автомат мэдэгдлээр бүх мэдээлэл шууд хүрнэ</li>
+        <li><span class="emoji">📈</span> Тайлан автомат үүсч, PDF хэвлэнэ</li>
+        <li><span class="emoji">💬</span> Хөрш чат, санал хураалт, зар зарлал</li>
+        <li><span class="emoji">🏠</span> Засвар хүсэлт, захиалга цахимаар илгээнэ</li>
+      </ul>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — СӨХ Цахим Платформ</span>
+    <span>2 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 3: Санхүүгийн удирдлага -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">2</div>
+    <h2>Санхүүгийн удирдлага</h2>
+  </div>
+  <div class="grid-3">
+    <div class="card highlight">
+      <div class="icon">💳</div>
+      <h3>QPay төлбөр</h3>
+      <p>QR код уншуулж эсвэл банкны апп-аар шууд төлнө. Хан, Голомт, ХХБ, Төрийн зэрэг 12+ банк дэмжинэ.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📊</div>
+      <h3>Санхүүгийн задаргаа</h3>
+      <p>Сарын хураамж хаашаа зарцуулагдаж байгааг график дээр харуулна — ил тод, ойлгомжтой.</p>
+    </div>
+    <div class="card">
+      <div class="icon">💰</div>
+      <h3>Өрийн мэдээлэл</h3>
+      <p>Оршин суугч бүрийн өрийг хянаж, автомат сануулга илгээнэ. Dashboard дээр шууд харагдана.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📄</div>
+      <h3>Тайлан & PDF</h3>
+      <p>Санхүүгийн тайланг автомат үүсгэж, PDF-ээр хэвлэнэ. Орц тус бүрээр задаргаатай.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🧾</div>
+      <h3>Нэхэмжлэх систем</h3>
+      <p>Сар бүрийн нэхэмжлэх автомат үүсч, оршин суугчид мэдэгдэл хүргэнэ.</p>
+    </div>
+    <div class="card">
+      <div class="icon">⏰</div>
+      <h3>Төлбөрийн сануулга</h3>
+      <p>Хугацаа дуусахаас өмнө автомат push notification илгээж, цуглуулалтыг нэмэгдүүлнэ.</p>
+    </div>
+  </div>
+  <div style="margin-top: 20px; background: #ecfdf5; border-radius: 12px; padding: 15px 20px; text-align: center;">
+    <strong style="color: #059669;">Үр дүн:</strong> Төлбөр цуглуулалтын хурд 3-5 дахин нэмэгдэнэ. Бэлэн мөнгө хүлээн авах шаардлага арилна.
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — СӨХ Цахим Платформ</span>
+    <span>3 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 4: Амьдралын чанар -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">3</div>
+    <h2>Оршин суугчдын амьдралын чанар</h2>
+  </div>
+  <div class="grid-4">
+    <div class="card">
+      <div class="icon">📢</div>
+      <h3>Зарлал & Мэдэгдэл</h3>
+      <p>Анхааруулга, мэдээлэл, яаралтай зар — push notification-оор шууд хүрнэ</p>
+    </div>
+    <div class="card">
+      <div class="icon">💬</div>
+      <h3>Хөрш чат</h3>
+      <p>Оршин суугчид хоорондоо бодит цагт мессеж бичнэ, нэргүй горимтой</p>
+    </div>
+    <div class="card">
+      <div class="icon">🗳️</div>
+      <h3>Санал хураалт</h3>
+      <p>Байрны шийдвэрийг цахимаар хураална — шударга, ил тод</p>
+    </div>
+    <div class="card">
+      <div class="icon">🛒</div>
+      <h3>Хөрш зах</h3>
+      <p>Хэрэггүй эд зүйлээ хөршдөө зарах, солих боломж</p>
+    </div>
+    <div class="card">
+      <div class="icon">🔧</div>
+      <h3>Засвар хүсэлт</h3>
+      <p>Гэмтэл, эвдрэлийг зурагтай илгээж, статус хянана</p>
+    </div>
+    <div class="card">
+      <div class="icon">📦</div>
+      <h3>Илгээмж хүлээн авалт</h3>
+      <p>Ирсэн илгээмжийг бүртгэж, оршин суугчид мэдэгдэнэ</p>
+    </div>
+    <div class="card">
+      <div class="icon">📅</div>
+      <h3>Зай захиалга</h3>
+      <p>Хурлын өрөө, фитнесс, тоглоомын талбай, BBQ зай захиална</p>
+    </div>
+    <div class="card">
+      <div class="icon">📹</div>
+      <h3>Камерын бичлэг</h3>
+      <p>CCTV бичлэг хүсэлт илгээж, хариу авна</p>
+    </div>
+  </div>
+  <div class="grid-4" style="margin-top: 15px;">
+    <div class="card">
+      <div class="icon">🚗</div>
+      <h3>Зогсоол</h3>
+      <p>Машин бүртгэл, зогсоолын газрын зураг, хаалт мэдэгдэл</p>
+    </div>
+    <div class="card">
+      <div class="icon">🆘</div>
+      <h3>Яаралтай дуудлага</h3>
+      <p>Онцгой нөхцөлд шууд дохио илгээнэ</p>
+    </div>
+    <div class="card">
+      <div class="icon">⭐</div>
+      <h3>Оноо & Урамшуулал</h3>
+      <p>Идэвхтэй оршин суугчид оноо цуглуулж, урамшуулал авна</p>
+    </div>
+    <div class="card">
+      <div class="icon">📝</div>
+      <h3>Гомдол & Санал</h3>
+      <p>Санал хүсэлт, гомдлыг бүртгэж, хариу өгнө</p>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — СӨХ Цахим Платформ</span>
+    <span>4 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 5: Админ панел -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">4</div>
+    <h2>СӨХ Админ панел — Удирдлагын хэрэгсэл</h2>
+  </div>
+  <p style="font-size: 15px; color: #374151; margin-bottom: 20px;">
+    СӨХ-ийн ажилтнууд нэг дашбоардаас бүх үйл ажиллагааг хянаж, удирдана.
+  </p>
+  <div class="grid-2">
+    <div>
+      <div class="section-title">📊 Dashboard KPI</div>
+      <div class="grid-2" style="margin-bottom: 15px;">
+        <div class="stat">
+          <div class="value">248</div>
+          <div class="label">Нийт оршин суугч</div>
+        </div>
+        <div class="stat">
+          <div class="value">12.4M₮</div>
+          <div class="label">Нийт өр</div>
+        </div>
+        <div class="stat">
+          <div class="value">89%</div>
+          <div class="label">Цуглуулалт</div>
+        </div>
+        <div class="stat">
+          <div class="value">7</div>
+          <div class="label">Шийдвэрлээгүй хүсэлт</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title">⚙️ Удирдлагын боломжууд</div>
+      <ul class="feature-list">
+        <li><span class="emoji">👥</span> Оршин суугч бүртгэл — CSV import/export</li>
+        <li><span class="emoji">💰</span> Санхүүгийн бүртгэл, нэхэмжлэх удирдлага</li>
+        <li><span class="emoji">📢</span> Зарлал нийтлэх, push notification илгээх</li>
+        <li><span class="emoji">🔧</span> Засвар хүсэлтүүдийг хуваарилах</li>
+        <li><span class="emoji">🗳️</span> Санал хураалт үүсгэх, үр дүнг хянах</li>
+        <li><span class="emoji">🎨</span> Байрны брэндинг тохируулах</li>
+        <li><span class="emoji">🚗</span> Зогсоол, CCTV, яаралтай удирдлага</li>
+      </ul>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — СӨХ Цахим Платформ</span>
+    <span>5 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 6: Техникийн давуу тал -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">5</div>
+    <h2>Техникийн давуу тал</h2>
+  </div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="icon">📱</div>
+      <h3>Утасны апп шиг ажиллана</h3>
+      <p>Суулгах шаардлагагүй, вэб хөтчөөр нээнэ. iOS, Android аль алинд ажиллана. App Store-д бүртгэх шаардлагагүй.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🌐</div>
+      <h3>Offline горим</h3>
+      <p>Интернэт тасарсан үед ч ажиллана. Холболт сэргэхэд автомат синк хийнэ.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🔐</div>
+      <h3>QR кодоор нэвтрэх</h3>
+      <p>Нууц үг мартсан ч QR код уншуулж нэвтэрнэ. Ахмад настанд тохиромжтой.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🌙</div>
+      <h3>Dark mode</h3>
+      <p>Харанхуй горим — нүдний ачааллыг бууруулж, батерей хэмнэнэ.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🇲🇳</div>
+      <h3>Монгол & English</h3>
+      <p>Бүрэн монгол хэлний дэмжлэг. Гадаадын оршин суугчдад англи хэлээр.</p>
+    </div>
+    <div class="card highlight">
+      <div class="icon">🔒</div>
+      <h3>Мэдээллийн аюулгүй байдал</h3>
+      <p>Supabase (PostgreSQL) дээр хадгалагдана. Row Level Security — зөвхөн эрх бүхий хүн хандана.</p>
+    </div>
+  </div>
+  <div style="margin-top: 25px;">
+    <div class="section-title">🔄 Бүртгэлийн урсгал</div>
+    <div class="flow">
+      <div class="flow-step">🏙️ Хот сонгох</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">🏘️ Дүүрэг</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">📍 Хороо</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">🏢 СӨХ сонгох</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">👤 Мэдээлэл бөглөх</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">✅ Бэлэн!</div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>ТООТ — СӨХ Цахим Платформ</span>
+    <span>6 / 7</span>
+  </div>
+</div>
+
+<!-- SLIDE 7: CTA -->
+<div class="slide" style="background: linear-gradient(135deg, #065f46 0%, #059669 100%); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+  <div style="font-size: 60px; margin-bottom: 20px;">🏢</div>
+  <h1 style="font-size: 42px; margin-bottom: 15px;">ТООТ-той хамтарч ажиллацгаая</h1>
+  <p style="font-size: 20px; opacity: 0.9; max-width: 600px; margin-bottom: 40px;">
+    Орон сууцны менежментийг цахимжуулж, оршин суугчдын амьдралын чанарыг дээшлүүлэх цаг болсон.
+  </p>
+  <div style="display: flex; gap: 30px; margin-bottom: 40px;">
+    <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 20px 30px;">
+      <div style="font-size: 28px; font-weight: 800;">1 сар</div>
+      <div style="font-size: 14px; opacity: 0.8;">Нэвтрүүлэх хугацаа</div>
+    </div>
+    <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 20px 30px;">
+      <div style="font-size: 28px; font-weight: 800;">24/7</div>
+      <div style="font-size: 14px; opacity: 0.8;">Техникийн дэмжлэг</div>
+    </div>
+    <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 20px 30px;">
+      <div style="font-size: 28px; font-weight: 800;">Үнэгүй</div>
+      <div style="font-size: 14px; opacity: 0.8;">Туршилтын хугацаа</div>
+    </div>
+  </div>
+  <div style="font-size: 16px; opacity: 0.7;">
+    📧 info@toot.mn &nbsp;&nbsp;|&nbsp;&nbsp; 📞 7000-0000 &nbsp;&nbsp;|&nbsp;&nbsp; 🌐 toot.mn
+  </div>
+</div>
+
+</body>
+</html>
