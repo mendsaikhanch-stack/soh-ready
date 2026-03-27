@@ -152,7 +152,7 @@ const features: Feature[] = [
   // ===== Хийгдээгүй / Санал болгох =====
   { name: 'Оршин суугч profile засах', status: 'done', category: 'Оршин суугч', note: 'Нэр, утас засах — /sokh/[id]/profile' },
   { name: 'Төлбөрийн түүх (receipt)', status: 'done', category: 'Оршин суугч', note: 'Баримт харах, хуулах, хуваалцах' },
-  { name: 'Зарлал push notification', status: 'todo', category: 'СӨХ Админ', note: 'Зарлал нийтлэхэд push илгээх' },
+  { name: 'Зарлал push notification', status: 'done', category: 'СӨХ Админ', note: 'Зарлал нийтлэхэд автомат push илгээнэ' },
   { name: 'SMS мэдэгдэл', status: 'todo', category: 'Систем', note: 'Төлбөрийн сануулга SMS-ээр' },
   { name: 'Email мэдэгдэл', status: 'todo', category: 'Систем', note: 'Бүртгэл баталгаажуулалт, сануулга' },
   { name: 'Хэрэглэгчийн гарын авлага', status: 'todo', category: 'Систем', note: 'Апп доторх заавар/tutorial' },

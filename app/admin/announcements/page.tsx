@@ -29,6 +29,21 @@ export default function AdminAnnouncements() {
     setSaving(true);
     const sokhId = await getAdminSokhId();
     await adminFrom('announcements').insert([{ sokh_id: sokhId, title, content, type }]);
+
+    // Push notification илгээх
+    try {
+      await fetch('/api/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `📢 ${title}`,
+          body: content || 'Шинэ зарлал нийтлэгдлээ',
+          url: `/sokh/${sokhId}/announcements`,
+          sokh_id: sokhId,
+        }),
+      });
+    } catch {}
+
     setShowForm(false);
     setTitle(''); setContent(''); setType('info');
     setSaving(false);
