@@ -17,3 +17,6 @@ CREATE TABLE IF NOT EXISTS elevator_tasks (
 
 ALTER TABLE elevator_tasks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "elevator_all" ON elevator_tasks FOR ALL USING (true) WITH CHECK (true);
+
+-- Үйлчилгээ тохиргоо: идэвхгүй болгосон feature-ийн жагсаалт
+ALTER TABLE sokh_organizations ADD COLUMN IF NOT EXISTS disabled_features TEXT[] DEFAULT '{}';

@@ -17,6 +17,7 @@ interface SokhOrg {
   phone: string;
   logo_url: string | null;
   theme: string | null;
+  disabled_features: string[] | null;
 }
 
 type MainTab = 'sokh' | 'osnaa' | 'tsah';
@@ -578,9 +579,10 @@ export default function SokhDashboard() {
 
         {tabMenus[activeMainTab].map((cat) => {
           const q = searchQuery.toLowerCase();
-          const filteredItems = q
-            ? cat.items.filter(item => item.label.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q))
-            : cat.items;
+          const disabled = sokh?.disabled_features || [];
+          const filteredItems = cat.items
+            .filter(item => !disabled.includes(item.href))
+            .filter(item => !q || item.label.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q));
           if (filteredItems.length === 0) return null;
           return (
             <div key={cat.title}>
