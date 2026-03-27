@@ -156,7 +156,7 @@ const features: Feature[] = [
   { name: 'SMS мэдэгдэл', status: 'todo', category: 'Систем', note: 'Төлбөрийн сануулга SMS-ээр' },
   { name: 'Email мэдэгдэл', status: 'todo', category: 'Систем', note: 'Бүртгэл баталгаажуулалт, сануулга' },
   { name: 'Хэрэглэгчийн гарын авлага', status: 'done', category: 'Систем', note: '/sokh/[id]/guide — accordion заавар' },
-  { name: 'Олон СӨХ дэмжлэг (multi-tenant)', status: 'todo', category: 'Систем', note: 'Нэг хэрэглэгч олон СӨХ-д бүртгэлтэй' },
+  { name: 'Олон СӨХ дэмжлэг (multi-tenant)', status: 'done', category: 'Систем', note: 'СӨХ бүрт тусдаа админ, DB-based auth, sokh_id isolation' },
   { name: 'Засвар хүсэлтэнд зураг хавсаргах', status: 'done', category: 'Оршин суугч', note: 'Камер/галерей-аас зураг хавсаргана' },
   { name: 'Санал хураалтын real-time үр дүн', status: 'done', category: 'Оршин суугч', note: 'Supabase realtime + санал өгөх ажиллана' },
   { name: 'Зогсоолын QR код', status: 'done', category: 'СӨХ Админ', note: 'Машин бүрт QR код үүсгэж хаалтанд уншуулах' },

@@ -11,6 +11,7 @@ const navItems = [
   { icon: '⚡', label: 'Цахилгаан орлого', href: '/superadmin/tsah-revenue' },
   { icon: '👥', label: 'Хэрэглэгчид', href: '/superadmin/users' },
   { icon: '📈', label: 'Аналитик', href: '/superadmin/analytics' },
+  { icon: '🔑', label: 'Админ эрх', href: '/superadmin/admins' },
   { icon: '🛠', label: 'Дэмжлэг', href: '/superadmin/support' },
   { icon: '⚙️', label: 'Тохиргоо', href: '/superadmin/settings' },
 ];

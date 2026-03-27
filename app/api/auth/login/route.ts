@@ -1,20 +1,22 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-
-const USERS: Record<string, { password: string; role: string }> = {
-  admin: { password: process.env.ADMIN_PASSWORD!, role: 'admin' },
-  superadmin: { password: process.env.SUPER_PASSWORD!, role: 'superadmin' },
-  osnaa: { password: process.env.OSNAA_PASSWORD!, role: 'osnaa' },
-};
+import { createClient } from '@supabase/supabase-js';
 
 // Rate limiting
 const attempts = new Map<string, { count: number; lockUntil: number }>();
+
+function rateLimitFail(ip: string, now: number) {
+  const rec = attempts.get(ip) || { count: 0, lockUntil: 0 };
+  rec.count++;
+  if (rec.count >= 5) rec.lockUntil = now + 15 * 60 * 1000;
+  attempts.set(ip, rec);
+  return NextResponse.json({ error: 'Нэвтрэх нэр эсвэл нууц үг буруу' }, { status: 401 });
+}
 
 export async function POST(request: Request) {
   const ip = request.headers.get('x-forwarded-for') || 'unknown';
   const now = Date.now();
 
-  // Rate limit шалгах
   const record = attempts.get(ip);
   if (record && record.lockUntil > now) {
     const waitSec = Math.ceil((record.lockUntil - now) / 1000);
@@ -28,10 +30,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Нэр, нууц үг оруулна уу' }, { status: 400 });
     }
 
-    // Байцаагч — DB-ээс шалгана
+    const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+    // ========== Байцаагч — inspectors хүснэгтээс ==========
     if (type === 'inspector') {
-      const { createClient } = await import('@supabase/supabase-js');
-      const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
       const { data: inspector } = await sb
         .from('inspectors')
         .select('*')
@@ -40,13 +42,7 @@ export async function POST(request: Request) {
         .single();
 
       const passwordMatch = inspector ? await bcrypt.compare(password, inspector.password) : false;
-      if (!inspector || !passwordMatch) {
-        const rec = attempts.get(ip) || { count: 0, lockUntil: 0 };
-        rec.count++;
-        if (rec.count >= 5) rec.lockUntil = now + 15 * 60 * 1000;
-        attempts.set(ip, rec);
-        return NextResponse.json({ error: 'Нэвтрэх нэр эсвэл нууц үг буруу' }, { status: 401 });
-      }
+      if (!inspector || !passwordMatch) return rateLimitFail(ip, now);
 
       attempts.delete(ip);
       const token = `${now}:${inspector.id}:${Math.random().toString(36).slice(2)}`;
@@ -55,41 +51,41 @@ export async function POST(request: Request) {
         kontorNumber: inspector.kontor_number || null,
       });
       response.cookies.set('inspector-session', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 86400,
-        path: '/',
+        httpOnly: true, secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict', maxAge: 86400, path: '/',
       });
       return response;
     }
 
-    const user = USERS[username];
-    const isCorrectType = type === 'superadmin' ? username === 'superadmin' : type === 'osnaa' ? username === 'osnaa' : username === 'admin';
+    // ========== Админ / Супер Админ / ОСНАА — admin_users хүснэгтээс ==========
+    const expectedRole = type === 'superadmin' ? 'superadmin' : type === 'osnaa' ? 'osnaa' : 'admin';
 
-    if (!user || user.password !== password || !isCorrectType) {
-      // Бүртгэх
-      const rec = attempts.get(ip) || { count: 0, lockUntil: 0 };
-      rec.count++;
-      if (rec.count >= 5) rec.lockUntil = now + 15 * 60 * 1000;
-      attempts.set(ip, rec);
+    const { data: adminUser } = await sb
+      .from('admin_users')
+      .select('*')
+      .eq('username', username)
+      .eq('role', expectedRole)
+      .eq('status', 'active')
+      .single();
 
-      return NextResponse.json({ error: 'Нэвтрэх нэр эсвэл нууц үг буруу' }, { status: 401 });
-    }
+    if (!adminUser) return rateLimitFail(ip, now);
 
-    // Амжилттай — cookie тохируулах
+    const passOk = await bcrypt.compare(password, adminUser.password_hash);
+    if (!passOk) return rateLimitFail(ip, now);
+
+    // Амжилттай — token-д sokh_id, user_id оруулах
     attempts.delete(ip);
-    const token = `${now}:${Math.random().toString(36).slice(2)}`;
+    const sokhId = adminUser.sokh_id || 0;
+    const token = `${now}:${sokhId}:${adminUser.id}:${Math.random().toString(36).slice(2)}`;
     const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : 'admin-session';
     const maxAge = type === 'superadmin' ? 43200 : 86400;
 
-    const response = NextResponse.json({ success: true, role: user.role });
+    const response = NextResponse.json({
+      success: true, role: adminUser.role, sokhId, displayName: adminUser.display_name,
+    });
     response.cookies.set(cookieName, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge,
-      path: '/',
+      httpOnly: true, secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict', maxAge, path: '/',
     });
 
     return response;

@@ -26,7 +26,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ authenticated: false });
     }
 
-    return NextResponse.json({ authenticated: true });
+    // Шинэ 4 хэсэгтэй token: timestamp:sokhId:userId:random
+    if (parts.length >= 4) {
+      const sokhId = parseInt(parts[1]);
+      const userId = parseInt(parts[2]);
+      return NextResponse.json({ authenticated: true, sokhId, userId });
+    }
+
+    // Хуучин 2 хэсэгтэй token (backward compat)
+    return NextResponse.json({ authenticated: true, sokhId: 0, userId: 0 });
   } catch {
     return NextResponse.json({ authenticated: false });
   }
