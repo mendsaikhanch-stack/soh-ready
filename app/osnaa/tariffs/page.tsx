@@ -18,7 +18,7 @@ interface Org { id: number; name: string; }
 
 const utilityTypes = [
   { value: 'water', label: 'Ус', icon: '💧', unit: 'м³' },
-  { value: 'heating', label: 'Дулаан', icon: '🔥', unit: 'Гкал' },
+  { value: 'heating', label: 'Дулаан', icon: '🔥', unit: 'мкв' },
   { value: 'electricity', label: 'Цахилгаан', icon: '⚡', unit: 'кВт/ц' },
 ];
 

@@ -45,7 +45,7 @@ interface QPayInvoice {
 const typeMap: Record<string, { label: string; icon: string; color: string; unit: string; bg: string; border: string }> = {
   electricity: { label: 'Цахилгаан', icon: '⚡', color: 'text-yellow-600', unit: 'кВт/ц', bg: 'bg-yellow-50', border: 'border-yellow-200' },
   water: { label: 'Ус', icon: '💧', color: 'text-blue-600', unit: 'м³', bg: 'bg-blue-50', border: 'border-blue-200' },
-  heating: { label: 'Дулаан', icon: '🔥', color: 'text-red-600', unit: 'Гкал', bg: 'bg-red-50', border: 'border-red-200' },
+  heating: { label: 'Дулаан', icon: '🔥', color: 'text-red-600', unit: 'мкв', bg: 'bg-red-50', border: 'border-red-200' },
 };
 
 const months = ['1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар','7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар'];
@@ -66,6 +66,10 @@ export default function UtilitiesPage() {
   const [readingValue, setReadingValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  // Дулааны тооцоолуур
+  const [areaSqm, setAreaSqm] = useState(0);
+  const [heatingRate, setHeatingRate] = useState(0);
 
   // QPay төлбөр
   const [payingBill, setPayingBill] = useState<Bill | null>(null);
@@ -95,9 +99,9 @@ export default function UtilitiesPage() {
       .order('month', { ascending: true });
     setUsages(usageData || []);
 
-    // Хэрэв нэвтэрсэн бол тоолуур заалт + нэхэмжлэх
+    // Хэрэв нэвтэрсэн бол тоолуур заалт + нэхэмжлэх + дулааны мэдээлэл
     if (profile) {
-      const [{ data: rd }, { data: bl }] = await Promise.all([
+      const [{ data: rd }, { data: bl }, { data: resData }, { data: tariffData }] = await Promise.all([
         supabase
           .from('meter_readings')
           .select('*')
@@ -112,9 +116,23 @@ export default function UtilitiesPage() {
           .order('year', { ascending: false })
           .order('month', { ascending: false })
           .limit(20),
+        supabase
+          .from('residents')
+          .select('area_sqm')
+          .eq('id', profile.id)
+          .limit(1),
+        supabase
+          .from('utility_tariffs')
+          .select('rate_per_unit')
+          .eq('sokh_id', params.id)
+          .eq('utility_type', 'heating')
+          .order('effective_from', { ascending: false })
+          .limit(1),
       ]);
       setReadings(rd || []);
       setBills(bl || []);
+      setAreaSqm(resData && resData.length > 0 ? Number(resData[0].area_sqm) || 0 : 0);
+      setHeatingRate(tariffData && tariffData.length > 0 ? Number(tariffData[0].rate_per_unit) || 0 : 0);
     }
 
     setLoading(false);
@@ -316,7 +334,7 @@ export default function UtilitiesPage() {
             activeTab === 'reading' ? 'bg-white shadow-sm' : 'text-gray-500'
           }`}
         >
-          {tp.icon} Заалт оруулах
+          {tp.icon} {selectedType === 'heating' ? 'Тооцоолуур' : 'Заалт оруулах'}
         </button>
         <button
           onClick={() => setActiveTab('history')}
@@ -332,10 +350,47 @@ export default function UtilitiesPage() {
         <p className="text-gray-400 text-center py-8">Ачаалж байна...</p>
       ) : (
         <div className="px-4 py-4">
-          {/* ========== ЗААЛТ ОРУУЛАХ TAB ========== */}
+          {/* ========== ЗААЛТ ОРУУЛАХ / ТООЦООЛУУР TAB ========== */}
           {activeTab === 'reading' && (
             <>
-              {/* Одоогийн сарын статус */}
+              {/* Дулааны тооцоолуур */}
+              {selectedType === 'heating' ? (
+                <div className={`rounded-xl p-4 border mb-4 ${tp.bg} ${tp.border}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-2xl">🔥</span>
+                    <div>
+                      <p className="font-semibold text-sm">Дулааны тооцоолуур — {months[currentMonth - 1]}</p>
+                      <p className="text-xs text-gray-500">{currentYear} он</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">Таны байрны талбай</span>
+                      <span className="text-sm font-bold">{areaSqm > 0 ? `${areaSqm} мкв` : <span className="text-red-400">бүртгэлгүй</span>}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">Тариф (₮/мкв)</span>
+                      <span className="text-sm font-medium">{heatingRate > 0 ? `${heatingRate.toLocaleString()}₮` : '-'}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      <span className="text-xs text-gray-500">Энэ сарын дулааны төлбөр</span>
+                      <span className="text-lg font-bold text-red-600">
+                        {areaSqm > 0 && heatingRate > 0
+                          ? `${Math.round(areaSqm * heatingRate).toLocaleString()}₮`
+                          : '-'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {areaSqm === 0 && (
+                    <p className="text-xs text-red-500 mt-2 text-center">
+                      Байрны мкв бүртгэгдээгүй байна. СӨХ-ийн админд хандана уу.
+                    </p>
+                  )}
+                </div>
+              ) : (
+              /* Ус / Цахилгаан тоолуур заалт */
               <div className={`rounded-xl p-4 border mb-4 ${tp.bg} ${tp.border}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-2xl">{tp.icon}</span>
@@ -408,6 +463,7 @@ export default function UtilitiesPage() {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Нэхэмжлэхүүд */}
               {typeBills.length > 0 && (

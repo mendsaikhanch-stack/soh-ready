@@ -9,7 +9,7 @@ interface Org { id: number; name: string; }
 
 const utilityTypes = [
   { value: 'water', label: 'Ус', icon: '💧', unit: 'м³' },
-  { value: 'heating', label: 'Дулаан', icon: '🔥', unit: 'Гкал' },
+  { value: 'heating', label: 'Дулаан', icon: '🔥', unit: 'мкв' },
   { value: 'electricity', label: 'Цахилгаан', icon: '⚡', unit: 'кВт/ц' },
 ];
 
@@ -54,25 +54,11 @@ export default function OsnaaBills() {
     setLoading(false);
   };
 
-  // Нэхэмжлэх үүсгэх: meter_readings * tariff = bill
+  // Нэхэмжлэх үүсгэх: meter_readings * tariff = bill (дулаан: мкв × тариф)
   const generateBills = async () => {
     if (!selectedOrg) return;
     setGenerating(true);
     setGenResult('');
-
-    // Тоолуурын заалтууд
-    const { data: readings } = await supabase
-      .from('meter_readings')
-      .select('*')
-      .eq('sokh_id', selectedOrg)
-      .eq('year', selectedYear)
-      .eq('month', selectedMonth);
-
-    if (!readings || readings.length === 0) {
-      setGenResult('Тоолуурын заалт байхгүй байна. Эхлээд заалт оруулна уу.');
-      setGenerating(false);
-      return;
-    }
 
     // Тарифууд
     const { data: tariffs } = await supabase
@@ -96,45 +82,107 @@ export default function OsnaaBills() {
     let created = 0;
     let skipped = 0;
 
-    for (const reading of readings) {
-      const rate = getRate(reading.utility_type);
-      if (rate === 0) { skipped++; continue; }
+    // === ДУЛААН: мкв × тариф ===
+    const heatingRate = getRate('heating');
+    if (heatingRate > 0) {
+      const { data: residents } = await supabase
+        .from('residents')
+        .select('id, apartment, area_sqm')
+        .eq('sokh_id', selectedOrg)
+        .order('apartment');
 
-      const consumption = Number(reading.current_reading) - Number(reading.previous_reading || 0);
-      const amount = Math.round(consumption * rate);
+      if (residents) {
+        for (const res of residents) {
+          const sqm = Number(res.area_sqm) || 0;
+          if (sqm === 0) { skipped++; continue; }
 
-      // Байгаа эсэхийг шалгах (upsert шиг)
-      const { data: existing } = await supabase
-        .from('utility_bills')
-        .select('id')
-        .eq('resident_id', reading.resident_id)
-        .eq('utility_type', reading.utility_type)
-        .eq('year', selectedYear)
-        .eq('month', selectedMonth)
-        .limit(1);
+          const amount = Math.round(sqm * heatingRate);
 
-      if (existing && existing.length > 0) {
-        await adminFrom('utility_bills').update({
-          consumption, rate, amount,
-        }).eq('id', existing[0].id);
-      } else {
-        await adminFrom('utility_bills').insert([{
-          sokh_id: Number(selectedOrg),
-          resident_id: reading.resident_id,
-          apartment: reading.apartment,
-          utility_type: reading.utility_type,
-          year: selectedYear,
-          month: selectedMonth,
-          consumption,
-          rate,
-          amount,
-          status: 'unpaid',
-        }]);
+          const { data: existing } = await supabase
+            .from('utility_bills')
+            .select('id')
+            .eq('resident_id', res.id)
+            .eq('utility_type', 'heating')
+            .eq('year', selectedYear)
+            .eq('month', selectedMonth)
+            .limit(1);
+
+          if (existing && existing.length > 0) {
+            await adminFrom('utility_bills').update({
+              consumption: sqm, rate: heatingRate, amount,
+            }).eq('id', existing[0].id);
+          } else {
+            await adminFrom('utility_bills').insert([{
+              sokh_id: Number(selectedOrg),
+              resident_id: res.id,
+              apartment: res.apartment,
+              utility_type: 'heating',
+              year: selectedYear,
+              month: selectedMonth,
+              consumption: sqm,
+              rate: heatingRate,
+              amount,
+              status: 'unpaid',
+            }]);
+          }
+          created++;
+        }
       }
-      created++;
     }
 
-    setGenResult(`${created} нэхэмжлэх үүсгэлээ${skipped > 0 ? `, ${skipped} алгаслаа (тариф байхгүй)` : ''}`);
+    // === УС, ЦАХИЛГААН: тоолуурын заалт × тариф ===
+    const { data: readings } = await supabase
+      .from('meter_readings')
+      .select('*')
+      .eq('sokh_id', selectedOrg)
+      .eq('year', selectedYear)
+      .eq('month', selectedMonth);
+
+    if (readings) {
+      for (const reading of readings) {
+        if (reading.utility_type === 'heating') continue; // дулааныг дээр тооцсон
+        const rate = getRate(reading.utility_type);
+        if (rate === 0) { skipped++; continue; }
+
+        const consumption = Number(reading.current_reading) - Number(reading.previous_reading || 0);
+        const amount = Math.round(consumption * rate);
+
+        const { data: existing } = await supabase
+          .from('utility_bills')
+          .select('id')
+          .eq('resident_id', reading.resident_id)
+          .eq('utility_type', reading.utility_type)
+          .eq('year', selectedYear)
+          .eq('month', selectedMonth)
+          .limit(1);
+
+        if (existing && existing.length > 0) {
+          await adminFrom('utility_bills').update({
+            consumption, rate, amount,
+          }).eq('id', existing[0].id);
+        } else {
+          await adminFrom('utility_bills').insert([{
+            sokh_id: Number(selectedOrg),
+            resident_id: reading.resident_id,
+            apartment: reading.apartment,
+            utility_type: reading.utility_type,
+            year: selectedYear,
+            month: selectedMonth,
+            consumption,
+            rate,
+            amount,
+            status: 'unpaid',
+          }]);
+        }
+        created++;
+      }
+    }
+
+    if (created === 0 && heatingRate === 0) {
+      setGenResult('Тоолуурын заалт байхгүй байна. Эхлээд заалт оруулна уу.');
+    } else {
+      setGenResult(`${created} нэхэмжлэх үүсгэлээ${skipped > 0 ? `, ${skipped} алгаслаа (мкв/тариф байхгүй)` : ''}`);
+    }
     setGenerating(false);
     await fetchBills();
   };

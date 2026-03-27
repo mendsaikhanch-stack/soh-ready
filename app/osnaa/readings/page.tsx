@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 
-interface Resident { id: number; name: string; apartment: string; }
+interface Resident { id: number; name: string; apartment: string; area_sqm?: number; }
 interface Reading { id: number; resident_id: number; apartment: string; utility_type: string; previous_reading: number; current_reading: number; consumption: number; month: number; year: number; }
 interface Org { id: number; name: string; }
+interface Tariff { id: number; rate_per_unit: number; unit: string; effective_from: string; }
 
 const utilityTypes = [
   { value: 'water', label: 'Ус', icon: '💧', unit: 'м³' },
-  { value: 'heating', label: 'Дулаан', icon: '🔥', unit: 'Гкал' },
+  { value: 'heating', label: 'Дулаан', icon: '🔥', unit: 'мкв' },
   { value: 'electricity', label: 'Цахилгаан', icon: '⚡', unit: 'кВт/ц' },
 ];
 
@@ -22,6 +23,7 @@ export default function OsnaaReadings() {
   const [readings, setReadings] = useState<Reading[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [heatingTariff, setHeatingTariff] = useState<Tariff | null>(null);
 
   const [selectedOrg, setSelectedOrg] = useState('');
   const [selectedType, setSelectedType] = useState('electricity');
@@ -49,7 +51,7 @@ export default function OsnaaReadings() {
   const fetchResidentsAndReadings = async () => {
     setLoading(true);
     const [{ data: res }, { data: rd }] = await Promise.all([
-      supabase.from('residents').select('id, name, apartment').eq('sokh_id', selectedOrg).order('apartment'),
+      supabase.from('residents').select('id, name, apartment, area_sqm').eq('sokh_id', selectedOrg).order('apartment'),
       supabase.from('meter_readings').select('*')
         .eq('sokh_id', selectedOrg)
         .eq('utility_type', selectedType)
@@ -59,6 +61,19 @@ export default function OsnaaReadings() {
     setResidents(res || []);
     setReadings(rd || []);
     setEntries({});
+
+    // Дулааны тариф авах
+    if (selectedType === 'heating' && selectedOrg) {
+      const { data: tariffs } = await supabase
+        .from('utility_tariffs')
+        .select('*')
+        .eq('sokh_id', selectedOrg)
+        .eq('utility_type', 'heating')
+        .order('effective_from', { ascending: false })
+        .limit(1);
+      setHeatingTariff(tariffs && tariffs.length > 0 ? tariffs[0] : null);
+    }
+
     setLoading(false);
   };
 
@@ -129,7 +144,7 @@ export default function OsnaaReadings() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">📊 Тоолуур заалт</h1>
+      <h1 className="text-2xl font-bold mb-6">{selectedType === 'heating' ? '🔥 Дулааны тооцоолуур' : '📊 Тоолуур заалт'}</h1>
 
       {/* Controls */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
@@ -173,7 +188,78 @@ export default function OsnaaReadings() {
         <div className="bg-white border rounded-xl p-8 text-center text-gray-400">
           Энэ СӨХ-д оршин суугч бүртгэлгүй байна
         </div>
+      ) : selectedType === 'heating' ? (
+        /* ===== ДУЛААНЫ ТООЦООЛУУР ===== */
+        <>
+          {!heatingTariff ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-700 text-sm">
+              Дулааны тариф тогтоогоогүй байна. Эхлээд <strong>Тариф удирдлага</strong> хуудаснаас дулааны тариф нэмнэ үү.
+            </div>
+          ) : (
+            <>
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
+                <p className="text-sm font-medium text-orange-800">
+                  🔥 Дулааны тооцоолуур — {months[selectedMonth - 1]} {selectedYear}
+                </p>
+                <p className="text-xs text-orange-600 mt-1">
+                  Тариф: <strong>{Number(heatingTariff.rate_per_unit).toLocaleString()}₮/мкв</strong> (хүчинтэй: {heatingTariff.effective_from})
+                </p>
+              </div>
+              <div className="bg-white border rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs text-gray-500">Тоот</th>
+                      <th className="px-4 py-3 text-left text-xs text-gray-500">Нэр</th>
+                      <th className="px-4 py-3 text-right text-xs text-gray-500">Талбай (мкв)</th>
+                      <th className="px-4 py-3 text-right text-xs text-gray-500">Тариф (₮/мкв)</th>
+                      <th className="px-4 py-3 text-right text-xs text-gray-500">Дүн</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {residents.map(res => {
+                      const sqm = Number(res.area_sqm) || 0;
+                      const amount = Math.round(sqm * Number(heatingTariff.rate_per_unit));
+                      return (
+                        <tr key={res.id} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-2 font-medium">{res.apartment}</td>
+                          <td className="px-4 py-2">{res.name}</td>
+                          <td className="px-4 py-2 text-right">
+                            {sqm > 0 ? (
+                              <span className="font-medium">{sqm} мкв</span>
+                            ) : (
+                              <span className="text-red-400 text-xs">мкв оруулаагүй</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-right text-gray-500">
+                            {Number(heatingTariff.rate_per_unit).toLocaleString()}₮
+                          </td>
+                          <td className="px-4 py-2 text-right font-bold text-orange-600">
+                            {sqm > 0 ? `${amount.toLocaleString()}₮` : '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="bg-orange-50 border-t">
+                    <tr>
+                      <td colSpan={2} className="px-4 py-3 font-semibold text-sm">Нийт</td>
+                      <td className="px-4 py-3 text-right font-medium text-sm">
+                        {residents.reduce((s, r) => s + (Number(r.area_sqm) || 0), 0)} мкв
+                      </td>
+                      <td></td>
+                      <td className="px-4 py-3 text-right font-bold text-orange-700 text-sm">
+                        {residents.reduce((s, r) => s + Math.round((Number(r.area_sqm) || 0) * Number(heatingTariff.rate_per_unit)), 0).toLocaleString()}₮
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
+        </>
       ) : (
+        /* ===== УС / ЦАХИЛГААН ТООЛУУР ===== */
         <div className="bg-white border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
