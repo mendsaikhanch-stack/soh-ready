@@ -313,15 +313,18 @@ export default function SokhDashboard() {
         {/* Хэрэглэгчийн мэдээлэл */}
         {profile && (
           <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/20">
-            <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push(`/sokh/${params.id}/profile`)}
+              className="flex items-center gap-2 hover:bg-white/10 rounded-lg px-1 py-0.5 transition"
+            >
               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">
                 {profile.name.charAt(0)}
               </div>
-              <div>
+              <div className="text-left">
                 <p className="text-sm font-medium">{profile.name}</p>
                 <p className="text-xs text-white/60">{profile.apartment}</p>
               </div>
-            </div>
+            </button>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setLocale(locale === 'mn' ? 'en' : 'mn')}

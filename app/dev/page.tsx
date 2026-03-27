@@ -150,7 +150,7 @@ const features: Feature[] = [
   { name: 'OSNAA_PASSWORD env-д нэмэх', status: 'done', category: 'Auth', note: '.env.local-д тохируулагдсан, fallback арилгасан' },
 
   // ===== Хийгдээгүй / Санал болгох =====
-  { name: 'Оршин суугч profile засах', status: 'todo', category: 'Оршин суугч', note: 'Нэр, утас, зураг солих' },
+  { name: 'Оршин суугч profile засах', status: 'done', category: 'Оршин суугч', note: 'Нэр, утас засах — /sokh/[id]/profile' },
   { name: 'Төлбөрийн түүх (receipt)', status: 'todo', category: 'Оршин суугч', note: 'Төлсөн түүх, баримт татах' },
   { name: 'Зарлал push notification', status: 'todo', category: 'СӨХ Админ', note: 'Зарлал нийтлэхэд push илгээх' },
   { name: 'SMS мэдэгдэл', status: 'todo', category: 'Систем', note: 'Төлбөрийн сануулга SMS-ээр' },
