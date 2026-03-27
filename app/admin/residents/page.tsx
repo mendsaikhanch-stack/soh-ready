@@ -11,6 +11,7 @@ interface Resident {
   apartment: string;
   phone: string;
   debt: number;
+  area_sqm: number;
   sokh_id: number;
 }
 
@@ -20,7 +21,7 @@ export default function AdminResidents() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: '', apartment: '', phone: '', debt: '0' });
+  const [form, setForm] = useState({ name: '', apartment: '', phone: '', debt: '0', area_sqm: '0' });
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -40,13 +41,13 @@ export default function AdminResidents() {
 
   const openAdd = () => {
     setEditId(null);
-    setForm({ name: '', apartment: '', phone: '', debt: '0' });
+    setForm({ name: '', apartment: '', phone: '', debt: '0', area_sqm: '0' });
     setShowForm(true);
   };
 
   const openEdit = (r: Resident) => {
     setEditId(r.id);
-    setForm({ name: r.name, apartment: r.apartment, phone: r.phone || '', debt: String(r.debt) });
+    setForm({ name: r.name, apartment: r.apartment, phone: r.phone || '', debt: String(r.debt), area_sqm: String(r.area_sqm || 0) });
     setShowForm(true);
   };
 
@@ -59,6 +60,7 @@ export default function AdminResidents() {
       apartment: form.apartment,
       phone: form.phone || null,
       debt: Number(form.debt) || 0,
+      area_sqm: Number(form.area_sqm) || 0,
     };
 
     if (editId) {
@@ -86,14 +88,14 @@ export default function AdminResidents() {
     const text = await file.text();
     const lines = text.split('\n').filter(l => l.trim());
 
-    // CSV формат: name,apartment,phone,debt
+    // CSV формат: name,apartment,phone,area_sqm,debt
     const newResidents = lines.slice(1).map(line => {
-      const [name, apartment, phone, debt] = line.split(',').map(s => s.trim().replace(/"/g, ''));
-      return { name, apartment, phone: phone || null, debt: Number(debt) || 0 };
+      const [name, apartment, phone, area_sqm, debt] = line.split(',').map(s => s.trim().replace(/"/g, ''));
+      return { name, apartment, phone: phone || null, area_sqm: Number(area_sqm) || 0, debt: Number(debt) || 0 };
     }).filter(r => r.name && r.apartment);
 
     if (newResidents.length === 0) {
-      alert('Файлд өгөгдөл олдсонгүй. CSV формат: name,apartment,phone,debt');
+      alert('Файлд өгөгдөл олдсонгүй. CSV формат: name,apartment,phone,area_sqm,debt');
       return;
     }
 
@@ -109,8 +111,8 @@ export default function AdminResidents() {
   };
 
   const exportCSV = () => {
-    const header = 'name,apartment,phone,debt\n';
-    const rows = residents.map(r => `"${r.name}","${r.apartment}","${r.phone || ''}",${r.debt}`).join('\n');
+    const header = 'name,apartment,phone,area_sqm,debt\n';
+    const rows = residents.map(r => `"${r.name}","${r.apartment}","${r.phone || ''}",${r.area_sqm || 0},${r.debt}`).join('\n');
     const blob = new Blob(['\ufeff' + header + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -149,10 +151,11 @@ export default function AdminResidents() {
       {showForm && (
         <div className="bg-white border rounded-xl p-4 mb-4">
           <h3 className="font-semibold mb-3">{editId ? 'Засах' : 'Шинэ оршин суугч'}</h3>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-5 gap-3">
             <input placeholder="Нэр" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
             <input placeholder="Тоот (жнь: A-101)" value={form.apartment} onChange={e => setForm({...form, apartment: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
             <input placeholder="Утас" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
+            <input placeholder="Талбай (мкв)" type="number" value={form.area_sqm} onChange={e => setForm({...form, area_sqm: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
             <input placeholder="Өр" type="number" value={form.debt} onChange={e => setForm({...form, debt: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
           </div>
           <div className="flex gap-2 mt-3">
@@ -176,6 +179,7 @@ export default function AdminResidents() {
                 <th className="px-4 py-3">Нэр</th>
                 <th className="px-4 py-3">Тоот</th>
                 <th className="px-4 py-3">Утас</th>
+                <th className="px-4 py-3 text-right">мкв</th>
                 <th className="px-4 py-3 text-right">Өр</th>
                 <th className="px-4 py-3 text-right">Үйлдэл</th>
               </tr>
@@ -187,6 +191,7 @@ export default function AdminResidents() {
                   <td className="px-4 py-3 text-sm font-medium">{r.name}</td>
                   <td className="px-4 py-3 text-sm">{r.apartment}</td>
                   <td className="px-4 py-3 text-sm text-gray-500">{r.phone || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-right text-gray-600">{r.area_sqm > 0 ? `${r.area_sqm}` : <span className="text-red-400">-</span>}</td>
                   <td className={`px-4 py-3 text-sm text-right font-semibold ${r.debt > 0 ? 'text-red-500' : 'text-green-500'}`}>
                     {r.debt > 0 ? `${r.debt.toLocaleString()}₮` : '0₮'}
                   </td>

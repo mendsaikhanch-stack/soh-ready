@@ -32,6 +32,9 @@ export default function OsnaaReadings() {
 
   // Bulk entry: { residentId: currentReading }
   const [entries, setEntries] = useState<Record<number, string>>({});
+  // мкв засах: { residentId: sqm value }
+  const [sqmEdits, setSqmEdits] = useState<Record<number, string>>({});
+  const [savingSqm, setSavingSqm] = useState(false);
 
   useEffect(() => {
     const fetchOrgs = async () => {
@@ -140,6 +143,19 @@ export default function OsnaaReadings() {
     await fetchResidentsAndReadings();
   };
 
+  // мкв хадгалах
+  const saveSqmAll = async () => {
+    const toSave = Object.entries(sqmEdits).filter(([, val]) => val !== '');
+    if (toSave.length === 0) return;
+    setSavingSqm(true);
+    for (const [resIdStr, sqmStr] of toSave) {
+      await adminFrom('residents').update({ area_sqm: Number(sqmStr) || 0 }).eq('id', Number(resIdStr));
+    }
+    setSavingSqm(false);
+    setSqmEdits({});
+    await fetchResidentsAndReadings();
+  };
+
   const ut = utilityTypes.find(u => u.value === selectedType)!;
 
   return (
@@ -197,13 +213,21 @@ export default function OsnaaReadings() {
             </div>
           ) : (
             <>
-              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
-                <p className="text-sm font-medium text-orange-800">
-                  🔥 Дулааны тооцоолуур — {months[selectedMonth - 1]} {selectedYear}
-                </p>
-                <p className="text-xs text-orange-600 mt-1">
-                  Тариф: <strong>{Number(heatingTariff.rate_per_unit).toLocaleString()}₮/мкв</strong> (хүчинтэй: {heatingTariff.effective_from})
-                </p>
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-orange-800">
+                    🔥 Дулааны тооцоолуур — {months[selectedMonth - 1]} {selectedYear}
+                  </p>
+                  <p className="text-xs text-orange-600 mt-1">
+                    Тариф: <strong>{Number(heatingTariff.rate_per_unit).toLocaleString()}₮/мкв</strong> (хүчинтэй: {heatingTariff.effective_from})
+                  </p>
+                </div>
+                {Object.values(sqmEdits).some(v => v !== '') && (
+                  <button onClick={saveSqmAll} disabled={savingSqm}
+                    className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50">
+                    {savingSqm ? 'Хадгалж байна...' : `мкв хадгалах (${Object.values(sqmEdits).filter(v => v !== '').length})`}
+                  </button>
+                )}
               </div>
               <div className="bg-white border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
@@ -218,18 +242,21 @@ export default function OsnaaReadings() {
                   </thead>
                   <tbody>
                     {residents.map(res => {
-                      const sqm = Number(res.area_sqm) || 0;
+                      const editedSqm = sqmEdits[res.id];
+                      const sqm = editedSqm !== undefined && editedSqm !== '' ? Number(editedSqm) : (Number(res.area_sqm) || 0);
                       const amount = Math.round(sqm * Number(heatingTariff.rate_per_unit));
                       return (
                         <tr key={res.id} className="border-b hover:bg-gray-50">
                           <td className="px-4 py-2 font-medium">{res.apartment}</td>
                           <td className="px-4 py-2">{res.name}</td>
                           <td className="px-4 py-2 text-right">
-                            {sqm > 0 ? (
-                              <span className="font-medium">{sqm} мкв</span>
-                            ) : (
-                              <span className="text-red-400 text-xs">мкв оруулаагүй</span>
-                            )}
+                            <input
+                              type="number"
+                              placeholder="мкв"
+                              value={editedSqm !== undefined ? editedSqm : (res.area_sqm || '')}
+                              onChange={e => setSqmEdits(prev => ({ ...prev, [res.id]: e.target.value }))}
+                              className="w-20 border rounded px-2 py-1 text-sm text-right"
+                            />
                           </td>
                           <td className="px-4 py-2 text-right text-gray-500">
                             {Number(heatingTariff.rate_per_unit).toLocaleString()}₮
@@ -245,11 +272,18 @@ export default function OsnaaReadings() {
                     <tr>
                       <td colSpan={2} className="px-4 py-3 font-semibold text-sm">Нийт</td>
                       <td className="px-4 py-3 text-right font-medium text-sm">
-                        {residents.reduce((s, r) => s + (Number(r.area_sqm) || 0), 0)} мкв
+                        {residents.reduce((s, r) => {
+                          const ed = sqmEdits[r.id];
+                          return s + (ed !== undefined && ed !== '' ? Number(ed) : (Number(r.area_sqm) || 0));
+                        }, 0)} мкв
                       </td>
                       <td></td>
                       <td className="px-4 py-3 text-right font-bold text-orange-700 text-sm">
-                        {residents.reduce((s, r) => s + Math.round((Number(r.area_sqm) || 0) * Number(heatingTariff.rate_per_unit)), 0).toLocaleString()}₮
+                        {residents.reduce((s, r) => {
+                          const ed = sqmEdits[r.id];
+                          const sq = ed !== undefined && ed !== '' ? Number(ed) : (Number(r.area_sqm) || 0);
+                          return s + Math.round(sq * Number(heatingTariff.rate_per_unit));
+                        }, 0).toLocaleString()}₮
                       </td>
                     </tr>
                   </tfoot>
