@@ -41,6 +41,7 @@ export default function PaymentsPage() {
   const [qpayLoading, setQpayLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'select' | 'qpay'>('select');
+  const [receiptPayment, setReceiptPayment] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -385,15 +386,22 @@ export default function PaymentsPage() {
           ) : (
             <div className="space-y-2">
               {payments.map((p) => (
-                <div key={p.id} className="bg-white rounded-xl p-3 flex justify-between items-center">
+                <button
+                  key={p.id}
+                  onClick={() => setReceiptPayment(p)}
+                  className="w-full bg-white rounded-xl p-3 flex justify-between items-center hover:bg-gray-50 active:scale-[0.99] transition text-left"
+                >
                   <div>
                     <p className="font-medium text-sm">{p.description || 'Сарын төлбөр'}</p>
                     <p className="text-xs text-gray-400">{timeAgo(p.created_at)}</p>
                   </div>
-                  <span className="text-green-600 font-semibold text-sm">
-                    -{(p.amount || 0).toLocaleString()}₮
-                  </span>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600 font-semibold text-sm">
+                      -{(p.amount || 0).toLocaleString()}₮
+                    </span>
+                    <span className="text-gray-300 text-xs">›</span>
+                  </div>
+                </button>
               ))}
             </div>
           )}
@@ -537,6 +545,99 @@ export default function PaymentsPage() {
             <div className="text-5xl mb-3">✅</div>
             <h2 className="text-lg font-bold mb-1">Амжилттай!</h2>
             <p className="text-sm text-gray-500">{payingBill?.name} — {payingBill?.amount.toLocaleString()}₮ төлөгдлөө</p>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Modal */}
+      {receiptPayment && (
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50" onClick={() => setReceiptPayment(null)}>
+          <div
+            className="bg-white w-full max-w-[430px] rounded-t-2xl p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
+
+            {/* Receipt card */}
+            <div id="receipt-content" className="bg-gray-50 rounded-2xl p-5 mb-4">
+              <div className="text-center mb-4">
+                <div className="text-3xl mb-1">🧾</div>
+                <h3 className="font-bold text-lg">Төлбөрийн баримт</h3>
+                <p className="text-xs text-gray-400">#{String(receiptPayment.id).padStart(6, '0')}</p>
+              </div>
+
+              <div className="border-t border-dashed border-gray-300 my-3"></div>
+
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Төлбөр</span>
+                  <span className="font-medium">{receiptPayment.description || 'Сарын төлбөр'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Дүн</span>
+                  <span className="font-bold text-green-600">{(receiptPayment.amount || 0).toLocaleString()}₮</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Огноо</span>
+                  <span className="font-medium">{timeAgo(receiptPayment.created_at || receiptPayment.paid_at)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Төлөв</span>
+                  <span className="text-green-600 font-medium">Төлөгдсөн ✓</span>
+                </div>
+                {profile && (
+                  <>
+                    <div className="border-t border-dashed border-gray-300 my-2"></div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Нэр</span>
+                      <span className="font-medium">{profile.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Тоот</span>
+                      <span className="font-medium">{profile.apartment}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="border-t border-dashed border-gray-300 my-3"></div>
+              <p className="text-center text-[10px] text-gray-400">Баримт автоматаар үүсгэгдсэн</p>
+            </div>
+
+            {/* Actions */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <button
+                onClick={() => {
+                  const text = `🧾 Төлбөрийн баримт #${String(receiptPayment.id).padStart(6, '0')}\n${receiptPayment.description || 'Сарын төлбөр'}\nДүн: ${(receiptPayment.amount || 0).toLocaleString()}₮\nОгноо: ${timeAgo(receiptPayment.created_at || receiptPayment.paid_at)}\nТөлөв: Төлөгдсөн ✓${profile ? `\nНэр: ${profile.name}\nТоот: ${profile.apartment}` : ''}`;
+                  if (navigator.share) {
+                    navigator.share({ title: 'Төлбөрийн баримт', text });
+                  } else {
+                    navigator.clipboard.writeText(text);
+                    alert('Хуулагдлаа!');
+                  }
+                }}
+                className="py-3 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition"
+              >
+                📤 Хуваалцах
+              </button>
+              <button
+                onClick={() => {
+                  const text = `🧾 Төлбөрийн баримт #${String(receiptPayment.id).padStart(6, '0')}\n${receiptPayment.description || 'Сарын төлбөр'}\nДүн: ${(receiptPayment.amount || 0).toLocaleString()}₮\nОгноо: ${timeAgo(receiptPayment.created_at || receiptPayment.paid_at)}\nТөлөв: Төлөгдсөн ✓${profile ? `\nНэр: ${profile.name}\nТоот: ${profile.apartment}` : ''}`;
+                  navigator.clipboard.writeText(text);
+                  alert('Хуулагдлаа!');
+                }}
+                className="py-3 rounded-xl text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+              >
+                📋 Хуулах
+              </button>
+            </div>
+
+            <button
+              onClick={() => setReceiptPayment(null)}
+              className="w-full py-3 rounded-xl text-sm font-medium border border-gray-300 text-gray-600"
+            >
+              Хаах
+            </button>
           </div>
         </div>
       )}
