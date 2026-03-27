@@ -11,6 +11,7 @@ interface Staff {
   role: string;
   phone: string;
   schedule: string;
+  salary: number;
   status: string;
   created_at: string;
 }
@@ -32,10 +33,12 @@ export default function AdminStaff() {
   const [editId, setEditId] = useState<number | null>(null);
 
   // Form
+  const [activeTab, setActiveTab] = useState<'list' | 'salary'>('list');
   const [name, setName] = useState('');
   const [role, setRole] = useState('janitor');
   const [phone, setPhone] = useState('');
   const [schedule, setSchedule] = useState('');
+  const [salary, setSalary] = useState('');
 
   useEffect(() => { fetchStaff(); }, []);
 
@@ -50,7 +53,7 @@ export default function AdminStaff() {
   };
 
   const resetForm = () => {
-    setName(''); setRole('janitor'); setPhone(''); setSchedule('');
+    setName(''); setRole('janitor'); setPhone(''); setSchedule(''); setSalary('');
     setEditId(null); setShowForm(false);
   };
 
@@ -59,7 +62,7 @@ export default function AdminStaff() {
     setSaving(true);
 
     const sokhId = await getAdminSokhId();
-    const record = { sokh_id: sokhId, name, role, phone, schedule, status: 'active' };
+    const record = { sokh_id: sokhId, name, role, phone, schedule, salary: Number(salary) || 0, status: 'active' };
 
     if (editId) {
       await adminFrom('staff').update(record).eq('id', editId);
@@ -78,6 +81,7 @@ export default function AdminStaff() {
     setRole(s.role);
     setPhone(s.phone || '');
     setSchedule(s.schedule || '');
+    setSalary(s.salary ? String(s.salary) : '');
     setShowForm(true);
   };
 
@@ -102,10 +106,10 @@ export default function AdminStaff() {
       <h1 className="text-2xl font-bold mb-6">👷 Ажилчдын удирдлага</h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-4 gap-3 mb-6">
         <div className="rounded-xl border p-4 bg-green-50 border-green-200">
           <p className="text-xl font-bold text-green-700">{active.length}</p>
-          <p className="text-xs text-gray-500">Идэвхтэй ажилтан</p>
+          <p className="text-xs text-gray-500">Идэвхтэй</p>
         </div>
         <div className="rounded-xl border p-4 bg-gray-50">
           <p className="text-xl font-bold text-gray-500">{inactive.length}</p>
@@ -115,15 +119,89 @@ export default function AdminStaff() {
           <p className="text-xl font-bold text-blue-700">{staff.length}</p>
           <p className="text-xs text-gray-500">Нийт</p>
         </div>
+        <div className="rounded-xl border p-4 bg-amber-50 border-amber-200">
+          <p className="text-xl font-bold text-amber-700">{active.reduce((s, st) => s + (st.salary || 0), 0).toLocaleString()}₮</p>
+          <p className="text-xs text-gray-500">Сарын цалин</p>
+        </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-4">
+        <button onClick={() => setActiveTab('list')}
+          className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'list' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>
+          Ажилчид
+        </button>
+        <button onClick={() => setActiveTab('salary')}
+          className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'salary' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>
+          Цалингийн тооцоо
+        </button>
+      </div>
+
+      {activeTab === 'salary' && (
+        <div className="space-y-3 mb-6">
+          <h2 className="text-sm font-semibold text-gray-500">САРЫН ЦАЛИНГИЙН ТООЦОО</h2>
+          {active.length === 0 ? (
+            <p className="text-gray-400 text-center py-8">Идэвхтэй ажилтан байхгүй</p>
+          ) : (
+            <>
+              <div className="bg-white border rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left px-4 py-2 text-xs text-gray-500">Нэр</th>
+                      <th className="text-left px-4 py-2 text-xs text-gray-500">Албан тушаал</th>
+                      <th className="text-right px-4 py-2 text-xs text-gray-500">Цалин</th>
+                      <th className="text-right px-4 py-2 text-xs text-gray-500">НДШ (12.5%)</th>
+                      <th className="text-right px-4 py-2 text-xs text-gray-500">ХХОАТ (10%)</th>
+                      <th className="text-right px-4 py-2 text-xs text-gray-500">Гарт</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {active.map(s => {
+                      const sal = s.salary || 0;
+                      const ndsh = Math.round(sal * 0.125);
+                      const taxable = sal - ndsh;
+                      const hhuat = Math.round(taxable * 0.1);
+                      const net = sal - ndsh - hhuat;
+                      const r = getRole(s.role);
+                      return (
+                        <tr key={s.id} className="border-t">
+                          <td className="px-4 py-2.5 font-medium">{s.name}</td>
+                          <td className="px-4 py-2.5 text-gray-500">{r.icon} {r.label}</td>
+                          <td className="px-4 py-2.5 text-right">{sal.toLocaleString()}₮</td>
+                          <td className="px-4 py-2.5 text-right text-red-500">-{ndsh.toLocaleString()}₮</td>
+                          <td className="px-4 py-2.5 text-right text-red-500">-{hhuat.toLocaleString()}₮</td>
+                          <td className="px-4 py-2.5 text-right font-bold text-green-600">{net.toLocaleString()}₮</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="bg-gray-50 font-bold">
+                    <tr className="border-t-2">
+                      <td className="px-4 py-2.5" colSpan={2}>Нийт</td>
+                      <td className="px-4 py-2.5 text-right">{active.reduce((s, st) => s + (st.salary || 0), 0).toLocaleString()}₮</td>
+                      <td className="px-4 py-2.5 text-right text-red-500">-{active.reduce((s, st) => s + Math.round((st.salary || 0) * 0.125), 0).toLocaleString()}₮</td>
+                      <td className="px-4 py-2.5 text-right text-red-500">-{active.reduce((s, st) => { const ndsh = Math.round((st.salary || 0) * 0.125); return s + Math.round(((st.salary || 0) - ndsh) * 0.1); }, 0).toLocaleString()}₮</td>
+                      <td className="px-4 py-2.5 text-right text-green-600">{active.reduce((s, st) => { const sal = st.salary || 0; const ndsh = Math.round(sal * 0.125); return s + sal - ndsh - Math.round((sal - ndsh) * 0.1); }, 0).toLocaleString()}₮</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <p className="text-[11px] text-gray-400">* НДШ 12.5%, ХХОАТ 10% — ойролцоо тооцоо</p>
+            </>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'list' && (
       <button onClick={() => { resetForm(); setShowForm(!showForm); }}
         className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-700 mb-4">
         + Ажилтан нэмэх
       </button>
+      )}
 
       {/* Form */}
-      {showForm && (
+      {activeTab === 'list' && showForm && (
         <div className="bg-white border rounded-xl p-4 mb-4">
           <h3 className="font-semibold text-sm mb-3">{editId ? 'Ажилтан засах' : 'Шинэ ажилтан'}</h3>
           <div className="grid grid-cols-2 gap-3">
@@ -137,6 +215,8 @@ export default function AdminStaff() {
               className="border rounded-lg px-3 py-2 text-sm" />
             <input placeholder="Хуваарь (жнь: Даваа-Баасан 09:00-18:00)" value={schedule}
               onChange={e => setSchedule(e.target.value)} className="border rounded-lg px-3 py-2 text-sm" />
+            <input placeholder="Сарын цалин (₮)" type="number" value={salary}
+              onChange={e => setSalary(e.target.value)} className="border rounded-lg px-3 py-2 text-sm" />
           </div>
           <div className="flex gap-2 mt-3">
             <button onClick={resetForm} className="px-4 py-2 rounded-lg border text-sm">Цуцлах</button>
@@ -149,9 +229,9 @@ export default function AdminStaff() {
       )}
 
       {/* List */}
-      {loading ? (
+      {activeTab === 'list' && loading ? (
         <p className="text-gray-400 text-center py-8">Ачаалж байна...</p>
-      ) : (
+      ) : activeTab === 'list' ? (
         <div className="space-y-3">
           {staff.map(s => {
             const r = getRole(s.role);
@@ -167,6 +247,7 @@ export default function AdminStaff() {
                       <p className="text-xs text-amber-600">{r.label}</p>
                       {s.phone && <p className="text-xs text-gray-500">📞 {s.phone}</p>}
                       {s.schedule && <p className="text-xs text-gray-500">🕐 {s.schedule}</p>}
+                      {s.salary > 0 && <p className="text-xs text-gray-500">💰 {s.salary.toLocaleString()}₮/сар</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -183,7 +264,7 @@ export default function AdminStaff() {
           })}
           {staff.length === 0 && <p className="text-gray-400 text-center py-8">Ажилтан байхгүй</p>}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

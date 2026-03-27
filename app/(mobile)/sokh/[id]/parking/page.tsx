@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface MyVehicle {
   id: number;
@@ -39,6 +40,7 @@ export default function MobileParkingPage() {
   const [form, setForm] = useState({ plateNumber: '', carModel: '', color: 'Цагаан' });
   const [selectedBlockedCar, setSelectedBlockedCar] = useState('');
   const [gateRequesting, setGateRequesting] = useState(false);
+  const [qrVehicle, setQrVehicle] = useState<MyVehicle | null>(null);
 
   const sokhId = params.id as string;
 
@@ -242,6 +244,12 @@ export default function MobileParkingPage() {
                     </p>
                   </div>
                   <button
+                    onClick={() => setQrVehicle(v)}
+                    className="text-blue-500 text-xs font-medium px-2 py-1 bg-blue-50 rounded-lg"
+                  >
+                    QR
+                  </button>
+                  <button
                     onClick={() => deleteVehicle(v.id)}
                     className="text-red-400 text-xs hover:text-red-600"
                   >
@@ -419,6 +427,44 @@ export default function MobileParkingPage() {
           )}
         </div>
       </div>
+
+      {/* QR Code Modal */}
+      {qrVehicle && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setQrVehicle(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-[340px] w-full text-center" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-1">🚗 Зогсоолын QR</h3>
+            <p className="text-sm text-gray-500 mb-4">Энэ QR кодыг хаалтанд уншуулна уу</p>
+
+            <div className="bg-white border-2 border-gray-200 rounded-2xl p-4 inline-block mb-4">
+              <QRCodeSVG
+                value={JSON.stringify({
+                  type: 'parking',
+                  plate: qrVehicle.plate_number,
+                  model: qrVehicle.car_model,
+                  color: qrVehicle.color,
+                  sokh_id: sokhId,
+                })}
+                size={200}
+                level="M"
+              />
+            </div>
+
+            <div className="bg-blue-50 rounded-xl p-3 mb-4">
+              <p className="text-lg font-bold text-blue-700">{qrVehicle.plate_number}</p>
+              <p className="text-xs text-gray-500">
+                {qrVehicle.car_model && `${qrVehicle.car_model} • `}{qrVehicle.color}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setQrVehicle(null)}
+              className="w-full py-3 rounded-xl text-sm font-medium border border-gray-300 text-gray-600"
+            >
+              Хаах
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
