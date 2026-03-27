@@ -47,9 +47,11 @@ export default function ElevatorPage() {
   useEffect(() => { fetchTasks(); }, []);
 
   const fetchTasks = async () => {
+    const sokhId = await getAdminSokhId();
     const { data } = await supabase
       .from('elevator_tasks')
       .select('*')
+      .eq('sokh_id', sokhId)
       .order('scheduled_date', { ascending: true });
     setTasks(data || []);
     setLoading(false);

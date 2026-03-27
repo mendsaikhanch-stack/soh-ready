@@ -19,7 +19,8 @@ export default function AdminPolls() {
   useEffect(() => { fetchPolls(); }, []);
 
   const fetchPolls = async () => {
-    const { data } = await supabase.from('polls').select('*').order('created_at', { ascending: false });
+    const sokhId = await getAdminSokhId();
+    const { data } = await supabase.from('polls').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false });
     setPolls(data || []);
     setLoading(false);
   };

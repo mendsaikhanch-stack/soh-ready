@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Request { id: number; title: string; description: string; status: string; created_at: string; }
 
@@ -21,7 +22,8 @@ export default function AdminMaintenance() {
   useEffect(() => { fetchRequests(); }, []);
 
   const fetchRequests = async () => {
-    const { data } = await supabase.from('maintenance_requests').select('*').order('created_at', { ascending: false });
+    const sokhId = await getAdminSokhId();
+    const { data } = await supabase.from('maintenance_requests').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false });
     setRequests(data || []);
     setLoading(false);
   };

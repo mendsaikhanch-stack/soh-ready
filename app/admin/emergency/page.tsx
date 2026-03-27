@@ -48,9 +48,11 @@ export default function AdminEmergency() {
   useEffect(() => { fetchAlerts(); }, []);
 
   const fetchAlerts = async () => {
+    const sokhId = await getAdminSokhId();
     const { data } = await supabase
       .from('emergency_alerts')
       .select('*')
+      .eq('sokh_id', sokhId)
       .order('created_at', { ascending: false });
 
     setAlerts(data || []);

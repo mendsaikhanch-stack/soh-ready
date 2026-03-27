@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 import { themes, getTheme } from '@/app/lib/themes';
 import LogoUpload from '@/app/components/LogoUpload';
 import Image from 'next/image';
@@ -17,10 +18,11 @@ export default function BrandingPage() {
 
   useEffect(() => {
     const fetchOrg = async () => {
+      const adminSokhId = await getAdminSokhId();
       const { data } = await supabase
         .from('sokh_organizations')
         .select('id, name, logo_url, theme')
-        .limit(1)
+        .eq('id', adminSokhId)
         .single();
 
       if (data) {

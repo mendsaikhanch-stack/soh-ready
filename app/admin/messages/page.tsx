@@ -45,9 +45,10 @@ export default function AdminMessages() {
   }, []);
 
   const fetchData = async () => {
+    const sokhId = await getAdminSokhId();
     const [{ data: res }, { data: notifs }] = await Promise.all([
-      supabase.from('residents').select('*').order('name'),
-      supabase.from('scheduled_notifications').select('*').order('scheduled_at', { ascending: false }),
+      supabase.from('residents').select('*').eq('sokh_id', sokhId).order('name'),
+      supabase.from('scheduled_notifications').select('*').eq('sokh_id', sokhId).order('scheduled_at', { ascending: false }),
     ]);
     setResidents(res || []);
     setScheduled(notifs || []);

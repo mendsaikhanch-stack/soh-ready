@@ -24,7 +24,8 @@ export default function AdminPackages() {
 
   useEffect(() => { fetch(); }, []);
   const fetch = async () => {
-    const { data } = await supabase.from('packages').select('*').order('delivered_at', { ascending: false });
+    const sokhId = await getAdminSokhId();
+    const { data } = await supabase.from('packages').select('*').eq('sokh_id', sokhId).order('delivered_at', { ascending: false });
     setPackages(data || []); setLoading(false);
   };
 

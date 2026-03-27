@@ -43,9 +43,11 @@ export default function AdminStaff() {
   useEffect(() => { fetchStaff(); }, []);
 
   const fetchStaff = async () => {
+    const sokhId = await getAdminSokhId();
     const { data } = await supabase
       .from('staff')
       .select('*')
+      .eq('sokh_id', sokhId)
       .order('created_at', { ascending: false });
 
     setStaff(data || []);

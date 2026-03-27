@@ -36,9 +36,10 @@ export default function AdminBooking() {
   useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = async () => {
+    const sokhId = await getAdminSokhId();
     const [{ data: sp }, { data: bk }] = await Promise.all([
-      supabase.from('common_spaces').select('*').order('name'),
-      supabase.from('space_bookings').select('*, common_spaces(name, type)').order('date', { ascending: false }).limit(50),
+      supabase.from('common_spaces').select('*').eq('sokh_id', sokhId).order('name'),
+      supabase.from('space_bookings').select('*, common_spaces!inner(name, type, sokh_id)').eq('common_spaces.sokh_id', sokhId).order('date', { ascending: false }).limit(50),
     ]);
     setSpaces(sp || []); setBookings(bk || []); setLoading(false);
   };

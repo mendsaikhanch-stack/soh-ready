@@ -37,7 +37,8 @@ export default function AdminFinance() {
 
   useEffect(() => { fetch(); }, [month, year]);
   const fetch = async () => {
-    const { data } = await supabase.from('budget_items').select('*').eq('month', month).eq('year', year).order('amount', { ascending: false });
+    const sokhId = await getAdminSokhId();
+    const { data } = await supabase.from('budget_items').select('*').eq('sokh_id', sokhId).eq('month', month).eq('year', year).order('amount', { ascending: false });
     setItems(data || []); setLoading(false);
   };
 

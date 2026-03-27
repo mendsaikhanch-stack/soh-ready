@@ -52,9 +52,10 @@ export default function AdminShops() {
 
   useEffect(() => { fetchAll(); }, []);
   const fetchAll = async () => {
+    const sokhId = await getAdminSokhId();
     const [{ data: sh }, { data: vm }] = await Promise.all([
-      supabase.from('local_shops').select('*').order('name'),
-      supabase.from('vending_machines').select('*').order('location'),
+      supabase.from('local_shops').select('*').eq('sokh_id', sokhId).order('name'),
+      supabase.from('vending_machines').select('*').eq('sokh_id', sokhId).order('location'),
     ]);
     setShops(sh || []); setMachines(vm || []); setLoading(false);
   };

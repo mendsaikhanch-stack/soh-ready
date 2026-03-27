@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -19,33 +20,38 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const { count: resCount } = await supabase.from('residents').select('*', { count: 'exact', head: true });
+      const sokhId = await getAdminSokhId();
 
-      const { data: resData } = await supabase.from('residents').select('debt');
+      const { count: resCount } = await supabase.from('residents').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId);
+
+      const { data: resData } = await supabase.from('residents').select('debt').eq('sokh_id', sokhId);
       const debtResidents = resData?.filter(r => Number(r.debt) > 0).length || 0;
       const totalDebt = resData?.reduce((sum, r) => sum + Number(r.debt), 0) || 0;
 
-      const { data: payData } = await supabase.from('payments').select('amount');
+      const { data: payData } = await supabase.from('payments').select('amount, residents!inner(sokh_id)').eq('residents.sokh_id', sokhId);
       const totalPaid = payData?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
-      const { count: annCount } = await supabase.from('announcements').select('*', { count: 'exact', head: true });
+      const { count: annCount } = await supabase.from('announcements').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId);
 
       const { count: maintCount } = await supabase
         .from('maintenance_requests')
         .select('*', { count: 'exact', head: true })
+        .eq('sokh_id', sokhId)
         .eq('status', 'pending');
 
       const { count: complaintCount } = await supabase
         .from('complaints')
         .select('*', { count: 'exact', head: true })
+        .eq('sokh_id', sokhId)
         .eq('status', 'pending');
 
       const { count: pollCount } = await supabase
         .from('polls')
         .select('*', { count: 'exact', head: true })
+        .eq('sokh_id', sokhId)
         .eq('status', 'active');
 
-      const { count: msgCount } = await supabase.from('messages').select('*', { count: 'exact', head: true });
+      const { count: msgCount } = await supabase.from('messages').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId);
 
       setStats({
         residents: resCount || 0,

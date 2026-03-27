@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Resident {
   name: string;
@@ -37,16 +38,19 @@ export default function AdminReports() {
 
   useEffect(() => {
     const fetchData = async () => {
+      const sokhId = await getAdminSokhId();
       const { data: res } = await supabase
         .from('residents')
         .select('name,apartment,entrance,floor,debt,phone')
+        .eq('sokh_id', sokhId)
         .order('entrance')
         .order('apartment');
       setResidents(res || []);
 
       const { data: pay } = await supabase
         .from('payments')
-        .select('amount,paid_at,resident_id')
+        .select('amount,paid_at,resident_id, residents!inner(sokh_id)')
+        .eq('residents.sokh_id', sokhId)
         .order('paid_at', { ascending: false });
       setPayments(pay || []);
       setLoading(false);

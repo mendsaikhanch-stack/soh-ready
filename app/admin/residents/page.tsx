@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Resident {
   id: number;
@@ -26,7 +27,8 @@ export default function AdminResidents() {
   useEffect(() => { fetchResidents(); }, []);
 
   const fetchResidents = async () => {
-    const { data } = await supabase.from('residents').select('*').order('apartment');
+    const sokhId = await getAdminSokhId();
+    const { data } = await supabase.from('residents').select('*').eq('sokh_id', sokhId).order('apartment');
     setResidents(data || []);
     setLoading(false);
   };

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
+import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Resident { id: number; name: string; apartment: string; debt: number; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
@@ -43,9 +44,10 @@ export default function AdminPayments() {
   }, []);
 
   const fetchData = async () => {
-    const { data: res } = await supabase.from('residents').select('id,name,apartment,debt').order('apartment');
+    const sokhId = await getAdminSokhId();
+    const { data: res } = await supabase.from('residents').select('id,name,apartment,debt').eq('sokh_id', sokhId).order('apartment');
     setResidents(res || []);
-    const { data: pay } = await supabase.from('payments').select('*').order('paid_at', { ascending: false }).limit(50);
+    const { data: pay } = await supabase.from('payments').select('*, residents!inner(sokh_id)').eq('residents.sokh_id', sokhId).order('paid_at', { ascending: false }).limit(50);
     setPayments(pay || []);
     setLoading(false);
   };

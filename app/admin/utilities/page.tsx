@@ -41,9 +41,11 @@ export default function AdminUtilities() {
   useEffect(() => { fetchUsages(); }, [filterYear]);
 
   const fetchUsages = async () => {
+    const sokhId = await getAdminSokhId();
     const { data } = await supabase
       .from('utility_usage')
       .select('*')
+      .eq('sokh_id', sokhId)
       .eq('year', filterYear)
       .order('month', { ascending: false });
 

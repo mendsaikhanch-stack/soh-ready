@@ -19,7 +19,8 @@ export default function AdminAnnouncements() {
   useEffect(() => { fetchItems(); }, []);
 
   const fetchItems = async () => {
-    const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
+    const sokhId = await getAdminSokhId();
+    const { data } = await supabase.from('announcements').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false });
     setItems(data || []);
     setLoading(false);
   };
