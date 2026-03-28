@@ -27,7 +27,7 @@ interface ParsedSokh {
   matched: boolean;
 }
 
-type EntryMode = 'manual' | 'file';
+type EntryMode = 'manual' | 'file' | 'image';
 
 export default function OrganizationsPage() {
   const [sokhs, setSokhs] = useState<Sokh[]>([]);
@@ -58,8 +58,14 @@ export default function OrganizationsPage() {
   const [importResult, setImportResult] = useState({ success: 0, failed: 0, skipped: 0 });
   const [fileCityId, setFileCityId] = useState<number | ''>('');
 
+  // Image OCR state
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [imagePreview, setImagePreview] = useState('');
+
   const nameRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const imgRef = useRef<HTMLInputElement>(null);
   const addedCount = useRef(0);
 
   // Load data
@@ -85,7 +91,7 @@ export default function OrganizationsPage() {
   const filteredDistricts = districts.filter(d => d.city_id === cityId);
   const filteredKhoroos = khoroos.filter(k => k.district_id === districtId);
 
-  // ===== Manual entry functions =====
+  // ===== Reset functions =====
 
   const resetForm = () => {
     setName('');
@@ -96,12 +102,32 @@ export default function OrganizationsPage() {
     setTimeout(() => nameRef.current?.focus(), 100);
   };
 
+  const resetFileImport = () => {
+    setParsedRows([]);
+    setFileName('');
+    setImportStep('upload');
+    setImportResult({ success: 0, failed: 0, skipped: 0 });
+    setFileCityId('');
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const resetImageImport = () => {
+    setImagePreview('');
+    setOcrProgress(0);
+    setParsedRows([]);
+    setImportStep('upload');
+    setImportResult({ success: 0, failed: 0, skipped: 0 });
+    setFileCityId('');
+    if (imgRef.current) imgRef.current.value = '';
+  };
+
   const resetFormFull = () => {
     setCityId('');
     setDistrictId('');
     setKhorooId('');
     resetForm();
     resetFileImport();
+    resetImageImport();
     setShowForm(false);
   };
 
@@ -183,15 +209,6 @@ export default function OrganizationsPage() {
   };
 
   // ===== File import functions =====
-
-  const resetFileImport = () => {
-    setParsedRows([]);
-    setFileName('');
-    setImportStep('upload');
-    setImportResult({ success: 0, failed: 0, skipped: 0 });
-    setFileCityId('');
-    if (fileRef.current) fileRef.current.value = '';
-  };
 
   const matchKhoroo = (districtName: string, khorooName: string, selectedCityId: number | ''): number | undefined => {
     // Дүүрэг олох
@@ -354,6 +371,91 @@ export default function OrganizationsPage() {
     setSokhs(s || []);
   };
 
+  // ===== Image OCR functions =====
+
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError('');
+
+    // Preview
+    const url = URL.createObjectURL(file);
+    setImagePreview(url);
+
+    // OCR
+    setOcrLoading(true);
+    setOcrProgress(0);
+
+    try {
+      const Tesseract = await import('tesseract.js');
+      const { data: { text } } = await Tesseract.recognize(file, 'mon+rus+eng', {
+        logger: (m: any) => {
+          if (m.status === 'recognizing text') {
+            setOcrProgress(Math.round(m.progress * 100));
+          }
+        },
+      });
+
+      // Parse OCR text into rows
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3);
+      const rows: ParsedSokh[] = [];
+
+      for (const line of lines) {
+        // Утасны дугаар олох (8 оронтой)
+        const phoneMatch = line.match(/(\d{8})/);
+        const phonePart = phoneMatch ? phoneMatch[1] : '';
+
+        // Дүүрэг олох
+        const districtMatch = line.match(/(баянгол|хан-уул|сүхбаатар|чингэлтэй|баянзүрх|сонгинохайрхан|налайх|багануур|багахангай)/i);
+        const districtPart = districtMatch ? districtMatch[1] : '';
+
+        // Хороо олох
+        const khorooMatch = line.match(/(\d+)\s*-?\s*(?:р\s*)?хороо/i) || line.match(/хороо\s*(\d+)/i);
+        const khorooPart = khorooMatch ? khorooMatch[1] + '-р хороо' : '';
+
+        // Утас, дүүрэг, хороо хассан хэсгийг нэр болгох
+        let namePart = line;
+        if (phonePart) namePart = namePart.replace(phonePart, '');
+        if (districtMatch) namePart = namePart.replace(districtMatch[0], '');
+        if (khorooMatch) namePart = namePart.replace(khorooMatch[0], '');
+        namePart = namePart.replace(/[,;|/\-]+$/g, '').replace(/^[,;|/\-]+/g, '').trim();
+        // Хаяг тусад нь салгах
+        const addrMatch = namePart.match(/(\d+\s*-?\s*р?\s*байр)/i);
+        const addressPart = addrMatch ? addrMatch[1] : '';
+        if (addrMatch) namePart = namePart.replace(addrMatch[0], '').trim();
+        namePart = namePart.replace(/\s{2,}/g, ' ').replace(/[,;|]+$/g, '').trim();
+
+        if (!namePart || namePart.length < 2) continue;
+
+        const kId = districtPart && khorooPart
+          ? matchKhoroo(districtPart, khorooPart, fileCityId)
+          : undefined;
+
+        rows.push({
+          name: namePart,
+          district: districtPart,
+          khoroo: khorooPart,
+          address: addressPart,
+          phone: phonePart,
+          khoroo_id: kId,
+          matched: !!kId,
+        });
+      }
+
+      if (rows.length === 0) {
+        setError('Зургаас өгөгдөл таниж чадсангүй. Илүү тод зураг оруулна уу.');
+      } else {
+        setParsedRows(rows);
+        setImportStep('preview');
+      }
+    } catch (err) {
+      setError('Зураг танихад алдаа гарлаа');
+      console.error(err);
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
   // ===== Helpers =====
 
   const getOrgStats = (id: number) => {
@@ -417,6 +519,16 @@ export default function OrganizationsPage() {
               }`}
             >
               📁 Файлаар оруулах
+            </button>
+            <button
+              onClick={() => { setEntryMode('image'); setEditId(null); setError(''); setSuccess(''); resetImageImport(); }}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+                entryMode === 'image'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              📷 Зургаар оруулах
             </button>
           </div>
 
@@ -731,6 +843,207 @@ export default function OrganizationsPage() {
             </>
           )}
 
+          {/* ===== Зургаар оруулах ===== */}
+          {entryMode === 'image' && (
+            <>
+              {importStep === 'upload' && (
+                <>
+                  <h2 className="text-lg font-semibold mb-4">📷 Зургаар оруулах (OCR)</h2>
+
+                  {/* Хот сонголт */}
+                  <div className="mb-4">
+                    <label className="text-xs text-gray-400 mb-1 block">Хот (таних үр дүнг дүүргэд тулгахад ашиглана)</label>
+                    <select
+                      value={fileCityId}
+                      onChange={e => setFileCityId(Number(e.target.value) || '')}
+                      className="w-64 bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="">Бүх хот</option>
+                      {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Зураг сонгох */}
+                  <div className="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-blue-500 transition mb-4">
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="Preview" className="max-h-64 mx-auto mb-3 rounded-lg" />
+                    ) : (
+                      <p className="text-3xl mb-3">📷</p>
+                    )}
+                    {ocrLoading ? (
+                      <div>
+                        <p className="text-sm text-gray-300 mb-2">Зураг танилт хийж байна...</p>
+                        <div className="w-64 mx-auto bg-gray-700 rounded-full h-2 mb-2">
+                          <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${ocrProgress}%` }} />
+                        </div>
+                        <p className="text-xs text-gray-500">{ocrProgress}%</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-300 mb-1">СӨХ жагсаалтын зургаа оруулна уу</p>
+                        <p className="text-xs text-gray-500 mb-4">JPG, PNG форматтай тод зураг илүү сайн танина</p>
+                        <label className="inline-block px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium cursor-pointer hover:bg-blue-500 transition">
+                          Зураг сонгох
+                          <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={handleImage} />
+                        </label>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Тайлбар */}
+                  <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
+                    <p className="text-xs text-gray-400 font-medium mb-2">💡 Зөвлөмж:</p>
+                    <ul className="text-xs text-gray-500 space-y-1">
+                      <li>- Тод, ойлгомжтой зураг илүү сайн танигдана</li>
+                      <li>- СӨХ нэр, дүүрэг, хороо, утас агуулсан хүснэгт маягийн зураг тохиромжтой</li>
+                      <li>- OCR танилтын дараа мэдээллийг шалгаж, засварлах боломжтой</li>
+                    </ul>
+                  </div>
+                </>
+              )}
+
+              {/* Preview, importing, done — file import-тай ижил UI ашиглана */}
+              {importStep === 'preview' && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-lg font-semibold">📷 OCR үр дүн</h2>
+                      <p className="text-sm text-gray-400">{parsedRows.length} мөр таниглаа</p>
+                    </div>
+                    <button onClick={resetImageImport} className="text-sm text-gray-400 hover:text-gray-200">
+                      Өөр зураг
+                    </button>
+                  </div>
+
+                  {imagePreview && (
+                    <div className="mb-4">
+                      <img src={imagePreview} alt="Source" className="max-h-40 rounded-lg border border-gray-700" />
+                    </div>
+                  )}
+
+                  {/* Статистик */}
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-3 text-center">
+                      <p className="text-xl font-bold">{parsedRows.length}</p>
+                      <p className="text-xs text-gray-500">Нийт</p>
+                    </div>
+                    <div className="bg-green-900/20 border border-green-800/50 rounded-xl p-3 text-center">
+                      <p className="text-xl font-bold text-green-400">{matchedCount}</p>
+                      <p className="text-xs text-gray-500">Хороо таарсан</p>
+                    </div>
+                    <div className={`${unmatchedCount > 0 ? 'bg-yellow-900/20 border-yellow-800/50' : 'bg-gray-900/50 border-gray-700'} border rounded-xl p-3 text-center`}>
+                      <p className={`text-xl font-bold ${unmatchedCount > 0 ? 'text-yellow-400' : 'text-gray-500'}`}>{unmatchedCount}</p>
+                      <p className="text-xs text-gray-500">Таараагүй (алгасна)</p>
+                    </div>
+                  </div>
+
+                  {/* Хот сонголт - дахин match */}
+                  {unmatchedCount > 0 && (
+                    <div className="bg-yellow-900/20 border border-yellow-800/50 rounded-xl p-3 mb-4">
+                      <p className="text-xs text-yellow-400 mb-2">Дүүрэг таараагүй байна. Хот сонгож таарахыг оролдоно уу:</p>
+                      <select
+                        value={fileCityId}
+                        onChange={e => rematchRows(Number(e.target.value) || '')}
+                        className="w-48 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="">Бүх хот</option>
+                        {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Хүснэгт */}
+                  <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-x-auto mb-4">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-gray-500 text-xs border-b border-gray-800">
+                          <th className="px-3 py-2">№</th>
+                          <th className="px-3 py-2">Нэр</th>
+                          <th className="px-3 py-2">Дүүрэг</th>
+                          <th className="px-3 py-2">Хороо</th>
+                          <th className="px-3 py-2">Хаяг</th>
+                          <th className="px-3 py-2">Утас</th>
+                          <th className="px-3 py-2">Төлөв</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parsedRows.slice(0, 50).map((r, i) => (
+                          <tr key={i} className={`border-b border-gray-800/50 ${r.matched ? '' : 'opacity-50'}`}>
+                            <td className="px-3 py-2 text-gray-500 text-xs">{i + 1}</td>
+                            <td className="px-3 py-2 font-medium">{r.name}</td>
+                            <td className="px-3 py-2 text-gray-400">{r.district || '—'}</td>
+                            <td className="px-3 py-2 text-gray-400">{r.khoroo || '—'}</td>
+                            <td className="px-3 py-2 text-gray-400">{r.address || '—'}</td>
+                            <td className="px-3 py-2 text-gray-400">{r.phone || '—'}</td>
+                            <td className="px-3 py-2">
+                              {r.matched
+                                ? <span className="text-green-400 text-xs">✓</span>
+                                : <span className="text-yellow-400 text-xs">✕ таараагүй</span>
+                              }
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {parsedRows.length > 50 && (
+                      <p className="text-center text-xs text-gray-500 py-2">...болон {parsedRows.length - 50} бусад</p>
+                    )}
+                  </div>
+
+                  {/* Товчлуурууд */}
+                  <div className="flex gap-3">
+                    <button onClick={resetImageImport} className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl text-sm transition">
+                      Цуцлах
+                    </button>
+                    <button
+                      onClick={doFileImport}
+                      disabled={matchedCount === 0}
+                      className="px-5 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl text-sm font-medium transition"
+                    >
+                      ✓ Импортлох ({matchedCount} СӨХ)
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {importStep === 'importing' && (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-3 animate-bounce">⏳</div>
+                  <p className="text-gray-300">Импортлож байна...</p>
+                  <p className="text-sm text-gray-500">{matchedCount} СӨХ нэмж байна</p>
+                </div>
+              )}
+
+              {importStep === 'done' && (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-3">✅</div>
+                  <p className="text-lg font-semibold mb-4">Импорт дууслаа!</p>
+                  <div className="flex justify-center gap-6 mb-6">
+                    <div>
+                      <p className="text-2xl font-bold text-green-400">{importResult.success}</p>
+                      <p className="text-xs text-gray-500">Амжилттай</p>
+                    </div>
+                    {importResult.skipped > 0 && (
+                      <div>
+                        <p className="text-2xl font-bold text-yellow-400">{importResult.skipped}</p>
+                        <p className="text-xs text-gray-500">Алгассан</p>
+                      </div>
+                    )}
+                    {importResult.failed > 0 && (
+                      <div>
+                        <p className="text-2xl font-bold text-red-400">{importResult.failed}</p>
+                        <p className="text-xs text-gray-500">Алдаатай</p>
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={resetImageImport} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-medium transition">
+                    Дахин зураг оруулах
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
           {/* Мессеж */}
           {success && (
             <div className="mt-3 bg-green-900/30 border border-green-800 text-green-400 px-4 py-2 rounded-xl text-sm">
@@ -745,65 +1058,67 @@ export default function OrganizationsPage() {
         </div>
       )}
 
-      {/* Жагсаалт */}
-      {loading ? <p className="text-gray-500">Ачаалж байна...</p> : (
-        <div className="space-y-3">
-          {sokhs.map(s => {
-            const stats = getOrgStats(s.id);
-            const location = getLocation(s);
-            return (
-              <div key={s.id} className="bg-gray-800/50 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition group">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{s.name}</h3>
-                    {location && <p className="text-blue-400 text-xs mt-0.5">{location}</p>}
-                    {s.address && <p className="text-gray-400 text-sm mt-1">{s.address}</p>}
-                    <p className="text-gray-500 text-xs mt-1">📞 {s.phone || 'Утасгүй'}</p>
-                  </div>
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                    <button
-                      onClick={() => handleEdit(s)}
-                      className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-gray-300"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDelete(s)}
-                      className="text-xs bg-red-900/50 hover:bg-red-800/50 px-3 py-1.5 rounded-lg text-red-400"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-800">
-                  <div>
-                    <p className="text-lg font-bold">{stats.count}</p>
-                    <p className="text-xs text-gray-500">Айл</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-red-400">{residents.filter(r => r.sokh_id === s.id && Number(r.debt) > 0).length}</p>
-                    <p className="text-xs text-gray-500">Өртэй</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold">{stats.debt > 0 ? `${(stats.debt/1000).toFixed(0)}к₮` : '0₮'}</p>
-                    <p className="text-xs text-gray-500">Нийт өр</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-green-400">{stats.count > 0 ? 'Идэвхтэй' : '—'}</p>
-                    <p className="text-xs text-gray-500">Төлөв</p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {sokhs.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              <p className="text-4xl mb-3">🏢</p>
-              <p>СӨХ бүртгэлгүй байна</p>
-              <p className="text-sm mt-1">Дээрх "+ СӨХ нэмэх" товч дарж эхлэнэ үү</p>
-            </div>
-          )}
+      {/* Жагсаалт — хүснэгт хэлбэрээр */}
+      {loading ? <p className="text-gray-500">Ачаалж байна...</p> : sokhs.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          <p className="text-4xl mb-3">🏢</p>
+          <p>СӨХ бүртгэлгүй байна</p>
+          <p className="text-sm mt-1">Дээрх "+ СӨХ нэмэх" товч дарж эхлэнэ үү</p>
+        </div>
+      ) : (
+        <div className="bg-gray-800/50 border border-gray-800 rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 text-xs border-b border-gray-700 bg-gray-900/50">
+                  <th className="px-4 py-3 font-medium">№</th>
+                  <th className="px-4 py-3 font-medium">СӨХ нэр</th>
+                  <th className="px-4 py-3 font-medium">Дүүрэг</th>
+                  <th className="px-4 py-3 font-medium">Хороо</th>
+                  <th className="px-4 py-3 font-medium">Хаяг</th>
+                  <th className="px-4 py-3 font-medium">Утас</th>
+                  <th className="px-4 py-3 font-medium text-center">Айл</th>
+                  <th className="px-4 py-3 font-medium text-center">Өр</th>
+                  <th className="px-4 py-3 font-medium text-center">Төлөв</th>
+                  <th className="px-4 py-3 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sokhs.map((s, idx) => {
+                  const stats = getOrgStats(s.id);
+                  const k = s.khoroos;
+                  const districtName = k?.districts?.name || '—';
+                  const khorooName = k?.name || '—';
+                  return (
+                    <tr key={s.id} className="border-b border-gray-800/50 hover:bg-gray-800/80 transition group">
+                      <td className="px-4 py-3 text-gray-500 text-xs">{idx + 1}</td>
+                      <td className="px-4 py-3 font-medium">{s.name}</td>
+                      <td className="px-4 py-3 text-gray-400">{districtName}</td>
+                      <td className="px-4 py-3 text-gray-400">{khorooName}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">{s.address || '—'}</td>
+                      <td className="px-4 py-3 text-gray-300">{s.phone || <span className="text-gray-600">—</span>}</td>
+                      <td className="px-4 py-3 text-center">{stats.count}</td>
+                      <td className="px-4 py-3 text-center">
+                        {stats.debt > 0 ? <span className="text-red-400">{(stats.debt/1000).toFixed(0)}к₮</span> : <span className="text-gray-600">0₮</span>}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {stats.count > 0
+                          ? <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-green-900/30 text-green-400 border border-green-800/50">Идэвхтэй</span>
+                          : <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">Шинэ</span>
+                        }
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition">
+                          <button onClick={() => handleEdit(s)} className="text-xs bg-gray-700 hover:bg-gray-600 px-2.5 py-1 rounded-lg text-gray-300">✏️</button>
+                          <button onClick={() => handleDelete(s)} className="text-xs bg-red-900/50 hover:bg-red-800/50 px-2.5 py-1 rounded-lg text-red-400">🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
