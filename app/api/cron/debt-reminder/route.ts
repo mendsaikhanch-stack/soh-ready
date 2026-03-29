@@ -98,6 +98,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[cron/debt-reminder]', err.message);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

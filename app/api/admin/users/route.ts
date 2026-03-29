@@ -26,7 +26,10 @@ export async function GET() {
     .select('id, username, sokh_id, role, display_name, status, created_at, updated_at')
     .order('created_at', { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[admin/users GET]', error.message);
+    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+  }
 
   // СӨХ нэрийг нэмэх
   const sokhIds = [...new Set((data || []).filter(u => u.sokh_id).map(u => u.sokh_id))];
@@ -73,7 +76,10 @@ export async function POST(request: Request) {
     status: 'active',
   }]).select().single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[admin/users POST]', error.message);
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+  }
   return NextResponse.json({ success: true, user: data });
 }
 
@@ -95,7 +101,10 @@ export async function PATCH(request: Request) {
   if (password) updates.password_hash = await bcrypt.hash(password, 12);
 
   const { error } = await sb.from('admin_users').update(updates).eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[admin/users PATCH]', error.message);
+    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+  }
 
   // Нууц үг солигдсон бол хуучин session-уудыг хүчингүй болгох
   if (passwordChanged || status === 'inactive') {
@@ -115,6 +124,9 @@ export async function DELETE(request: Request) {
   if (!id) return NextResponse.json({ error: 'id шаардлагатай' }, { status: 400 });
 
   const { error } = await sb.from('admin_users').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[admin/users DELETE]', error.message);
+    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+  }
   return NextResponse.json({ success: true });
 }

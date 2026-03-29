@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
       pushSent: totalSent,
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[push/trigger-scheduled]', err.message);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
