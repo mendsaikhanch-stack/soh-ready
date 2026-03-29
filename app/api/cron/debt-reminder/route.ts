@@ -87,8 +87,9 @@ export async function GET(request: NextRequest) {
               payload
             );
             totalPush++;
-          } catch (err: any) {
-            if (err.statusCode === 410 || err.statusCode === 404) {
+          } catch (err: unknown) {
+            const statusCode = (err as { statusCode?: number }).statusCode;
+            if (statusCode === 410 || statusCode === 404) {
               await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
             }
           }
@@ -102,8 +103,8 @@ export async function GET(request: NextRequest) {
       pushSent: totalPush,
       timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
-    console.error('[cron/debt-reminder]', err.message);
+  } catch (err: unknown) {
+    console.error('[cron/debt-reminder]', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

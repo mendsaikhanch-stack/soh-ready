@@ -36,9 +36,9 @@ export default function SuperAdminDashboard() {
           .order('created_at', { ascending: false })
           .limit(10);
 
-        const allErrors = recentErrors || [];
-        const todayErrors = allErrors.filter((e: any) => new Date(e.created_at) >= todayStart);
-        const fatalErrors = allErrors.filter((e: any) => e.level === 'fatal');
+        const allErrors = (Array.isArray(recentErrors) ? recentErrors : []) as { created_at: string; level: string; message: string }[];
+        const todayErrors = allErrors.filter(e => new Date(e.created_at) >= todayStart);
+        const fatalErrors = allErrors.filter(e => e.level === 'fatal');
 
         setErrorStats({
           today: todayErrors.length,

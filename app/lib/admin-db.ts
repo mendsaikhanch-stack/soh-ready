@@ -1,20 +1,22 @@
 // Admin DB client — /api/admin/db proxy-гаар дамжуулж service_role ашиглана.
 // Admin page-ууд supabase.from() биш энийг ашиглана.
 
+type DbValue = string | number | boolean | null;
+
 interface QueryParams {
   select?: string;
-  eq?: Record<string, any>;
-  in?: Record<string, any[]>;
-  not?: Record<string, any>;
+  eq?: Record<string, DbValue>;
+  in?: Record<string, DbValue[]>;
+  not?: Record<string, DbValue>;
   order?: { column: string; ascending?: boolean };
   limit?: number;
   single?: boolean;
   count?: boolean;
-  data?: any;
+  data?: Record<string, unknown> | Record<string, unknown>[];
 }
 
 interface QueryResult {
-  data: any;
+  data: Record<string, unknown>[] | Record<string, unknown> | null;
   error: string | null;
   count?: number;
 }
@@ -31,8 +33,8 @@ async function adminQuery(table: string, action: string, params?: QueryParams): 
       return { data: null, error: result.error || 'Request failed' };
     }
     return { data: result.data, error: null, count: result.count };
-  } catch (err: any) {
-    return { data: null, error: err.message };
+  } catch (err: unknown) {
+    return { data: null, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
 
@@ -40,9 +42,9 @@ async function adminQuery(table: string, action: string, params?: QueryParams): 
 export function adminFrom(table: string) {
   return {
     select: (columns?: string) => new AdminQueryBuilder(table, 'select', { select: columns }),
-    insert: (data: any) => adminQuery(table, 'insert', { data }),
-    upsert: (data: any) => adminQuery(table, 'upsert', { data }),
-    update: (data: any) => new AdminUpdateBuilder(table, data),
+    insert: (data: Record<string, unknown> | Record<string, unknown>[]) => adminQuery(table, 'insert', { data: data as Record<string, unknown>[] }),
+    upsert: (data: Record<string, unknown> | Record<string, unknown>[]) => adminQuery(table, 'upsert', { data: data as Record<string, unknown>[] }),
+    update: (data: Record<string, unknown>) => new AdminUpdateBuilder(table, data),
     delete: () => new AdminDeleteBuilder(table),
   };
 }
@@ -51,22 +53,22 @@ class AdminQueryBuilder {
   private table: string;
   private params: QueryParams;
 
-  constructor(table: string, action: string, params: QueryParams = {}) {
+  constructor(table: string, _action: string, params: QueryParams = {}) {
     this.table = table;
     this.params = params;
   }
 
-  eq(column: string, value: any) {
+  eq(column: string, value: DbValue) {
     this.params.eq = { ...this.params.eq, [column]: value };
     return this;
   }
 
-  in(column: string, values: any[]) {
+  in(column: string, values: DbValue[]) {
     this.params.in = { ...this.params.in, [column]: values };
     return this;
   }
 
-  not(column: string, operator: string, value: any) {
+  not(column: string, _operator: string, value: DbValue) {
     this.params.not = { ...this.params.not, [column]: value };
     return this;
   }
@@ -86,7 +88,7 @@ class AdminQueryBuilder {
     return this;
   }
 
-  async then(resolve: (value: QueryResult) => void, reject?: (reason: any) => void) {
+  async then(resolve: (value: QueryResult) => void, reject?: (reason: unknown) => void) {
     try {
       const result = await adminQuery(this.table, 'select', this.params);
       resolve(result);
@@ -98,20 +100,20 @@ class AdminQueryBuilder {
 
 class AdminUpdateBuilder {
   private table: string;
-  private data: any;
+  private data: Record<string, unknown>;
   private params: QueryParams = {};
 
-  constructor(table: string, data: any) {
+  constructor(table: string, data: Record<string, unknown>) {
     this.table = table;
     this.data = data;
   }
 
-  eq(column: string, value: any) {
+  eq(column: string, value: DbValue) {
     this.params.eq = { ...this.params.eq, [column]: value };
     return this;
   }
 
-  async then(resolve: (value: QueryResult) => void, reject?: (reason: any) => void) {
+  async then(resolve: (value: QueryResult) => void, reject?: (reason: unknown) => void) {
     try {
       const result = await adminQuery(this.table, 'update', { data: this.data, ...this.params });
       resolve(result);
@@ -129,12 +131,12 @@ class AdminDeleteBuilder {
     this.table = table;
   }
 
-  eq(column: string, value: any) {
+  eq(column: string, value: DbValue) {
     this.params.eq = { ...this.params.eq, [column]: value };
     return this;
   }
 
-  async then(resolve: (value: QueryResult) => void, reject?: (reason: any) => void) {
+  async then(resolve: (value: QueryResult) => void, reject?: (reason: unknown) => void) {
     try {
       const result = await adminQuery(this.table, 'delete', this.params);
       resolve(result);

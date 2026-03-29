@@ -1,21 +1,13 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
-import { validateSessionToken } from '@/app/lib/session-token';
+import { checkAuth } from '@/app/lib/session-token';
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-async function isSuperAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('superadmin-session')?.value;
-  if (!token) return false;
-  return validateSessionToken(token, 12 * 60 * 60 * 1000).valid;
-}
-
 // GET — бүх админ хэрэглэгчид
 export async function GET() {
-  if (!await isSuperAdmin()) {
+  if (!await (await checkAuth('superadmin')).valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -47,7 +39,7 @@ export async function GET() {
 
 // POST — шинэ админ үүсгэх
 export async function POST(request: Request) {
-  if (!await isSuperAdmin()) {
+  if (!await (await checkAuth('superadmin')).valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -83,7 +75,7 @@ export async function POST(request: Request) {
 
 // PATCH — админ засах (status, password reset)
 export async function PATCH(request: Request) {
-  if (!await isSuperAdmin()) {
+  if (!await (await checkAuth('superadmin')).valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -114,7 +106,7 @@ export async function PATCH(request: Request) {
 
 // DELETE — админ устгах
 export async function DELETE(request: Request) {
-  if (!await isSuperAdmin()) {
+  if (!await (await checkAuth('superadmin')).valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

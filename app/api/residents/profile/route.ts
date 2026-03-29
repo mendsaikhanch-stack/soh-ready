@@ -1,22 +1,12 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
-import { validateSessionToken } from '@/app/lib/session-token';
+import { checkAnyAuth } from '@/app/lib/session-token';
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-async function isAuthenticated(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const adminToken = cookieStore.get('admin-session')?.value;
-  const superToken = cookieStore.get('superadmin-session')?.value;
-  const token = adminToken || superToken;
-  if (!token) return false;
-  return validateSessionToken(token, 24 * 60 * 60 * 1000).valid;
-}
-
 export async function PUT(request: Request) {
   try {
-    if (!await isAuthenticated()) {
+    if (!(await checkAnyAuth('admin', 'superadmin')).valid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

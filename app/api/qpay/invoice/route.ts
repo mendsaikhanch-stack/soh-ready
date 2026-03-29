@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
       qr_text: result.qr_text,
       urls: result.urls || [],
     });
-  } catch (err: any) {
-    console.error('QPay invoice error:', err?.message);
+  } catch (err: unknown) {
+    console.error('QPay invoice error:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'Нэхэмжлэл үүсгэхэд алдаа гарлаа' }, { status: 500 });
   }
 }

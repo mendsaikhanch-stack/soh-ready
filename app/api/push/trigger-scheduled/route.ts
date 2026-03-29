@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import webpush from 'web-push';
-import { validateSessionToken } from '@/app/lib/session-token';
+import { checkAuth } from '@/app/lib/session-token';
 
 let vapidConfigured = false;
 function ensureVapid() {
@@ -16,15 +15,9 @@ function ensureVapid() {
 }
 
 async function isAdminOrCron(request: NextRequest): Promise<boolean> {
-  // Cron secret шалгах (Vercel cron гэх мэт)
   const cronSecret = request.headers.get('x-cron-secret');
   if (cronSecret && cronSecret === process.env.CRON_SECRET) return true;
-
-  // Admin session шалгах
-  const cookieStore = await cookies();
-  const adminToken = cookieStore.get('admin-session')?.value;
-  if (!adminToken) return false;
-  return validateSessionToken(adminToken, 24 * 60 * 60 * 1000).valid;
+  return (await checkAuth('admin')).valid;
 }
 
 // Товлосон мэдэгдлүүдийг шалгаж push илгээх
@@ -89,8 +82,9 @@ export async function POST(request: NextRequest) {
               payload
             );
             totalSent++;
-          } catch (err: any) {
-            if (err.statusCode === 410 || err.statusCode === 404) {
+          } catch (err: unknown) {
+            const statusCode = (err as { statusCode?: number }).statusCode;
+            if (statusCode === 410 || statusCode === 404) {
               await supabaseAdmin
                 .from('push_subscriptions')
                 .delete()
@@ -105,8 +99,8 @@ export async function POST(request: NextRequest) {
       triggered: pendingNotifs.length,
       pushSent: totalSent,
     });
-  } catch (err: any) {
-    console.error('[push/trigger-scheduled]', err.message);
+  } catch (err: unknown) {
+    console.error('[push/trigger-scheduled]', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

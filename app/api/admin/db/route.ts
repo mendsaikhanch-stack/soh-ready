@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
-import { validateSessionToken } from '@/app/lib/session-token';
-
-// Admin session шалгах
-async function isAdminAuthenticated(type: 'admin' | 'superadmin' | 'osnaa' | 'inspector' = 'admin'): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(`${type}-session`)?.value;
-  if (!token) return false;
-  const maxAge = type === 'superadmin' ? 12 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-  return validateSessionToken(token, maxAge).valid;
-}
+import { getAuthRole, type AuthRole } from '@/app/lib/session-token';
 
 // Role тус бүрд зөвшөөрөгдсөн хүснэгтүүд
-type Role = 'superadmin' | 'admin' | 'osnaa' | 'inspector';
+type Role = AuthRole;
 
 // Бүх role-д нийтлэг хүснэгтүүд
 const COMMON_TABLES = new Set([
@@ -59,20 +49,10 @@ const INSPECTOR_WRITE_TABLES = new Set(['utility_usage']);
 // Мэдрэмтгий column-уудыг select-ээс хориглох
 const BLOCKED_COLUMNS = new Set(['password', 'password_hash', 'secret', 'token']);
 
-// Хэрэглэгчийн role тодорхойлох
-async function getAuthRole(): Promise<Role | null> {
-  // Дараалал чухал: superadmin > admin > osnaa > inspector
-  if (await isAdminAuthenticated('superadmin')) return 'superadmin';
-  if (await isAdminAuthenticated('admin')) return 'admin';
-  if (await isAdminAuthenticated('osnaa')) return 'osnaa';
-  if (await isAdminAuthenticated('inspector')) return 'inspector';
-  return null;
-}
-
 // Admin DB proxy — service_role key ашиглан зөвшөөрөгдсөн хүснэгт дээр DB операц хийнэ
 export async function POST(request: NextRequest) {
-  const role = await getAuthRole();
-  if (!role) {
+  const auth = await getAuthRole();
+  if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -85,6 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Role-д зөвшөөрөгдсөн хүснэгт шалгах
+    const role = auth.role;
     const allowedTables = ROLE_TABLES[role];
     if (!allowedTables.has(table)) {
       return NextResponse.json({ error: 'Table not allowed for your role' }, { status: 403 });
@@ -179,9 +160,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database operation failed' }, { status: 500 });
     }
 
+    // Write операцуудыг audit log-д бичих
+    if (action !== 'select') {
+      Promise.resolve(
+        supabaseAdmin.from('audit_logs').insert({
+          user_id: auth.userId ? parseInt(auth.userId) : null,
+          role,
+          action,
+          table_name: table,
+          details: params?.eq || params?.data ? JSON.stringify(params.eq || params.data).slice(0, 1000) : null,
+        })
+      ).catch(() => {});
+    }
+
     return NextResponse.json({ data, count });
-  } catch (err: any) {
-    console.error('[admin/db] unexpected:', err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'unknown error';
+    console.error('[admin/db] unexpected:', message);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

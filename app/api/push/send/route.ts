@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import webpush from 'web-push';
-import { validateSessionToken } from '@/app/lib/session-token';
+import { checkAnyAuth } from '@/app/lib/session-token';
 
 // VAPID тохиргоо — runtime-д lazy init
 let vapidConfigured = false;
@@ -16,17 +15,9 @@ function ensureVapid() {
   }
 }
 
-// Admin session шалгах
-async function isAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('admin-session')?.value || cookieStore.get('superadmin-session')?.value;
-  if (!token) return false;
-  return validateSessionToken(token, 24 * 60 * 60 * 1000).valid;
-}
-
 // Push notification илгээх
 export async function POST(request: NextRequest) {
-  if (!(await isAdmin())) {
+  if (!(await checkAnyAuth('admin', 'superadmin')).valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -73,18 +64,18 @@ export async function POST(request: NextRequest) {
           payload
         );
         sent++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
-        // 410 Gone = subscription хүчингүй болсон → устгах
-        if (err.statusCode === 410 || err.statusCode === 404) {
+        const statusCode = (err as { statusCode?: number }).statusCode;
+        if (statusCode === 410 || statusCode === 404) {
           await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
         }
       }
     }
 
     return NextResponse.json({ sent, failed, total: subs.length });
-  } catch (err: any) {
-    console.error('[push/send]', err.message);
+  } catch (err: unknown) {
+    console.error('[push/send]', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const result = await checkPayment(invoice_id);
 
     const paid = result.count > 0 && result.rows?.some(
-      (r: any) => r.payment_status === 'PAID'
+      (r: { payment_status: string }) => r.payment_status === 'PAID'
     );
 
     return NextResponse.json({
@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
       count: result.count || 0,
       rows: result.rows || [],
     });
-  } catch (err: any) {
-    console.error('QPay check error:', err?.message);
+  } catch (err: unknown) {
+    console.error('QPay check error:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'Төлбөр шалгахад алдаа гарлаа' }, { status: 500 });
   }
 }

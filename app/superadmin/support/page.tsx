@@ -34,25 +34,26 @@ export default function SupportPage() {
         .limit(50);
 
       // Нэгтгэж, цаг хугацаагаар эрэмбэлэх
+      type DbRow = Record<string, unknown>;
       const all: SupportTicket[] = [
-        ...(complaints || []).map((c: any) => ({
-          id: c.id,
-          content: c.content || c.description,
-          title: c.title || c.subject || 'Гомдол/санал',
-          status: c.status || 'pending',
-          priority: c.priority || 'medium',
-          created_at: c.created_at,
-          sokh_id: c.sokh_id,
+        ...((Array.isArray(complaints) ? complaints : []) as DbRow[]).map(c => ({
+          id: c.id as number,
+          content: (c.content || c.description) as string,
+          title: (c.title || c.subject || 'Гомдол/санал') as string,
+          status: (c.status || 'pending') as string,
+          priority: (c.priority || 'medium') as string,
+          created_at: c.created_at as string,
+          sokh_id: c.sokh_id as number,
           source: 'complaint' as const,
         })),
-        ...(maintenance || []).map((m: any) => ({
-          id: m.id,
-          content: m.description,
-          title: m.title || 'Засварын хүсэлт',
-          status: m.status || 'pending',
-          priority: m.priority || 'medium',
-          created_at: m.created_at,
-          sokh_id: m.sokh_id,
+        ...((Array.isArray(maintenance) ? maintenance : []) as DbRow[]).map(m => ({
+          id: m.id as number,
+          content: m.description as string,
+          title: (m.title || 'Засварын хүсэлт') as string,
+          status: (m.status || 'pending') as string,
+          priority: (m.priority || 'medium') as string,
+          created_at: m.created_at as string,
+          sokh_id: m.sokh_id as number,
           source: 'maintenance' as const,
         })),
       ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
