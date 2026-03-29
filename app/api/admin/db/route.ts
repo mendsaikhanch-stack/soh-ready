@@ -18,7 +18,19 @@ async function isAdminAuthenticated(type: 'admin' | 'superadmin' | 'osnaa' | 'in
   return Date.now() - timestamp < maxAge;
 }
 
-// Admin DB proxy — service_role key ашиглан бүх DB операц хийнэ
+// Зөвшөөрөгдсөн хүснэгтүүдийн жагсаалт
+const ALLOWED_TABLES = new Set([
+  'sokh_organizations', 'residents', 'payments', 'announcements',
+  'maintenance_requests', 'complaints', 'parking_vehicles', 'parking_events',
+  'utility_usage', 'chat_messages', 'polls', 'poll_votes', 'packages',
+  'staff', 'emergency_alerts', 'bookings', 'bookable_spaces', 'shops',
+  'vending_machines', 'elevator_maintenance', 'cctv_cameras', 'cctv_ai_alerts',
+  'cctv_requests', 'marketplace_listings', 'scheduled_notifications',
+  'push_subscriptions', 'visitor_passes', 'org_features', 'points_ledger',
+  'resident_points', 'finance_entries', 'budget_categories',
+]);
+
+// Admin DB proxy — service_role key ашиглан зөвшөөрөгдсөн хүснэгт дээр DB операц хийнэ
 export async function POST(request: NextRequest) {
   // Admin session шалгах
   const isAdmin = await isAdminAuthenticated('admin');
@@ -36,6 +48,10 @@ export async function POST(request: NextRequest) {
 
     if (!table || !action) {
       return NextResponse.json({ error: 'table and action required' }, { status: 400 });
+    }
+
+    if (!ALLOWED_TABLES.has(table)) {
+      return NextResponse.json({ error: 'Table not allowed' }, { status: 403 });
     }
 
     let query;
