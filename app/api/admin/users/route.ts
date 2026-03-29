@@ -99,7 +99,7 @@ export async function PATCH(request: Request) {
 
   // Нууц үг солигдсон бол хуучин session-уудыг хүчингүй болгох
   if (passwordChanged || status === 'inactive') {
-    await sb.from('admin_sessions').delete().eq('user_id', id).throwOnError().catch(() => {});
+    await sb.from('admin_sessions').delete().eq('user_id', id);
   }
 
   return NextResponse.json({ success: true, passwordChanged });
