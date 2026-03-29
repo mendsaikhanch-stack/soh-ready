@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { checkAnyAuth } from '@/app/lib/session-token';
+import { profileLimiter } from '@/app/lib/rate-limit';
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 export async function PUT(request: Request) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
+  const rl = profileLimiter.check(ip);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: `Хэт олон хүсэлт. ${rl.retryAfterSec}с хүлээнэ үү` }, { status: 429 });
+  }
+
   try {
     if (!(await checkAnyAuth('admin', 'superadmin')).valid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -1,5 +1,8 @@
 // Client-side instrumentation — хөтчийн алдааг автоматаар бүртгэх
 
+// Sentry client SDK-г эхлүүлэх (sentry.client.config.ts-аас тохиргоог ачаална)
+import './sentry.client.config';
+
 function reportError(data: {
   level: string;
   message: string;

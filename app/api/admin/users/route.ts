@@ -2,11 +2,18 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { checkAuth } from '@/app/lib/session-token';
+import { adminUsersLimiter } from '@/app/lib/rate-limit';
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 // GET — бүх админ хэрэглэгчид
-export async function GET() {
+export async function GET(request: Request) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
+  const rl = adminUsersLimiter.check(ip);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: `Хэт олон хүсэлт. ${rl.retryAfterSec}с хүлээнэ үү` }, { status: 429 });
+  }
+
   if (!await (await checkAuth('superadmin')).valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -39,6 +46,12 @@ export async function GET() {
 
 // POST — шинэ админ үүсгэх
 export async function POST(request: Request) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
+  const rl = adminUsersLimiter.check(ip);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: `Хэт олон хүсэлт. ${rl.retryAfterSec}с хүлээнэ үү` }, { status: 429 });
+  }
+
   if (!await (await checkAuth('superadmin')).valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -75,6 +88,12 @@ export async function POST(request: Request) {
 
 // PATCH — админ засах (status, password reset)
 export async function PATCH(request: Request) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
+  const rl = adminUsersLimiter.check(ip);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: `Хэт олон хүсэлт. ${rl.retryAfterSec}с хүлээнэ үү` }, { status: 429 });
+  }
+
   if (!await (await checkAuth('superadmin')).valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -106,6 +125,12 @@ export async function PATCH(request: Request) {
 
 // DELETE — админ устгах
 export async function DELETE(request: Request) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
+  const rl = adminUsersLimiter.check(ip);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: `Хэт олон хүсэлт. ${rl.retryAfterSec}с хүлээнэ үү` }, { status: 429 });
+  }
+
   if (!await (await checkAuth('superadmin')).valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

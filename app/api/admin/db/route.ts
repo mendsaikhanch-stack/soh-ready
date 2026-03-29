@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { getAuthRole, type AuthRole } from '@/app/lib/session-token';
+import { adminDbLimiter } from '@/app/lib/rate-limit';
 
 // Role тус бүрд зөвшөөрөгдсөн хүснэгтүүд
 type Role = AuthRole;
@@ -51,6 +52,12 @@ const BLOCKED_COLUMNS = new Set(['password', 'password_hash', 'secret', 'token']
 
 // Admin DB proxy — service_role key ашиглан зөвшөөрөгдсөн хүснэгт дээр DB операц хийнэ
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
+  const rl = adminDbLimiter.check(ip);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: `Хэт олон хүсэлт. ${rl.retryAfterSec}с хүлээнэ үү` }, { status: 429 });
+  }
+
   const auth = await getAuthRole();
   if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

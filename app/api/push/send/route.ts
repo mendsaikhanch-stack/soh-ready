@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import webpush from 'web-push';
 import { checkAnyAuth } from '@/app/lib/session-token';
+import { pushSendLimiter } from '@/app/lib/rate-limit';
 
 // VAPID тохиргоо — runtime-д lazy init
 let vapidConfigured = false;
@@ -17,6 +18,12 @@ function ensureVapid() {
 
 // Push notification илгээх
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
+  const rl = pushSendLimiter.check(ip);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: `Хэт олон хүсэлт. ${rl.retryAfterSec}с хүлээнэ үү` }, { status: 429 });
+  }
+
   if (!(await checkAnyAuth('admin', 'superadmin')).valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
