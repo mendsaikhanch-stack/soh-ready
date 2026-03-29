@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 export async function POST(request: Request) {
   const { secret } = await request.json();
 
-  if (secret !== process.env.MIGRATION_SECRET && secret !== 'migrate-2024') {
+  if (!process.env.MIGRATION_SECRET || secret !== process.env.MIGRATION_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

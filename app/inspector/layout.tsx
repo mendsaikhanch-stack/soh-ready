@@ -37,7 +37,7 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
         else setInspector({ id: 0, name: 'Байцаагч', kontorNumber: null });
       }
     } catch {
-      setAuthed(false);
+      setInspector(null);
     }
     setChecking(false);
   };
