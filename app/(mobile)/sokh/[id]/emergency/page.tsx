@@ -81,6 +81,15 @@ export default function EmergencyPage() {
     { label: 'Онцгой байдал', phone: '105', icon: '🆘' },
   ];
 
+  const utilityNumbers = [
+    { label: 'Цахилгаан аваар', phone: '107', icon: '⚡' },
+    { label: 'Дулааны сүлжээ', phone: '11-343434', icon: '🔥' },
+    { label: 'Ус суваг', phone: '11-321032', icon: '💧' },
+    { label: 'Лифт аваар', phone: '11-343300', icon: '🛗' },
+    { label: 'Хийн аваар', phone: '104', icon: '💨' },
+    { label: 'Мэдээллийн лавлах', phone: '108', icon: '📞' },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-red-600 text-white px-4 py-4">
@@ -92,6 +101,7 @@ export default function EmergencyPage() {
 
       <div className="px-4 py-4">
         {/* Emergency numbers */}
+        <h2 className="text-xs font-semibold text-red-300 mb-2">ЯАРАЛТАЙ ДУУДЛАГА</h2>
         <div className="grid grid-cols-4 gap-2 mb-4">
           {emergencyNumbers.map((n) => (
             <a
@@ -101,6 +111,22 @@ export default function EmergencyPage() {
             >
               <p className="text-xl">{n.icon}</p>
               <p className="text-xs font-bold text-red-600">{n.phone}</p>
+              <p className="text-[10px] text-gray-500">{n.label}</p>
+            </a>
+          ))}
+        </div>
+
+        {/* Utility numbers */}
+        <h2 className="text-xs font-semibold text-gray-500 mb-2">ИНЖЕНЕРИЙН ШУГАМ СҮЛЖЭЭ</h2>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {utilityNumbers.map((n) => (
+            <a
+              key={n.phone}
+              href={`tel:${n.phone}`}
+              className="bg-white rounded-xl p-2.5 shadow-sm text-center active:scale-95 transition"
+            >
+              <p className="text-lg">{n.icon}</p>
+              <p className="text-xs font-bold text-blue-600">{n.phone}</p>
               <p className="text-[10px] text-gray-500">{n.label}</p>
             </a>
           ))}

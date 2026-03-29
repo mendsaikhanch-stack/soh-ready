@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
+import * as XLSX from 'xlsx';
 
 interface Resident { id: number; name: string; apartment: string; debt: number; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
@@ -85,6 +86,32 @@ export default function AdminPayments() {
     return r ? `${r.name} (${r.apartment})` : 'Тодорхойгүй';
   };
 
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    // Төлбөрийн түүх sheet
+    const payData = payments.map(p => ({
+      'Огноо': new Date(p.paid_at).toLocaleDateString('mn-MN'),
+      'Оршин суугч': getResidentName(p.resident_id),
+      'Тайлбар': p.description,
+      'Дүн (₮)': Number(p.amount),
+    }));
+    const paySheet = XLSX.utils.json_to_sheet(payData);
+    XLSX.utils.book_append_sheet(wb, paySheet, 'Төлбөрийн түүх');
+
+    // Өртэй айлууд sheet
+    const debtData = residents.filter(r => r.debt > 0).sort((a, b) => b.debt - a.debt).map(r => ({
+      'Нэр': r.name,
+      'Тоот': r.apartment,
+      'Өр (₮)': r.debt,
+    }));
+    const debtSheet = XLSX.utils.json_to_sheet(debtData);
+    XLSX.utils.book_append_sheet(wb, debtSheet, 'Өртэй айлууд');
+
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `төлбөр-${today}.xlsx`);
+  };
+
   const totalDebt = residents.reduce((s, r) => s + r.debt, 0);
   const totalCollected = payments.reduce((s, p) => s + Number(p.amount), 0);
   const debtors = residents.filter(r => r.debt > 0).length;
@@ -101,6 +128,13 @@ export default function AdminPayments() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">💰 Төлбөр & Орлого</h1>
+        <button
+          onClick={exportToExcel}
+          disabled={loading || payments.length === 0}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
+        >
+          📥 Excel татах
+        </button>
       </div>
 
       {/* Tabs */}
@@ -333,7 +367,7 @@ export default function AdminPayments() {
                 <input
                   value={bankAccount.accountName}
                   onChange={e => setBankAccount({ ...bankAccount, accountName: e.target.value })}
-                  placeholder="жнь: Сэргэлэн СӨХ"
+                  placeholder="жнь: Нарантуул СӨХ"
                   className="w-full border rounded-xl px-4 py-3 text-sm"
                 />
               </div>
