@@ -10,7 +10,9 @@ export async function getAdminSokhId(): Promise<number> {
       cachedSokhId = data.sokhId;
       return data.sokhId;
     }
-  } catch {}
+  } catch (err) {
+    console.error('Admin auth check failed:', err instanceof Error ? err.message : 'Unknown error');
+  }
 
   // OSNAA session-с шалгах
   try {
@@ -20,7 +22,9 @@ export async function getAdminSokhId(): Promise<number> {
       cachedSokhId = data.sokhId;
       return data.sokhId;
     }
-  } catch {}
+  } catch (err) {
+    console.error('OSNAA auth check failed:', err instanceof Error ? err.message : 'Unknown error');
+  }
 
   return 0;
 }

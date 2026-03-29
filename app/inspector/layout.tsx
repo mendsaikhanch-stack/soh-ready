@@ -32,9 +32,23 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
       const res = await fetch('/api/auth/check?type=inspector');
       const data = await res.json();
       if (data.authenticated) {
-        const saved = localStorage.getItem('inspector_user');
-        if (saved) setInspector(JSON.parse(saved));
-        else setInspector({ id: 0, name: 'Байцаагч', kontorNumber: null });
+        try {
+          const saved = localStorage.getItem('inspector_user');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && typeof parsed.id === 'number' && typeof parsed.name === 'string') {
+              setInspector(parsed);
+            } else {
+              localStorage.removeItem('inspector_user');
+              setInspector({ id: 0, name: 'Байцаагч', kontorNumber: null });
+            }
+          } else {
+            setInspector({ id: 0, name: 'Байцаагч', kontorNumber: null });
+          }
+        } catch {
+          localStorage.removeItem('inspector_user');
+          setInspector({ id: 0, name: 'Байцаагч', kontorNumber: null });
+        }
       }
     } catch {
       setInspector(null);
