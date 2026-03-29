@@ -10,60 +10,45 @@ const roles = [
     name: 'Оршин суугч',
     icon: '🏠',
     color: 'bg-green-600',
-    username: 'test@test.com',
-    password: '(Supabase Auth)',
     loginUrl: '/login',
     dashboardUrl: '/sokh/1',
     description: 'Оршин суугчийн утасны апп',
-    type: 'supabase',
   },
   {
     id: 'admin',
     name: 'СӨХ Админ',
     icon: '🏢',
     color: 'bg-blue-600',
-    username: 'admin',
-    password: 'Toot@2024!Secure',
     loginUrl: '/admin',
     dashboardUrl: '/admin',
     description: 'Байрны удирдлагын панел',
-    type: 'cookie',
   },
   {
     id: 'inspector',
     name: 'Байцаагч',
     icon: '🔍',
     color: 'bg-indigo-600',
-    username: '(DB-ээс)',
-    password: '(DB-ээс)',
     loginUrl: '/inspector',
     dashboardUrl: '/inspector',
     description: 'ОСНААК шалгалтын апп',
-    type: 'db',
   },
   {
     id: 'superadmin',
     name: 'Супер Админ',
     icon: 'S',
     color: 'bg-purple-600',
-    username: 'superadmin',
-    password: 'Super@Toot2024!',
     loginUrl: '/superadmin',
     dashboardUrl: '/superadmin',
     description: 'Платформ удирдлага',
-    type: 'cookie',
   },
   {
     id: 'osnaa',
     name: 'ОСНААК Админ',
     icon: '⚡',
     color: 'bg-amber-600',
-    username: 'osnaa',
-    password: 'Osnaa@Toot2024!',
     loginUrl: '/osnaa',
     dashboardUrl: '/osnaa',
     description: 'Ус, Дулаан, Цахилгаан удирдлага',
-    type: 'cookie',
   },
 ];
 
@@ -172,7 +157,6 @@ const features: Feature[] = [
 export default function DevPage() {
   const router = useRouter();
   const [copied, setCopied] = useState<string | null>(null);
-  const [showPasswords, setShowPasswords] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'done' | 'partial' | 'todo'>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [newFeature, setNewFeature] = useState('');
@@ -264,18 +248,9 @@ export default function DevPage() {
           </button>
         </div>
 
-        {/* ==================== CREDENTIALS ==================== */}
+        {/* ==================== NAVIGATION ==================== */}
         <div className="mb-10">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold">🔑 Нэвтрэх мэдээлэл</h2>
-            <button
-              onClick={() => setShowPasswords(!showPasswords)}
-              className="text-xs px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white transition"
-            >
-              {showPasswords ? '🙈 Нуух' : '👁 Харуулах'}
-            </button>
-          </div>
-
+          <h2 className="text-lg font-bold mb-4">🔑 Хуудсуудруу шилжих</h2>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {roles.map(role => (
               <div key={role.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
@@ -288,36 +263,6 @@ export default function DevPage() {
                     <p className="text-[11px] text-gray-500">{role.description}</p>
                   </div>
                 </div>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between bg-gray-800/50 rounded-lg px-3 py-2">
-                    <span className="text-gray-500 text-xs">Нэр:</span>
-                    <div className="flex items-center gap-2">
-                      <code className="text-green-400 text-xs">{role.username}</code>
-                      {role.type !== 'db' && (
-                        <button onClick={() => copyText(role.username, `${role.id}-user`)}
-                          className="text-[10px] text-gray-600 hover:text-white">
-                          {copied === `${role.id}-user` ? '✓' : '📋'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between bg-gray-800/50 rounded-lg px-3 py-2">
-                    <span className="text-gray-500 text-xs">Нууц үг:</span>
-                    <div className="flex items-center gap-2">
-                      <code className="text-amber-400 text-xs">
-                        {showPasswords ? role.password : '••••••••'}
-                      </code>
-                      {role.type !== 'db' && role.type !== 'supabase' && (
-                        <button onClick={() => copyText(role.password, `${role.id}-pass`)}
-                          className="text-[10px] text-gray-600 hover:text-white">
-                          {copied === `${role.id}-pass` ? '✓' : '📋'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => router.push(role.loginUrl)}
@@ -332,12 +277,6 @@ export default function DevPage() {
                     Dashboard
                   </button>
                 </div>
-
-                {role.type === 'db' && (
-                  <p className="text-[10px] text-gray-600 mt-2 text-center">
-                    * Supabase inspectors хүснэгтээс
-                  </p>
-                )}
               </div>
             ))}
           </div>
