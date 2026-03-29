@@ -43,7 +43,9 @@ export default function AdminAnnouncements() {
           sokh_id: sokhId,
         }),
       });
-    } catch {}
+    } catch {
+      // Push илгээхэд алдаа гарсан ч зарлал хадгалагдсан
+    }
 
     setShowForm(false);
     setTitle(''); setContent(''); setType('info');

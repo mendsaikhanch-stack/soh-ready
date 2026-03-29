@@ -219,7 +219,9 @@ export default function PaymentsPage() {
             setQpayInvoice(null);
           }, 2500);
         }
-      } catch {}
+      } catch {
+        // QPay polling алдаа — дараагийн interval дахин шалгана
+      }
     }, 3000);
 
     // 5 минутын дараа polling зогсоох

@@ -266,7 +266,9 @@ export default function UtilitiesPage() {
             setQpayInvoice(null);
           }, 2500);
         }
-      } catch {}
+      } catch {
+        // QPay polling алдаа — дараагийн interval дахин шалгана
+      }
     }, 3000);
 
     pollingRef.current = interval;
