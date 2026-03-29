@@ -28,6 +28,7 @@ const ALLOWED_TABLES = new Set([
   'cctv_requests', 'marketplace_listings', 'scheduled_notifications',
   'push_subscriptions', 'visitor_passes', 'org_features', 'points_ledger',
   'resident_points', 'finance_entries', 'budget_categories',
+  'error_logs',
 ]);
 
 // Admin DB proxy — service_role key ашиглан зөвшөөрөгдсөн хүснэгт дээр DB операц хийнэ

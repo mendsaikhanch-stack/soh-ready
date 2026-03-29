@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface SokhOrg {
   id: number;
@@ -15,6 +16,7 @@ export default function SuperAdminDashboard() {
   const [sokhs, setSokhs] = useState<SokhOrg[]>([]);
   const [residents, setResidents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorStats, setErrorStats] = useState({ today: 0, fatal: 0, recentErrors: [] as any[] });
 
   useEffect(() => {
     const fetch = async () => {
@@ -23,6 +25,29 @@ export default function SuperAdminDashboard() {
 
       const { data: resData } = await supabase.from('residents').select('*');
       setResidents(resData || []);
+
+      // Алдааны статистик татах
+      try {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const { data: recentErrors } = await adminFrom('error_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        const allErrors = recentErrors || [];
+        const todayErrors = allErrors.filter((e: any) => new Date(e.created_at) >= todayStart);
+        const fatalErrors = allErrors.filter((e: any) => e.level === 'fatal');
+
+        setErrorStats({
+          today: todayErrors.length,
+          fatal: fatalErrors.length,
+          recentErrors: allErrors.slice(0, 5),
+        });
+      } catch {
+        // error_logs хүснэгт үүсээгүй бол алгасах
+      }
 
       setLoading(false);
     };
@@ -153,22 +178,49 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
 
-          {/* System health */}
+          {/* System health — бодит алдааны мэдээлэл */}
           <div className="bg-gray-800/50 rounded-2xl border border-gray-800 p-5">
             <h2 className="font-semibold mb-4">Системийн байдал</h2>
             <div className="space-y-3">
-              {[
-                { label: 'API хариу үйлдэл', value: '120ms', status: '🟢' },
-                { label: 'Database', value: 'Хэвийн', status: '🟢' },
-                { label: 'Uptime', value: '99.9%', status: '🟢' },
-                { label: 'Алдааны хувь', value: '0.01%', status: '🟢' },
-              ].map(s => (
-                <div key={s.label} className="flex justify-between items-center text-sm">
-                  <span className="text-gray-400">{s.label}</span>
-                  <span className="flex items-center gap-1">{s.status} {s.value}</span>
-                </div>
-              ))}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Өнөөдрийн алдаа</span>
+                <span className="flex items-center gap-1">
+                  {errorStats.today === 0 ? '🟢' : errorStats.today < 5 ? '🟡' : '🔴'} {errorStats.today}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Ноцтой алдаа (fatal)</span>
+                <span className="flex items-center gap-1">
+                  {errorStats.fatal === 0 ? '🟢' : '🔴'} {errorStats.fatal}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Database</span>
+                <span className="flex items-center gap-1">🟢 Хэвийн</span>
+              </div>
             </div>
+            {errorStats.recentErrors.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <p className="text-xs text-gray-500 mb-2">Сүүлийн алдаанууд:</p>
+                <div className="space-y-2">
+                  {errorStats.recentErrors.map((e: any, i: number) => (
+                    <div key={i} className="text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className={e.level === 'fatal' ? 'text-red-400' : 'text-yellow-400'}>
+                          {e.level === 'fatal' ? '!!!' : '!'}
+                        </span>
+                        <span className="text-gray-300 truncate flex-1">{e.message}</span>
+                      </div>
+                      <div className="flex gap-2 text-gray-600 ml-4">
+                        <span>{e.source}</span>
+                        {e.route && <span>{e.route}</span>}
+                        <span>{new Date(e.created_at).toLocaleString('mn-MN')}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Recent activity */}
