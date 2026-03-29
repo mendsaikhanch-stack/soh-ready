@@ -27,7 +27,7 @@ interface ParsedSokh {
   matched: boolean;
 }
 
-type EntryMode = 'manual' | 'file' | 'image';
+type EntryMode = 'manual' | 'file' | 'image' | 'paste';
 
 export default function OrganizationsPage() {
   const [sokhs, setSokhs] = useState<Sokh[]>([]);
@@ -57,6 +57,9 @@ export default function OrganizationsPage() {
   const [importStep, setImportStep] = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
   const [importResult, setImportResult] = useState({ success: 0, failed: 0, skipped: 0 });
   const [fileCityId, setFileCityId] = useState<number | ''>('');
+
+  // Paste state
+  const [pasteText, setPasteText] = useState('');
 
   // Image OCR state
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -210,23 +213,48 @@ export default function OrganizationsPage() {
 
   // ===== File import functions =====
 
-  const matchKhoroo = (districtName: string, khorooName: string, selectedCityId: number | ''): number | undefined => {
-    // Дүүрэг олох
-    const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/дүүрэг/g, '');
-    const dist = districts.find(d => {
-      if (selectedCityId && d.city_id !== selectedCityId) return false;
-      return normalize(d.name) === normalize(districtName);
-    });
-    if (!dist) return undefined;
+  const DISTRICT_ALIASES: Record<string, string> = {
+    'БГД': 'Баянгол', 'BGD': 'Баянгол',
+    'СБД': 'Сүхбаатар', 'SBD': 'Сүхбаатар',
+    'ЧД': 'Чингэлтэй', 'CHD': 'Чингэлтэй',
+    'СХД': 'Сонгинохайрхан', 'SHD': 'Сонгинохайрхан', 'СОХД': 'Сонгинохайрхан',
+    'БЗД': 'Баянзүрх', 'BZD': 'Баянзүрх',
+    'ХУД': 'Хан-Уул', 'HUD': 'Хан-Уул',
+    'НД': 'Налайх',
+    'БНУД': 'Багануур', 'БНД': 'Багануур',
+    'БХД': 'Багахангай',
+  };
 
-    // Хороо олох
+  const resolveDistrict = (raw: string, selectedCityId: number | '') => {
+    const trimmed = raw.trim();
+    const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/дүүрэг/g, '');
+    // Try alias first
+    const aliasName = DISTRICT_ALIASES[trimmed.toUpperCase()] || DISTRICT_ALIASES[trimmed];
+    const target = aliasName || trimmed;
+    return districts.find(d => {
+      if (selectedCityId && d.city_id !== selectedCityId) return false;
+      return normalize(d.name) === normalize(target);
+    });
+  };
+
+  const matchKhoroo = (districtName: string, khorooName: string, selectedCityId: number | ''): number | undefined => {
+    const dist = resolveDistrict(districtName, selectedCityId);
+    if (!dist) return undefined;
     const khorooNum = khorooName.match(/(\d+)/)?.[1];
     if (!khorooNum) return undefined;
-
     const kh = khoroos.find(k =>
-      k.district_id === dist.id && k.name.includes(khorooNum)
+      k.district_id === dist.id && k.name.includes(khorooNum + '-р хороо')
     );
     return kh?.id;
+  };
+
+  // "БГД, 8-р хороо" гэх мэт нэгдсэн форматыг задлах
+  const parseDistrictKhoroo = (combined: string): { district: string; khoroo: string } | null => {
+    // "БГД, 8-р хороо" or "Баянгол 8" or "БГД 8-р хороо"
+    const m = combined.match(/^([А-Яа-яA-Za-zӨөҮүЁё-]+)\s*[,.\s]+\s*(\d+)\s*-?\s*р?\s*хороо?/i)
+      || combined.match(/^([А-Яа-яA-Za-zӨөҮүЁё-]+)\s*[,.\s]+\s*(\d+)/);
+    if (m) return { district: m[1].trim(), khoroo: m[2] + '-р хороо' };
+    return null;
   };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -270,7 +298,7 @@ export default function OrganizationsPage() {
         const row = data[i];
         if (!row) continue;
         const joined = row.map((c: any) => String(c).toLowerCase()).join('|');
-        if (joined.includes('нэр') || joined.includes('name') || joined.includes('сөх')) {
+        if (joined.includes('нэр') || joined.includes('name') || joined.includes('сөх') || joined.includes('дүүрэг') || joined.includes('хороо') || joined.includes('утас')) {
           headerIdx = i;
           break;
         }
@@ -279,13 +307,15 @@ export default function OrganizationsPage() {
       const headers = data[headerIdx].map((h: any) => String(h).toLowerCase().trim());
 
       // Баганууд таних
-      let colName = -1, colDistrict = -1, colKhoroo = -1, colAddress = -1, colPhone = -1;
+      let colName = -1, colDistrict = -1, colKhoroo = -1, colAddress = -1, colPhone = -1, colContact = -1, colCombined = -1;
       headers.forEach((h, i) => {
-        if ((h.includes('нэр') || h.includes('name') || h.includes('сөх')) && colName === -1) colName = i;
+        if ((h.includes('нэр') || h.includes('name') || h.includes('сөх') || h.includes('байгууллага')) && colName === -1) colName = i;
+        else if ((h.includes('дүүрэг') && h.includes('хороо')) || h === 'дүүрэг/хороо') colCombined = i;
         else if (h.includes('дүүрэг') || h.includes('district')) colDistrict = i;
         else if (h.includes('хороо') || h.includes('khoroo')) colKhoroo = i;
         else if (h.includes('хаяг') || h.includes('address') || h.includes('байр')) colAddress = i;
         else if (h.includes('утас') || h.includes('phone') || h.includes('дугаар')) colPhone = i;
+        else if (h.includes('холбоо') || h.includes('contact') || h.includes('хүн')) colContact = i;
       });
 
       if (colName === -1) {
@@ -300,8 +330,16 @@ export default function OrganizationsPage() {
         const rowName = String(row[colName] ?? '').trim();
         if (!rowName || rowName.length < 2) continue;
 
-        const districtName = colDistrict >= 0 ? String(row[colDistrict] ?? '').trim() : '';
-        const khorooName = colKhoroo >= 0 ? String(row[colKhoroo] ?? '').trim() : '';
+        let districtName = colDistrict >= 0 ? String(row[colDistrict] ?? '').trim() : '';
+        let khorooName = colKhoroo >= 0 ? String(row[colKhoroo] ?? '').trim() : '';
+
+        // Нэгдсэн "Дүүрэг/Хороо" багана задлах
+        if (colCombined >= 0 && !districtName) {
+          const combined = String(row[colCombined] ?? '').trim();
+          const parsed = parseDistrictKhoroo(combined);
+          if (parsed) { districtName = parsed.district; khorooName = parsed.khoroo; }
+        }
+
         const kId = districtName && khorooName ? matchKhoroo(districtName, khorooName, fileCityId) : undefined;
 
         rows.push({
@@ -341,11 +379,53 @@ export default function OrganizationsPage() {
     setImportStep('importing');
     let success = 0, failed = 0, skipped = 0;
 
+    // Дутуу хороо автомат үүсгэх
+    const missingKhoroos: { district: string; khoroo: string }[] = [];
     for (const row of parsedRows) {
-      if (!row.khoroo_id) {
-        skipped++;
-        continue;
+      if (!row.khoroo_id && row.district && row.khoroo) {
+        const dist = resolveDistrict(row.district, fileCityId);
+        if (dist) {
+          const kNum = row.khoroo.match(/(\d+)/)?.[1];
+          if (kNum && !khoroos.find(k => k.district_id === dist.id && k.name === kNum + '-р хороо')) {
+            missingKhoroos.push({ district: dist.id.toString(), khoroo: kNum });
+          }
+        }
       }
+    }
+
+    if (missingKhoroos.length > 0) {
+      const unique = [...new Set(missingKhoroos.map(m => m.district + ':' + m.khoroo))];
+      const toInsert = unique.map(k => {
+        const [dId, num] = k.split(':');
+        return { district_id: +dId, name: num + '-р хороо' };
+      });
+      await supabase.from('khoroos').insert(toInsert);
+      // Дахин ачаалах
+      const { data: newK } = await supabase.from('khoroos').select('*').order('id');
+      if (newK) {
+        setKhoroos(newK);
+        // Re-match
+        for (const row of parsedRows) {
+          if (!row.khoroo_id && row.district && row.khoroo) {
+            const dist = resolveDistrict(row.district, fileCityId);
+            if (dist) {
+              const kNum = row.khoroo.match(/(\d+)/)?.[1];
+              const kh = newK.find(k => k.district_id === dist.id && k.name === kNum + '-р хороо');
+              if (kh) { row.khoroo_id = kh.id; row.matched = true; }
+            }
+          }
+        }
+      }
+    }
+
+    // Давхардал шалгах
+    const existingNames = new Set(sokhs.map(s => s.name.toLowerCase() + '|' + s.khoroo_id));
+
+    for (const row of parsedRows) {
+      if (!row.khoroo_id) { skipped++; continue; }
+
+      const dupKey = row.name.toLowerCase() + '|' + row.khoroo_id;
+      if (existingNames.has(dupKey)) { skipped++; continue; }
 
       const { error } = await supabase
         .from('sokh_organizations')
@@ -357,13 +437,12 @@ export default function OrganizationsPage() {
         });
 
       if (error) { failed++; console.error('Import error:', error, row); }
-      else success++;
+      else { success++; existingNames.add(dupKey); }
     }
 
     setImportResult({ success, failed, skipped });
     setImportStep('done');
 
-    // Жагсаалт дахин ачаалах
     const { data: s } = await supabase
       .from('sokh_organizations')
       .select('*, khoroos(name, districts(name, cities(name)))')
@@ -519,6 +598,16 @@ export default function OrganizationsPage() {
               }`}
             >
               📁 Файлаар оруулах
+            </button>
+            <button
+              onClick={() => { setEntryMode('paste'); setEditId(null); setError(''); setSuccess(''); setPasteText(''); setParsedRows([]); setImportStep('upload'); }}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+                entryMode === 'paste'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              📋 Буулгах
             </button>
             <button
               onClick={() => { setEntryMode('image'); setEditId(null); setError(''); setSuccess(''); resetImageImport(); }}
@@ -837,6 +926,225 @@ export default function OrganizationsPage() {
                   </div>
                   <button onClick={resetFileImport} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-medium transition">
                     Дахин импорт
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ===== Буулгаж оруулах ===== */}
+          {entryMode === 'paste' && (
+            <>
+              {importStep === 'upload' && (
+                <>
+                  <h2 className="text-lg font-semibold mb-4">📋 Текст буулгаж оруулах</h2>
+                  <p className="text-xs text-gray-500 mb-3">CSV, хүснэгт, чөлөөт текст — ямар ч формат, автомат таниж задална. Товчилсон нэрс (БГД, СБД, ЧД, СХД...) танина.</p>
+                  <textarea
+                    value={pasteText}
+                    onChange={e => setPasteText(e.target.value)}
+                    placeholder={"Жишээ:\nБГД, 8-р хороо, Тэмүүлэл, Г.Эрдэнэцэцэг, 99037139\nСБД, 11-р хороо, Рашаант, СӨХ, 80129114\n\nЭсвэл header-тай:\nДүүрэг/Хороо,СӨХ,Холбоо барих хүн,Утас\nБГД 8-р хороо,Тэмүүлэл,Г.Эрдэнэцэцэг,99037139"}
+                    className="w-full h-48 bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y placeholder:text-gray-600"
+                  />
+                  <div className="flex gap-3 mt-3">
+                    <button
+                      onClick={() => {
+                        if (!pasteText.trim()) { setError('Текст оруулна уу'); return; }
+                        setError('');
+                        const lines = pasteText.split('\n').filter(l => l.trim());
+                        // CSV parse
+                        const parsed: string[][] = lines.map(line => {
+                          const result: string[] = [];
+                          let current = '', inQ = false;
+                          for (const ch of line) {
+                            if (ch === '"') inQ = !inQ;
+                            else if ((ch === ',' || ch === '\t' || ch === ';') && !inQ) { result.push(current.trim()); current = ''; }
+                            else current += ch;
+                          }
+                          result.push(current.trim());
+                          return result;
+                        });
+
+                        // Detect header
+                        let headerIdx = -1;
+                        for (let i = 0; i < Math.min(3, parsed.length); i++) {
+                          const joined = parsed[i].join('|').toLowerCase();
+                          if (joined.includes('нэр') || joined.includes('сөх') || joined.includes('дүүрэг') || joined.includes('утас') || joined.includes('байгууллага')) {
+                            headerIdx = i;
+                            break;
+                          }
+                        }
+
+                        const rows: ParsedSokh[] = [];
+                        const startIdx = headerIdx >= 0 ? headerIdx + 1 : 0;
+
+                        if (headerIdx >= 0) {
+                          // Header-тай формат
+                          const headers = parsed[headerIdx].map(h => h.toLowerCase());
+                          let cName = -1, cDist = -1, cKhoroo = -1, cPhone = -1, cCombined = -1;
+                          headers.forEach((h, i) => {
+                            if ((h.includes('нэр') || h.includes('сөх') || h.includes('байгууллага')) && cName === -1) cName = i;
+                            else if ((h.includes('дүүрэг') && h.includes('хороо')) || h === 'дүүрэг/хороо') cCombined = i;
+                            else if (h.includes('дүүрэг')) cDist = i;
+                            else if (h.includes('хороо')) cKhoroo = i;
+                            else if (h.includes('утас') || h.includes('дугаар')) cPhone = i;
+                          });
+
+                          for (let i = startIdx; i < parsed.length; i++) {
+                            const r = parsed[i];
+                            const name = cName >= 0 ? (r[cName] || '').trim() : '';
+                            if (!name || name.length < 2) continue;
+                            let district = cDist >= 0 ? (r[cDist] || '').trim() : '';
+                            let khoroo = cKhoroo >= 0 ? (r[cKhoroo] || '').trim() : '';
+                            if (cCombined >= 0 && !district) {
+                              const p = parseDistrictKhoroo((r[cCombined] || '').trim());
+                              if (p) { district = p.district; khoroo = p.khoroo; }
+                            }
+                            const kId = district && khoroo ? matchKhoroo(district, khoroo, '') : undefined;
+                            rows.push({ name, district, khoroo, address: '', phone: cPhone >= 0 ? (r[cPhone] || '').trim() : '', khoroo_id: kId, matched: !!kId });
+                          }
+                        } else {
+                          // Header-гүй — автомат таних
+                          for (let i = startIdx; i < parsed.length; i++) {
+                            const r = parsed[i].filter(c => c);
+                            if (r.length < 2) continue;
+                            // Дүүрэг/хороо олох
+                            let district = '', khoroo = '', name = '', phone = '';
+                            const rest: string[] = [];
+                            for (const cell of r) {
+                              const p = parseDistrictKhoroo(cell);
+                              if (p && !district) { district = p.district; khoroo = p.khoroo; }
+                              else if (/^\d{8}/.test(cell.replace(/\s/g, '')) || /\d{8}/.test(cell.replace(/[,; ]/g, ''))) {
+                                phone = phone ? phone + ', ' + cell : cell;
+                              } else if (/^\d+$/.test(cell)) {
+                                // Skip row numbers
+                              } else {
+                                rest.push(cell);
+                              }
+                            }
+                            name = rest[0] || '';
+                            if (!name || name.length < 2) continue;
+                            const kId = district && khoroo ? matchKhoroo(district, khoroo, '') : undefined;
+                            rows.push({ name, district, khoroo, address: '', phone, khoroo_id: kId, matched: !!kId });
+                          }
+                        }
+
+                        if (rows.length === 0) { setError('Текстээс өгөгдөл олдсонгүй'); return; }
+                        setParsedRows(rows);
+                        setImportStep('preview');
+                      }}
+                      disabled={!pasteText.trim()}
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl text-sm font-medium transition"
+                    >
+                      Задлах
+                    </button>
+                    <span className="text-xs text-gray-500 self-center">{pasteText.split('\n').filter(l => l.trim()).length} мөр</span>
+                  </div>
+                </>
+              )}
+
+              {/* Preview/importing/done — file import-тай ижил UI */}
+              {importStep === 'preview' && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-lg font-semibold">📋 Буулгасан өгөгдөл</h2>
+                      <p className="text-sm text-gray-400">{parsedRows.length} СӨХ олдлоо</p>
+                    </div>
+                    <button onClick={() => { setImportStep('upload'); setParsedRows([]); }} className="text-sm text-gray-400 hover:text-gray-200">
+                      Буцах
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-3 text-center">
+                      <p className="text-xl font-bold">{parsedRows.length}</p>
+                      <p className="text-xs text-gray-500">Нийт</p>
+                    </div>
+                    <div className="bg-green-900/20 border border-green-800/50 rounded-xl p-3 text-center">
+                      <p className="text-xl font-bold text-green-400">{matchedCount}</p>
+                      <p className="text-xs text-gray-500">Хороо таарсан</p>
+                    </div>
+                    <div className={`${unmatchedCount > 0 ? 'bg-yellow-900/20 border-yellow-800/50' : 'bg-gray-900/50 border-gray-700'} border rounded-xl p-3 text-center`}>
+                      <p className={`text-xl font-bold ${unmatchedCount > 0 ? 'text-yellow-400' : 'text-gray-500'}`}>{unmatchedCount}</p>
+                      <p className="text-xs text-gray-500">Таараагүй (хороо үүсгэнэ)</p>
+                    </div>
+                  </div>
+                  <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-x-auto mb-4">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-gray-500 text-xs border-b border-gray-800">
+                          <th className="px-3 py-2">№</th>
+                          <th className="px-3 py-2">Нэр</th>
+                          <th className="px-3 py-2">Дүүрэг</th>
+                          <th className="px-3 py-2">Хороо</th>
+                          <th className="px-3 py-2">Утас</th>
+                          <th className="px-3 py-2">Төлөв</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parsedRows.slice(0, 100).map((r, i) => (
+                          <tr key={i} className={`border-b border-gray-800/50 ${r.matched ? '' : 'opacity-60'}`}>
+                            <td className="px-3 py-2 text-gray-500 text-xs">{i + 1}</td>
+                            <td className="px-3 py-2 font-medium">{r.name}</td>
+                            <td className="px-3 py-2 text-gray-400">{r.district || '—'}</td>
+                            <td className="px-3 py-2 text-gray-400">{r.khoroo || '—'}</td>
+                            <td className="px-3 py-2 text-gray-400">{r.phone || '—'}</td>
+                            <td className="px-3 py-2">
+                              {r.matched
+                                ? <span className="text-green-400 text-xs">✓</span>
+                                : r.district && r.khoroo
+                                  ? <span className="text-blue-400 text-xs">+ хороо үүсгэнэ</span>
+                                  : <span className="text-yellow-400 text-xs">✕ таараагүй</span>
+                              }
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex gap-3">
+                    <button onClick={() => { setImportStep('upload'); setParsedRows([]); }} className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl text-sm transition">Цуцлах</button>
+                    <button
+                      onClick={doFileImport}
+                      disabled={parsedRows.filter(r => r.matched || (r.district && r.khoroo)).length === 0}
+                      className="px-5 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl text-sm font-medium transition"
+                    >
+                      ✓ Импортлох ({parsedRows.filter(r => r.matched || (r.district && r.khoroo)).length} СӨХ)
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {importStep === 'importing' && (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-3 animate-bounce">⏳</div>
+                  <p className="text-gray-300">Импортлож байна...</p>
+                </div>
+              )}
+
+              {importStep === 'done' && (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-3">✅</div>
+                  <p className="text-lg font-semibold mb-4">Импорт дууслаа!</p>
+                  <div className="flex justify-center gap-6 mb-6">
+                    <div>
+                      <p className="text-2xl font-bold text-green-400">{importResult.success}</p>
+                      <p className="text-xs text-gray-500">Амжилттай</p>
+                    </div>
+                    {importResult.skipped > 0 && (
+                      <div>
+                        <p className="text-2xl font-bold text-yellow-400">{importResult.skipped}</p>
+                        <p className="text-xs text-gray-500">Алгассан / давхардсан</p>
+                      </div>
+                    )}
+                    {importResult.failed > 0 && (
+                      <div>
+                        <p className="text-2xl font-bold text-red-400">{importResult.failed}</p>
+                        <p className="text-xs text-gray-500">Алдаатай</p>
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={() => { setImportStep('upload'); setParsedRows([]); setPasteText(''); }} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-medium transition">
+                    Дахин буулгах
                   </button>
                 </div>
               )}

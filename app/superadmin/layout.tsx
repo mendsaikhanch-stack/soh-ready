@@ -13,6 +13,7 @@ const navItems = [
   { icon: '📈', label: 'Аналитик', href: '/superadmin/analytics' },
   { icon: '🔑', label: 'Админ эрх', href: '/superadmin/admins' },
   { icon: '🛠', label: 'Дэмжлэг', href: '/superadmin/support' },
+  { icon: '📍', label: 'Дүүрэг & Хороо', href: '/superadmin/locations' },
   { icon: '⚙️', label: 'Тохиргоо', href: '/superadmin/settings' },
 ];
 
