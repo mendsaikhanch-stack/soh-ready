@@ -6,8 +6,19 @@ export async function POST(request: NextRequest) {
   try {
     const { subscription, sokh_id } = await request.json();
 
-    if (!subscription?.endpoint) {
+    if (!subscription?.endpoint || typeof subscription.endpoint !== 'string') {
       return NextResponse.json({ error: 'subscription required' }, { status: 400 });
+    }
+
+    if (sokh_id && (typeof sokh_id !== 'number' || sokh_id <= 0)) {
+      return NextResponse.json({ error: 'Invalid sokh_id' }, { status: 400 });
+    }
+
+    // endpoint URL формат шалгах
+    try {
+      new URL(subscription.endpoint);
+    } catch {
+      return NextResponse.json({ error: 'Invalid endpoint URL' }, { status: 400 });
     }
 
     // Upsert: endpoint давхардахгүй
