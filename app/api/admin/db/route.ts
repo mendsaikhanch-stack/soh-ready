@@ -9,7 +9,7 @@ async function isAdminAuthenticated(type: 'admin' | 'superadmin' | 'osnaa' | 'in
   if (!token) return false;
 
   const parts = token.split(':');
-  if (parts.length !== 2) return false;
+  if (parts.length < 2) return false;
 
   const timestamp = parseInt(parts[0], 10);
   if (isNaN(timestamp)) return false;

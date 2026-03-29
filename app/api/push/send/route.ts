@@ -21,7 +21,7 @@ async function isAdmin(): Promise<boolean> {
   const token = cookieStore.get('admin-session')?.value || cookieStore.get('superadmin-session')?.value;
   if (!token) return false;
   const parts = token.split(':');
-  if (parts.length !== 2) return false;
+  if (parts.length < 2) return false;
   const timestamp = parseInt(parts[0], 10);
   return !isNaN(timestamp) && Date.now() - timestamp < 24 * 60 * 60 * 1000;
 }
