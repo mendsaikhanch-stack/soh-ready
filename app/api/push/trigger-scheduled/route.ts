@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import webpush from 'web-push';
 
@@ -13,12 +14,35 @@ function ensureVapid() {
   }
 }
 
+async function isAdminOrCron(request: NextRequest): Promise<boolean> {
+  // Cron secret шалгах (Vercel cron гэх мэт)
+  const cronSecret = request.headers.get('x-cron-secret');
+  if (cronSecret && cronSecret === process.env.CRON_SECRET) return true;
+
+  // Admin session шалгах
+  const cookieStore = await cookies();
+  const adminToken = cookieStore.get('admin-session')?.value;
+  if (!adminToken) return false;
+  const parts = adminToken.split(':');
+  if (parts.length < 2) return false;
+  const timestamp = parseInt(parts[0], 10);
+  return !isNaN(timestamp) && Date.now() - timestamp <= 24 * 60 * 60 * 1000;
+}
+
 // Товлосон мэдэгдлүүдийг шалгаж push илгээх
 export async function POST(request: NextRequest) {
+  if (!await isAdminOrCron(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   ensureVapid();
 
   try {
     const { sokh_id } = await request.json();
+
+    if (!sokh_id || typeof sokh_id !== 'number' || sokh_id <= 0) {
+      return NextResponse.json({ error: 'Valid sokh_id required' }, { status: 400 });
+    }
 
     // Хугацаа болсон pending мэдэгдлүүдийг олох
     const now = new Date().toISOString();

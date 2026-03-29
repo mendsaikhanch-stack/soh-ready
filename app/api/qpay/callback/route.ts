@@ -6,8 +6,8 @@ import { checkPayment } from '@/app/lib/qpay';
 export async function GET(request: NextRequest) {
   const orderId = request.nextUrl.searchParams.get('order_id');
 
-  if (!orderId) {
-    return NextResponse.json({ error: 'order_id required' }, { status: 400 });
+  if (!orderId || !/^[a-zA-Z0-9\-_]+$/.test(orderId)) {
+    return NextResponse.json({ error: 'Valid order_id required' }, { status: 400 });
   }
 
   // QPay API-аар төлбөр баталгаажуулах
