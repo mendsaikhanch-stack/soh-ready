@@ -15,12 +15,23 @@ function validateToken(token: string, maxAgeMs: number): boolean {
   }
 }
 
+// Нийтлэг аюулгүй байдлын header нэмэх
+function addSecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  return response;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // API route-уудыг алгасах (тэдгээр өөрсдөө auth шалгана)
+  // API route-уудад аюулгүй байдлын header нэмэх
   if (pathname.startsWith('/api/')) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    addSecurityHeaders(response);
+    // Sensitive API-уудыг хөтчөөс кэшлэхгүй
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
   }
 
   // Admin route хамгаалалт
