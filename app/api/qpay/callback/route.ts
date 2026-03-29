@@ -1,22 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
+import { checkPayment } from '@/app/lib/qpay';
 
 // QPay callback — төлбөр төлөгдсөн үед QPay дуудна
 export async function GET(request: NextRequest) {
   const orderId = request.nextUrl.searchParams.get('order_id');
 
-  // Төлбөрийн бичлэг хадгалах (хэрэв order_id байвал)
-  if (orderId) {
-    await supabaseAdmin.from('payments').insert([{
-      amount: 0, // Бодит дүнг payment check-с авна
-      description: `QPay төлбөр #${orderId}`,
-    }]);
+  if (!orderId) {
+    return NextResponse.json({ error: 'order_id required' }, { status: 400 });
   }
 
-  return NextResponse.json({ success: true });
+  // QPay API-аар төлбөр баталгаажуулах
+  try {
+    const result = await checkPayment(orderId);
+    const paid = result.count > 0 && result.rows?.some(
+      (r: { payment_status: string }) => r.payment_status === 'PAID'
+    );
+
+    if (!paid) {
+      return NextResponse.json({ error: 'Payment not verified' }, { status: 400 });
+    }
+
+    const paidAmount = result.paid_amount || 0;
+
+    // Баталгаажсан төлбөрийг хадгалах
+    await supabaseAdmin.from('payments').insert([{
+      amount: paidAmount,
+      description: `QPay төлбөр #${orderId}`,
+    }]);
+
+    return NextResponse.json({ success: true, amount: paidAmount });
+  } catch {
+    return NextResponse.json({ error: 'Payment verification failed' }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
-  // QPay POST callback-г бас хүлээн авна
   return GET(request);
 }
