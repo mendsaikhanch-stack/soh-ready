@@ -4,8 +4,8 @@
 
 ### Live URL
 - **Апп:** https://soh-ready.vercel.app/app
-- **Админ:** https://soh-ready.vercel.app/admin (admin / Toot@2024!Secure)
-- **Super Admin:** https://soh-ready.vercel.app/superadmin (superadmin / Super@Toot2024!)
+- **Админ:** https://soh-ready.vercel.app/admin (нууц үгийг .env.local-с харна)
+- **Super Admin:** https://soh-ready.vercel.app/superadmin (нууц үгийг .env.local-с харна)
 
 ### Утсаар үзүүлэх
 1. Утасны browser-ээр https://soh-ready.vercel.app/app руу орно
@@ -329,8 +329,8 @@ echo "утга" | npx vercel env add VARIABLE_NAME production --force
 | Зүйл | Одоо | Production-д |
 |-------|------|-------------|
 | QPay | Sandbox credentials | QPay-с бодит merchant key авах |
-| Нууц үг | `Toot@2024!Secure` | Хүчтэй нууц үг солих |
-| Session secret | Placeholder | Санамсаргүй 64+ тэмдэгт |
+| Нууц үг | .env.local-д | ✅ Солигдсон |
+| Session secret | .env.local-д | ✅ Солигдсон |
 | Domain | soh-ready.vercel.app | toot.mn (custom domain) |
 | RLS | SELECT нээлттэй | sokh_id-р хязгаарлах |
 | Supabase | Free tier | Pro plan ($25/сар) - backup, 8GB |
