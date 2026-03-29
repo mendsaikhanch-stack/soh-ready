@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import webpush from 'web-push';
+import { validateSessionToken } from '@/app/lib/session-token';
 
 // VAPID тохиргоо — runtime-д lazy init
 let vapidConfigured = false;
@@ -20,10 +21,7 @@ async function isAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
   const token = cookieStore.get('admin-session')?.value || cookieStore.get('superadmin-session')?.value;
   if (!token) return false;
-  const parts = token.split(':');
-  if (parts.length < 2) return false;
-  const timestamp = parseInt(parts[0], 10);
-  return !isNaN(timestamp) && Date.now() - timestamp < 24 * 60 * 60 * 1000;
+  return validateSessionToken(token, 24 * 60 * 60 * 1000).valid;
 }
 
 // Push notification илгээх
@@ -42,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Subscription-ууд авах
-    let query = supabaseAdmin.from('push_subscriptions').select('*');
+    let query = supabaseAdmin.from('push_subscriptions').select('endpoint, p256dh, auth, sokh_id');
     if (sokh_id) {
       query = query.eq('sokh_id', sokh_id);
     }

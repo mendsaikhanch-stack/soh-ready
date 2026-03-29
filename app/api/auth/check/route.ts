@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { validateSessionToken } from '@/app/lib/session-token';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -13,29 +14,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ authenticated: false });
   }
 
-  try {
-    const parts = token.split(':');
-    if (parts.length < 2) {
-      return NextResponse.json({ authenticated: false });
-    }
+  const maxAge = type === 'superadmin' ? 12 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  const result = validateSessionToken(token, maxAge);
 
-    const timestamp = parseInt(parts[0]);
-    const maxAge = type === 'superadmin' ? 12 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-
-    if (Date.now() - timestamp > maxAge) {
-      return NextResponse.json({ authenticated: false });
-    }
-
-    // Шинэ 4 хэсэгтэй token: timestamp:sokhId:userId:random
-    if (parts.length >= 4) {
-      const sokhId = parseInt(parts[1]);
-      const userId = parseInt(parts[2]);
-      return NextResponse.json({ authenticated: true, sokhId, userId });
-    }
-
-    // Хуучин 2 хэсэгтэй token (backward compat)
-    return NextResponse.json({ authenticated: true, sokhId: 0, userId: 0 });
-  } catch {
+  if (!result.valid) {
     return NextResponse.json({ authenticated: false });
   }
+
+  return NextResponse.json({
+    authenticated: true,
+    sokhId: parseInt(result.sokhId || '0'),
+    userId: parseInt(result.userId || '0'),
+  });
 }

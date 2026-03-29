@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
+import { validateSessionToken } from '@/app/lib/session-token';
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -9,10 +10,7 @@ async function isSuperAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
   const token = cookieStore.get('superadmin-session')?.value;
   if (!token) return false;
-  const parts = token.split(':');
-  if (parts.length < 2) return false;
-  const timestamp = parseInt(parts[0]);
-  return Date.now() - timestamp <= 12 * 60 * 60 * 1000;
+  return validateSessionToken(token, 12 * 60 * 60 * 1000).valid;
 }
 
 // GET — бүх админ хэрэглэгчид

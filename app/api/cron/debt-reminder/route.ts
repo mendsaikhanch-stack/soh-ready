@@ -16,9 +16,14 @@ function ensureVapid() {
 // Cron: Сар бүрийн 1, 15, 25-нд өртэй айлуудад автомат push + scheduled_notification үүсгэнэ
 // Vercel Cron эсвэл гаднаас GET /api/cron/debt-reminder?key=SECRET дуудна
 export async function GET(request: NextRequest) {
-  // Хамгаалалт
+  // Хамгаалалт — CRON_SECRET заавал тохируулсан байх ёстой
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error('[cron/debt-reminder] CRON_SECRET тохируулаагүй байна');
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+  }
   const key = request.nextUrl.searchParams.get('key');
-  if (key !== process.env.CRON_SECRET) {
+  if (key !== cronSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -64,7 +69,7 @@ export async function GET(request: NextRequest) {
       // Push илгээх
       const { data: subs } = await supabaseAdmin
         .from('push_subscriptions')
-        .select('*')
+        .select('endpoint, p256dh, auth')
         .eq('sokh_id', org.id);
 
       if (subs && subs.length > 0) {

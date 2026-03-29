@@ -1,21 +1,17 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
+import { validateSessionToken } from '@/app/lib/session-token';
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 async function isAuthenticated(): Promise<boolean> {
   const cookieStore = await cookies();
-  // Оршин суугч өөрийн мэдээллээ эсвэл админ засаж болно
   const adminToken = cookieStore.get('admin-session')?.value;
   const superToken = cookieStore.get('superadmin-session')?.value;
-  if (!adminToken && !superToken) return false;
-  const token = adminToken || superToken || '';
-  const parts = token.split(':');
-  if (parts.length < 2) return false;
-  const timestamp = parseInt(parts[0], 10);
-  if (isNaN(timestamp)) return false;
-  return Date.now() - timestamp <= 24 * 60 * 60 * 1000;
+  const token = adminToken || superToken;
+  if (!token) return false;
+  return validateSessionToken(token, 24 * 60 * 60 * 1000).valid;
 }
 
 export async function PUT(request: Request) {

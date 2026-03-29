@@ -21,6 +21,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid sokh_id' }, { status: 400 });
     }
 
+    // sokh_id бодитоор байгаа эсэхийг шалгах
+    if (sokh_id) {
+      const { data: org } = await supabaseAdmin
+        .from('sokh_organizations')
+        .select('id')
+        .eq('id', sokh_id)
+        .single();
+      if (!org) {
+        return NextResponse.json({ error: 'Invalid sokh_id' }, { status: 400 });
+      }
+    }
+
     // endpoint URL формат шалгах
     try {
       new URL(subscription.endpoint);

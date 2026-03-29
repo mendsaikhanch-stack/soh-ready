@@ -10,6 +10,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Valid order_id required' }, { status: 400 });
   }
 
+  // Давхар callback шалгах — аль хэдийн бичигдсэн бол дахин бичихгүй
+  const { data: existing } = await supabaseAdmin
+    .from('payments')
+    .select('id')
+    .eq('description', `QPay төлбөр #${orderId}`)
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    return NextResponse.json({ success: true, duplicate: true });
+  }
+
   // QPay API-аар төлбөр баталгаажуулах
   try {
     const result = await checkPayment(orderId);

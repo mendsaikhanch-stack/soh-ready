@@ -33,6 +33,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Байрны дугаар хэт урт байна' }, { status: 400 });
     }
 
+    // sokh_id бодитоор байгаа эсэхийг шалгах
+    if (sokh_id) {
+      if (typeof sokh_id !== 'number' || sokh_id <= 0) {
+        return NextResponse.json({ error: 'sokh_id буруу' }, { status: 400 });
+      }
+      const { data: org } = await supabaseAdmin
+        .from('sokh_organizations')
+        .select('id')
+        .eq('id', sokh_id)
+        .single();
+      if (!org) {
+        return NextResponse.json({ error: 'Байгууллага олдсонгүй' }, { status: 400 });
+      }
+    }
+
     // Admin client-ээр хэрэглэгч үүсгэх — имэйл шууд баталгаажна
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,

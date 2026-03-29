@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import webpush from 'web-push';
+import { validateSessionToken } from '@/app/lib/session-token';
 
 let vapidConfigured = false;
 function ensureVapid() {
@@ -23,10 +24,7 @@ async function isAdminOrCron(request: NextRequest): Promise<boolean> {
   const cookieStore = await cookies();
   const adminToken = cookieStore.get('admin-session')?.value;
   if (!adminToken) return false;
-  const parts = adminToken.split(':');
-  if (parts.length < 2) return false;
-  const timestamp = parseInt(parts[0], 10);
-  return !isNaN(timestamp) && Date.now() - timestamp <= 24 * 60 * 60 * 1000;
+  return validateSessionToken(adminToken, 24 * 60 * 60 * 1000).valid;
 }
 
 // Товлосон мэдэгдлүүдийг шалгаж push илгээх

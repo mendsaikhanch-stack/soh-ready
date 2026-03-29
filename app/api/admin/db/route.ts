@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
+import { validateSessionToken } from '@/app/lib/session-token';
 
 // Admin session шалгах
 async function isAdminAuthenticated(type: 'admin' | 'superadmin' | 'osnaa' | 'inspector' = 'admin'): Promise<boolean> {
   const cookieStore = await cookies();
   const token = cookieStore.get(`${type}-session`)?.value;
   if (!token) return false;
-
-  const parts = token.split(':');
-  if (parts.length < 2) return false;
-
-  const timestamp = parseInt(parts[0], 10);
-  if (isNaN(timestamp)) return false;
-
-  const maxAge = type === 'admin' ? 24 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000;
-  return Date.now() - timestamp < maxAge;
+  const maxAge = type === 'superadmin' ? 12 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  return validateSessionToken(token, maxAge).valid;
 }
 
 // Role тус бүрд зөвшөөрөгдсөн хүснэгтүүд
@@ -62,6 +56,9 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
 // Inspector зөвхөн select + utility_usage-д update хийж болно
 const INSPECTOR_WRITE_TABLES = new Set(['utility_usage']);
 
+// Мэдрэмтгий column-уудыг select-ээс хориглох
+const BLOCKED_COLUMNS = new Set(['password', 'password_hash', 'secret', 'token']);
+
 // Хэрэглэгчийн role тодорхойлох
 async function getAuthRole(): Promise<Role | null> {
   // Дараалал чухал: superadmin > admin > osnaa > inspector
@@ -102,7 +99,15 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'select': {
-        query = supabaseAdmin.from(table).select(params?.select || '*');
+        // Мэдрэмтгий column шалгах
+        const selectStr: string = params?.select || '*';
+        if (selectStr !== '*') {
+          const cols = selectStr.split(',').map((c: string) => c.trim().split('(')[0].trim());
+          if (cols.some((c: string) => BLOCKED_COLUMNS.has(c))) {
+            return NextResponse.json({ error: 'Access to sensitive columns denied' }, { status: 403 });
+          }
+        }
+        query = supabaseAdmin.from(table).select(selectStr);
         if (params?.eq) {
           for (const [key, value] of Object.entries(params.eq)) {
             query = query.eq(key, value);

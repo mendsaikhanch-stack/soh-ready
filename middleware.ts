@@ -3,9 +3,10 @@ import type { NextRequest } from 'next/server';
 
 function validateToken(token: string, maxAgeMs: number): boolean {
   try {
-    const parts = token.split(':');
-    // Шинэ format: timestamp:sokhId:userId:random (4 хэсэг)
-    // Хуучин format: timestamp:random (2 хэсэг)
+    // HMAC signed format: payload.signature — payload хэсгийг авах
+    const dotIdx = token.lastIndexOf('.');
+    const payload = dotIdx !== -1 ? token.slice(0, dotIdx) : token;
+    const parts = payload.split(':');
     if (parts.length < 2) return false;
     const timestamp = parseInt(parts[0]);
     if (isNaN(timestamp)) return false;
@@ -22,6 +23,18 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
+// Хугацаа дууссан cookie цэвэрлэх helper
+function clearExpiredCookie(request: NextRequest, cookieName: string, maxAgeMs: number): NextResponse | null {
+  const token = request.cookies.get(cookieName)?.value;
+  if (token && !validateToken(token, maxAgeMs)) {
+    const res = NextResponse.next();
+    res.cookies.delete(cookieName);
+    addSecurityHeaders(res);
+    return res;
+  }
+  return null;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -29,60 +42,32 @@ export function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/')) {
     const response = NextResponse.next();
     addSecurityHeaders(response);
-    // Sensitive API-уудыг хөтчөөс кэшлэхгүй
     response.headers.set('Cache-Control', 'no-store');
     return response;
   }
 
-  // Admin route хамгаалалт
-  if (pathname.startsWith('/admin')) {
-    const adminToken = request.cookies.get('admin-session')?.value;
-    if (!adminToken || !validateToken(adminToken, 24 * 60 * 60 * 1000)) {
-      // Token байхгүй эсвэл хугацаа дууссан — layout login форм харуулна
-      // Cookie цэвэрлэх (хугацаа дууссан бол)
-      if (adminToken) {
-        const res = NextResponse.next();
-        res.cookies.delete('admin-session');
-        return res;
-      }
+  // Admin/SuperAdmin/OSNAA/Inspector — layout нь login form харуулдаг (client-side auth gate)
+  // Middleware зөвхөн хугацаа дууссан cookie цэвэрлэнэ
+  const routeConfig: Record<string, { cookie: string; maxAge: number }> = {
+    '/admin': { cookie: 'admin-session', maxAge: 24 * 60 * 60 * 1000 },
+    '/superadmin': { cookie: 'superadmin-session', maxAge: 12 * 60 * 60 * 1000 },
+    '/osnaa': { cookie: 'osnaa-session', maxAge: 24 * 60 * 60 * 1000 },
+    '/inspector': { cookie: 'inspector-session', maxAge: 24 * 60 * 60 * 1000 },
+  };
+
+  for (const [prefix, config] of Object.entries(routeConfig)) {
+    if (pathname.startsWith(prefix)) {
+      const cleared = clearExpiredCookie(request, config.cookie, config.maxAge);
+      if (cleared) return cleared;
+      break;
     }
   }
 
-  // Super Admin route хамгаалалт
-  if (pathname.startsWith('/superadmin')) {
-    const superToken = request.cookies.get('superadmin-session')?.value;
-    if (!superToken || !validateToken(superToken, 12 * 60 * 60 * 1000)) {
-      if (superToken) {
-        const res = NextResponse.next();
-        res.cookies.delete('superadmin-session');
-        return res;
-      }
-    }
-  }
-
-  // OSNAA route хамгаалалт
-  if (pathname.startsWith('/osnaa')) {
-    const osnaaToken = request.cookies.get('osnaa-session')?.value;
-    if (osnaaToken && !validateToken(osnaaToken, 24 * 60 * 60 * 1000)) {
-      const res = NextResponse.next();
-      res.cookies.delete('osnaa-session');
-      return res;
-    }
-  }
-
-  // Inspector route хамгаалалт
-  if (pathname.startsWith('/inspector')) {
-    const inspToken = request.cookies.get('inspector-session')?.value;
-    if (inspToken && !validateToken(inspToken, 24 * 60 * 60 * 1000)) {
-      const res = NextResponse.next();
-      res.cookies.delete('inspector-session');
-      return res;
-    }
-  }
-
-  return NextResponse.next();
+  const response = NextResponse.next();
+  addSecurityHeaders(response);
+  return response;
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/superadmin/:path*', '/osnaa/:path*', '/inspector/:path*'],
+  matcher: ['/api/:path*', '/admin/:path*', '/superadmin/:path*', '/osnaa/:path*', '/inspector/:path*'],
 };

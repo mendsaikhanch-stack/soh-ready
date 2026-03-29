@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
+import { createSessionToken } from '@/app/lib/session-token';
 
 // Rate limiting
 const attempts = new Map<string, { count: number; lockUntil: number }>();
@@ -37,16 +37,18 @@ export async function POST(request: Request) {
     if (type === 'inspector') {
       const { data: inspector } = await sb
         .from('inspectors')
-        .select('*')
+        .select('id, username, password, name, kontor_number')
         .eq('username', username)
         .eq('status', 'active')
         .single();
 
-      const passwordMatch = inspector ? await bcrypt.compare(password, inspector.password) : false;
+      // Timing attack-аас хамгаалах — хэрэглэгч байхгүй ч bcrypt ажиллуулна
+      const dummyHash = '$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012';
+      const passwordMatch = await bcrypt.compare(password, inspector?.password || dummyHash);
       if (!inspector || !passwordMatch) return rateLimitFail(ip, now);
 
       attempts.delete(ip);
-      const token = `${now}:${inspector.id}:${randomUUID()}`;
+      const token = createSessionToken({ userId: inspector.id });
       const response = NextResponse.json({
         success: true, role: 'inspector', inspectorId: inspector.id, name: inspector.name,
         kontorNumber: inspector.kontor_number || null,
@@ -63,21 +65,22 @@ export async function POST(request: Request) {
 
     const { data: adminUser } = await sb
       .from('admin_users')
-      .select('*')
+      .select('id, username, password_hash, role, sokh_id, display_name')
       .eq('username', username)
       .eq('role', expectedRole)
       .eq('status', 'active')
       .single();
 
+    // Timing attack-аас хамгаалах
+    const dummyAdminHash = '$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012';
+    const passOk = await bcrypt.compare(password, adminUser?.password_hash || dummyAdminHash);
     if (!adminUser) return rateLimitFail(ip, now);
-
-    const passOk = await bcrypt.compare(password, adminUser.password_hash);
     if (!passOk) return rateLimitFail(ip, now);
 
     // Амжилттай — token-д sokh_id, user_id оруулах
     attempts.delete(ip);
     const sokhId = adminUser.sokh_id || 0;
-    const token = `${now}:${sokhId}:${adminUser.id}:${randomUUID()}`;
+    const token = createSessionToken({ userId: adminUser.id, sokhId });
     const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : 'admin-session';
     const maxAge = type === 'superadmin' ? 43200 : 86400;
 
