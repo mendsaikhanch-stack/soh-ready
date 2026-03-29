@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       rows: result.rows || [],
     });
   } catch (err: any) {
-    console.error('QPay check error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('QPay check error:', err?.message);
+    return NextResponse.json({ error: 'Төлбөр шалгахад алдаа гарлаа' }, { status: 500 });
   }
 }

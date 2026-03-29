@@ -90,11 +90,19 @@ export async function PATCH(request: Request) {
   if (status) updates.status = status;
   if (display_name) updates.display_name = display_name;
   if (sokh_id !== undefined) updates.sokh_id = sokh_id || null;
+
+  const passwordChanged = !!password;
   if (password) updates.password_hash = await bcrypt.hash(password, 12);
 
   const { error } = await sb.from('admin_users').update(updates).eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ success: true });
+
+  // Нууц үг солигдсон бол хуучин session-уудыг хүчингүй болгох
+  if (passwordChanged || status === 'inactive') {
+    await sb.from('admin_sessions').delete().eq('user_id', id).throwOnError().catch(() => {});
+  }
+
+  return NextResponse.json({ success: true, passwordChanged });
 }
 
 // DELETE — админ устгах

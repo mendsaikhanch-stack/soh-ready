@@ -6,13 +6,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { amount, description, orderId } = body;
 
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ error: 'amount required' }, { status: 400 });
+    if (!amount || typeof amount !== 'number' || amount <= 0 || amount > 100_000_000) {
+      return NextResponse.json({ error: 'amount required (1 - 100,000,000)' }, { status: 400 });
     }
+
+    // orderId sanitize — зөвхөн alphanumeric болон зураас зөвшөөрнө
+    const safeOrderId = String(orderId || Date.now()).replace(/[^a-zA-Z0-9\-_]/g, '');
 
     const host = request.headers.get('host') || 'localhost:3001';
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const callbackUrl = `${protocol}://${host}/api/qpay/callback?order_id=${orderId || Date.now()}`;
+    const callbackUrl = `${protocol}://${host}/api/qpay/callback?order_id=${safeOrderId}`;
 
     const result = await createInvoice({
       amount,
@@ -28,7 +31,7 @@ export async function POST(request: NextRequest) {
       urls: result.urls || [],
     });
   } catch (err: any) {
-    console.error('QPay invoice error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('QPay invoice error:', err?.message);
+    return NextResponse.json({ error: 'Нэхэмжлэл үүсгэхэд алдаа гарлаа' }, { status: 500 });
   }
 }
