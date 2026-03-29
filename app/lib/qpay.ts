@@ -1,8 +1,8 @@
 // QPay v2 API client — server-side only
-const BASE_URL = process.env.QPAY_BASE_URL || 'https://merchant-sandbox.qpay.mn/v2';
-const USERNAME = process.env.QPAY_USERNAME || 'TEST_VENDOR_MERCHANT';
-const PASSWORD = process.env.QPAY_PASSWORD || '123456';
-const INVOICE_CODE = process.env.QPAY_INVOICE_CODE || 'TEST_INVOICE';
+const BASE_URL = process.env.QPAY_BASE_URL!;
+const USERNAME = process.env.QPAY_USERNAME!;
+const PASSWORD = process.env.QPAY_PASSWORD!;
+const INVOICE_CODE = process.env.QPAY_INVOICE_CODE!;
 
 let cachedToken: { access_token: string; refresh_token: string; expires_at: number } | null = null;
 
