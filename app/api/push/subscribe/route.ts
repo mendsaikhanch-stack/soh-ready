@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
+import { pushSubscribeLimiter } from '@/app/lib/rate-limit';
 
 // Push subscription хадгалах
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const { allowed, retryAfterSec } = pushSubscribeLimiter.check(ip);
+  if (!allowed) {
+    return NextResponse.json({ error: `Rate limited. Retry after ${retryAfterSec}s` }, { status: 429 });
+  }
+
   try {
     const { subscription, sokh_id } = await request.json();
 
@@ -36,11 +43,12 @@ export async function POST(request: NextRequest) {
       );
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('[push/subscribe]', error.message);
+      return NextResponse.json({ error: 'Subscription failed' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

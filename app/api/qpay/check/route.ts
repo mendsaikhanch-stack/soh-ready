@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkPayment } from '@/app/lib/qpay';
+import { qpayCheckLimiter } from '@/app/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const { allowed } = qpayCheckLimiter.check(ip);
+  if (!allowed) {
+    return NextResponse.json({ error: 'Хэт олон хүсэлт. Түр хүлээнэ үү' }, { status: 429 });
+  }
+
   try {
     const body = await request.json();
     const { invoice_id } = body;

@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
+import { errorLogLimiter } from '@/app/lib/rate-limit';
 
 // Алдааны лог хүлээн авах — клиент/сервер аль алинаас
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const { allowed } = errorLogLimiter.check(ip);
+  if (!allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const body = await request.json();
     const { level, message, stack, digest, source, route, method, metadata } = body;

@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
+import { registerLimiter } from '@/app/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for') || 'unknown';
+  const { allowed, retryAfterSec } = registerLimiter.check(ip);
+  if (!allowed) {
+    return NextResponse.json({ error: `${retryAfterSec} секунд хүлээнэ үү` }, { status: 429 });
+  }
+
   try {
     const { email, password, name, phone, apartment, sokh_id } = await req.json();
 
@@ -38,7 +45,8 @@ export async function POST(req: NextRequest) {
       if (authError.message.includes('already been registered')) {
         return NextResponse.json({ error: 'Энэ имэйл бүртгэлтэй байна' }, { status: 400 });
       }
-      return NextResponse.json({ error: authError.message }, { status: 400 });
+      console.error('[register]', authError.message);
+      return NextResponse.json({ error: 'Бүртгэл амжилтгүй' }, { status: 400 });
     }
 
     // Оршин суугчийн мэдээлэл хадгалах
