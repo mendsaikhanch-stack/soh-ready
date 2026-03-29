@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 
 // Dev горимд бүх роль-д нэг дор нэвтрэх
 export async function POST() {
@@ -6,8 +7,8 @@ export async function POST() {
     return NextResponse.json({ error: 'Not available' }, { status: 403 });
   }
 
-  const token = `${Date.now()}:${Math.random().toString(36).slice(2)}`;
-  const inspectorToken = `${Date.now()}:1:${Math.random().toString(36).slice(2)}`;
+  const token = `${Date.now()}:${randomUUID()}`;
+  const inspectorToken = `${Date.now()}:1:${randomUUID()}`;
 
   const response = NextResponse.json({ success: true, message: 'Бүх роль-д нэвтэрлээ' });
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
 
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
       if (!inspector || !passwordMatch) return rateLimitFail(ip, now);
 
       attempts.delete(ip);
-      const token = `${now}:${inspector.id}:${Math.random().toString(36).slice(2)}`;
+      const token = `${now}:${inspector.id}:${randomUUID()}`;
       const response = NextResponse.json({
         success: true, role: 'inspector', inspectorId: inspector.id, name: inspector.name,
         kontorNumber: inspector.kontor_number || null,
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
     // Амжилттай — token-д sokh_id, user_id оруулах
     attempts.delete(ip);
     const sokhId = adminUser.sokh_id || 0;
-    const token = `${now}:${sokhId}:${adminUser.id}:${Math.random().toString(36).slice(2)}`;
+    const token = `${now}:${sokhId}:${adminUser.id}:${randomUUID()}`;
     const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : 'admin-session';
     const maxAge = type === 'superadmin' ? 43200 : 86400;
 

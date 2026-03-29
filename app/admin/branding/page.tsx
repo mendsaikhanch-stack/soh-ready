@@ -164,9 +164,9 @@ export default function BrandingPage() {
           {/* Menu items */}
           <div className="bg-gray-50 px-3 pb-3 space-y-1.5">
             {[
-              { icon: '&#128176;', label: 'Төлбөр', active: true },
-              { icon: '&#128227;', label: 'Зарлал', active: false },
-              { icon: '&#128295;', label: 'Засвар', active: false },
+              { icon: '\uD83D\uDCB0', label: 'Төлбөр', active: true },
+              { icon: '\uD83D\uDCE3', label: 'Зарлал', active: false },
+              { icon: '\uD83D\uDD27', label: 'Засвар', active: false },
             ].map((item) => (
               <div
                 key={item.label}
@@ -174,9 +174,9 @@ export default function BrandingPage() {
                   item.active ? `${currentTheme.cardBg} ${currentTheme.cardBorder}` : 'bg-white border-gray-100'
                 }`}
               >
-                <span dangerouslySetInnerHTML={{ __html: item.icon }} />
+                <span>{item.icon}</span>
                 <span className="font-medium text-xs">{item.label}</span>
-                <span className="ml-auto text-gray-300 text-xs">&#8250;</span>
+                <span className="ml-auto text-gray-300 text-xs">&rsaquo;</span>
               </div>
             ))}
           </div>
