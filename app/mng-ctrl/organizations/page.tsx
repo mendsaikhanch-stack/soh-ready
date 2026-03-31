@@ -66,6 +66,12 @@ export default function OrganizationsPage() {
   const [ocrProgress, setOcrProgress] = useState(0);
   const [imagePreview, setImagePreview] = useState('');
 
+  // Жагсаалт шүүлтүүр
+  const [filterCityId, setFilterCityId] = useState<number | ''>('');
+  const [filterDistrictId, setFilterDistrictId] = useState<number | ''>('');
+  const [filterKhorooId, setFilterKhorooId] = useState<number | ''>('');
+  const [searchText, setSearchText] = useState('');
+
   const nameRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
@@ -1366,6 +1372,68 @@ export default function OrganizationsPage() {
         </div>
       )}
 
+      {/* Шүүлтүүр */}
+      {!loading && sokhs.length > 0 && (
+        <div className="bg-gray-800/50 border border-gray-800 rounded-2xl p-4 mb-4">
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-xs text-gray-500 block mb-1">Хайх</label>
+              <input
+                value={searchText}
+                onChange={e => setSearchText(e.target.value)}
+                placeholder="СӨХ нэр, утас..."
+                className="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Хот</label>
+              <select
+                value={filterCityId}
+                onChange={e => { setFilterCityId(Number(e.target.value) || ''); setFilterDistrictId(''); setFilterKhorooId(''); }}
+                className="bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">Бүгд</option>
+                {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Дүүрэг</label>
+              <select
+                value={filterDistrictId}
+                onChange={e => { setFilterDistrictId(Number(e.target.value) || ''); setFilterKhorooId(''); }}
+                className="bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">Бүгд</option>
+                {districts.filter(d => !filterCityId || d.city_id === filterCityId).map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Хороо</label>
+              <select
+                value={filterKhorooId}
+                onChange={e => setFilterKhorooId(Number(e.target.value) || '')}
+                className="bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">Бүгд</option>
+                {khoroos.filter(k => !filterDistrictId || k.district_id === filterDistrictId).map(k => (
+                  <option key={k.id} value={k.id}>{k.name}</option>
+                ))}
+              </select>
+            </div>
+            {(filterCityId || filterDistrictId || filterKhorooId || searchText) && (
+              <button
+                onClick={() => { setFilterCityId(''); setFilterDistrictId(''); setFilterKhorooId(''); setSearchText(''); }}
+                className="text-xs text-gray-400 hover:text-white px-3 py-2 rounded-lg hover:bg-gray-700"
+              >
+                Цэвэрлэх
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Жагсаалт — хүснэгт хэлбэрээр */}
       {loading ? <p className="text-gray-500">Ачаалж байна...</p> : sokhs.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
@@ -1374,7 +1442,34 @@ export default function OrganizationsPage() {
           <p className="text-sm mt-1">Дээрх "+ СӨХ нэмэх" товч дарж эхлэнэ үү</p>
         </div>
       ) : (
-        <div className="bg-gray-800/50 border border-gray-800 rounded-2xl overflow-hidden">
+        <>
+        {(() => {
+          const search = searchText.toLowerCase().trim();
+          const filtered = sokhs.filter(s => {
+            // Хороо шүүлтүүр
+            if (filterKhorooId && s.khoroo_id !== filterKhorooId) return false;
+            // Дүүрэг шүүлтүүр
+            if (filterDistrictId) {
+              const k = khoroos.find(k => k.id === s.khoroo_id);
+              if (!k || k.district_id !== filterDistrictId) return false;
+            }
+            // Хот шүүлтүүр
+            if (filterCityId && !filterDistrictId) {
+              const k = khoroos.find(k => k.id === s.khoroo_id);
+              const d = k ? districts.find(d => d.id === k.district_id) : null;
+              if (!d || d.city_id !== filterCityId) return false;
+            }
+            // Текст хайлт
+            if (search) {
+              const haystack = `${s.name} ${s.phone || ''} ${s.address || ''}`.toLowerCase();
+              if (!haystack.includes(search)) return false;
+            }
+            return true;
+          });
+
+          return (<>
+            <p className="text-xs text-gray-500 mb-2">{filtered.length} / {sokhs.length} СӨХ</p>
+            <div className="bg-gray-800/50 border border-gray-800 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -1392,7 +1487,7 @@ export default function OrganizationsPage() {
                 </tr>
               </thead>
               <tbody>
-                {sokhs.map((s, idx) => {
+                {filtered.map((s, idx) => {
                   const stats = getOrgStats(s.id);
                   const k = s.khoroos;
                   const districtName = k?.districts?.name || '—';
@@ -1428,6 +1523,9 @@ export default function OrganizationsPage() {
             </table>
           </div>
         </div>
+          </>);
+        })()}
+        </>
       )}
     </div>
   );

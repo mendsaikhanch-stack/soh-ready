@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import TootLogo from '@/app/components/TootLogo';
+import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
 import { supabase } from '@/app/lib/supabase';
 import Image from 'next/image';
 
@@ -43,6 +44,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(false);
   const [orgLogo, setOrgLogo] = useState<string | null>(null);
   const [orgName, setOrgName] = useState('');
+
+  // Админ PWA manifest солих
+  useEffect(() => {
+    const link = document.querySelector('link[rel="manifest"]');
+    if (link) link.setAttribute('href', '/manifest-admin.json');
+    const meta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (meta) meta.setAttribute('content', 'Тоот Удирдлага');
+    document.title = 'Тоот Удирдлага';
+    return () => {
+      if (link) link.setAttribute('href', '/manifest.json');
+      if (meta) meta.setAttribute('content', 'Тоот');
+    };
+  }, []);
 
   useEffect(() => {
     checkAuth();
@@ -228,6 +242,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+      <PWAInstallPrompt appName="Тоот Удирдлага" />
     </div>
   );
 }

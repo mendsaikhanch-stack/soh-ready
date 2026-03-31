@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { useAuth } from '@/app/lib/auth-context';
 
 interface Notification {
   id: string;
@@ -19,6 +20,7 @@ interface Notification {
 export default function NotificationsPage() {
   const params = useParams();
   const router = useRouter();
+  const { profile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -81,22 +83,16 @@ export default function NotificationsPage() {
       });
     }
 
-    // 2. Өртэй оршин суугчдын сануулга
-    const { data: residents } = await supabase
-      .from('residents')
-      .select('*')
-      .eq('sokh_id', sokhId);
+    // 2. Тухайн хэрэглэгчийн өрийн сануулга
+    if (profile) {
+      const myDebt = Number(profile.debt) || 0;
 
-    if (residents) {
-      const debtResidents = residents.filter(r => r.debt > 0);
-      const totalDebt = debtResidents.reduce((s, r) => s + Number(r.debt), 0);
-
-      if (totalDebt > 0) {
+      if (myDebt > 0) {
         notifs.push({
           id: 'debt-summary',
           type: 'debt',
           title: 'Төлбөрийн үлдэгдэл',
-          message: `Нийт ${debtResidents.length} тоот ${totalDebt.toLocaleString()}₮ өртэй байна. Хугацаандаа төлөөрэй.`,
+          message: `Таны ${myDebt.toLocaleString()}₮ төлбөр төлөгдөөгүй байна. Хугацаандаа төлөөрэй.`,
           date: now.toISOString(),
           read: false,
           icon: '💰',
@@ -104,53 +100,46 @@ export default function NotificationsPage() {
           action: 'payments',
         });
 
-        // Их өртэй тоотуудын сануулга
-        const highDebt = debtResidents
-          .sort((a, b) => b.debt - a.debt)
-          .slice(0, 5);
-
-        highDebt.forEach(r => {
-          if (r.debt >= 200000) {
-            notifs.push({
-              id: `debt-${r.id}`,
-              type: 'reminder',
-              title: `${r.apartment || r.name} - өр хэтэрсэн`,
-              message: `${r.debt.toLocaleString()}₮ өртэй. Нэн даруй төлөхийг анхааруулж байна.`,
-              date: now.toISOString(),
-              read: false,
-              icon: '🚨',
-              color: 'bg-red-50 border-red-300',
-            });
-          }
-        });
-
-        // Сарын сануулга
-        const day = now.getDate();
-        if (day <= 3) {
+        if (myDebt >= 200000) {
           notifs.push({
-            id: 'monthly-reminder',
+            id: 'debt-high',
             type: 'reminder',
-            title: 'Сарын төлбөрийн сануулга',
-            message: `${now.getFullYear()} оны ${now.getMonth() + 1}-р сарын төлбөрөө төлнө үү. Хугацаа: Сар бүрийн 25-ны дотор.`,
+            title: 'Өр хэтэрсэн байна',
+            message: `${myDebt.toLocaleString()}₮ өртэй. Нэн даруй төлөхийг анхааруулж байна.`,
             date: now.toISOString(),
             read: false,
-            icon: '📅',
-            color: 'bg-yellow-50 border-yellow-200',
-            action: 'payments',
-          });
-        } else if (day >= 20 && day <= 25) {
-          notifs.push({
-            id: 'deadline-warning',
-            type: 'reminder',
-            title: 'Төлбөрийн хугацаа дуусах гэж байна',
-            message: `Энэ сарын төлбөрөө 25-ны дотор төлнө үү. Хугацаа хэтрэхээс өмнө төлөөрэй!`,
-            date: now.toISOString(),
-            read: false,
-            icon: '⏰',
-            color: 'bg-orange-50 border-orange-200',
-            action: 'payments',
+            icon: '🚨',
+            color: 'bg-red-50 border-red-300',
           });
         }
+      }
+
+      // Сарын сануулга
+      const day = now.getDate();
+      if (day <= 3) {
+        notifs.push({
+          id: 'monthly-reminder',
+          type: 'reminder',
+          title: 'Сарын төлбөрийн сануулга',
+          message: `${now.getFullYear()} оны ${now.getMonth() + 1}-р сарын төлбөрөө төлнө үү. Хугацаа: Сар бүрийн 25-ны дотор.`,
+          date: now.toISOString(),
+          read: false,
+          icon: '📅',
+          color: 'bg-yellow-50 border-yellow-200',
+          action: 'payments',
+        });
+      } else if (day >= 20 && day <= 25) {
+        notifs.push({
+          id: 'deadline-warning',
+          type: 'reminder',
+          title: 'Төлбөрийн хугацаа дуусах гэж байна',
+          message: `Энэ сарын төлбөрөө 25-ны дотор төлнө үү. Хугацаа хэтрэхээс өмнө төлөөрэй!`,
+          date: now.toISOString(),
+          read: false,
+          icon: '⏰',
+          color: 'bg-orange-50 border-orange-200',
+          action: 'payments',
+        });
       }
     }
 

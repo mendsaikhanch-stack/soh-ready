@@ -34,7 +34,7 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
       title: '💵 Санхүү',
       items: [
         { icon: '💰', label: 'Төлбөр', desc: 'СӨХ хураамж төлөх, үлдэгдэл', href: 'payments', color: 'bg-green-50 border-green-200' },
-        { icon: '📋', label: 'Тайлан', desc: 'Санхүүгийн тайлан, зардал', href: 'reports', color: 'bg-blue-50 border-blue-200' },
+        { icon: '📋', label: 'Зарцуулалт', desc: 'СӨХ-ийн орлого зардлын ил тод тайлан', href: 'reports', color: 'bg-blue-50 border-blue-200' },
         { icon: '💰', label: 'Санхүү', desc: 'Төлбөр хаашаа зарцуулагдаж байна', href: 'finance', color: 'bg-cyan-50 border-cyan-200' },
       ],
     },
@@ -61,7 +61,7 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
     {
       title: '📌 Бусад',
       items: [
-        { icon: '👥', label: 'Оршин суугчид', desc: 'Айл өрхийн жагсаалт', href: 'residents', color: 'bg-purple-50 border-purple-200' },
+        // Оршин суугчид - зөвхөн СӨХ админ харна (admin/residents)
         { icon: '👷', label: 'Ажилчид', desc: 'Ажилтнуудын мэдээлэл, хуваарь', href: 'staff', color: 'bg-amber-50 border-amber-200' },
         { icon: '🚨', label: 'Яаралтай', desc: 'Онцгой байдлын мэдэгдэл', href: 'emergency', color: 'bg-red-50 border-red-200' },
         { icon: '🏆', label: 'Оноо & Шагнал', desc: 'Идэвхтэй оршин суугчийн урамшуулал', href: 'points', color: 'bg-amber-50 border-amber-200' },
@@ -399,8 +399,8 @@ export default function SokhDashboard() {
         </div>
       </div>
 
-      {/* Өрийн сануулга banner - СӨХ таб */}
-      {activeMainTab === 'sokh' && stats.totalDebt > 0 && (
+      {/* Миний төлбөрийн үлдэгдэл banner - СӨХ таб */}
+      {activeMainTab === 'sokh' && myDebt > 0 && (
         <div
           className="mx-4 mt-3 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-3 active:scale-[0.98] transition cursor-pointer"
           onClick={() => router.push(`/sokh/${params.id}/payments`)}
@@ -409,7 +409,7 @@ export default function SokhDashboard() {
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-700">Төлбөрийн үлдэгдэл</p>
             <p className="text-xs text-red-600">
-              Нийт {stats.totalDebt.toLocaleString()}₮ төлөгдөөгүй байна
+              {myDebt.toLocaleString()}₮ төлөгдөөгүй байна
             </p>
           </div>
           <span className="text-red-300">›</span>
@@ -439,8 +439,8 @@ export default function SokhDashboard() {
           <p className="text-xs text-gray-500">Айл өрх</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-3 text-center">
-          <p className="text-xl font-bold text-red-500">{stats.totalDebt > 0 ? `${(stats.totalDebt / 1000).toFixed(0)}к` : '0'}</p>
-          <p className="text-xs text-gray-500">Нийт өр ₮</p>
+          <p className="text-xl font-bold text-red-500">{myDebt > 0 ? `${(myDebt / 1000).toFixed(0)}к` : '0'}</p>
+          <p className="text-xs text-gray-500">Миний өр ₮</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-3 text-center">
           <p className="text-xl font-bold text-blue-500">{stats.announcements}</p>
@@ -448,18 +448,18 @@ export default function SokhDashboard() {
         </div>
       </div>}
 
-      {/* Миний өр - СӨХ таб */}
-      {activeMainTab === 'sokh' && profile && myDebt > 0 && (
+      {/* ОСНАА төлбөрийн үлдэгдэл - ОСНАА таб */}
+      {activeMainTab === 'osnaa' && myDebt > 0 && (
         <div
-          className="mx-4 mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3 active:scale-[0.98] transition cursor-pointer"
-          onClick={() => router.push(`/sokh/${params.id}/payments`)}
+          className="mx-4 mt-3 bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3 active:scale-[0.98] transition cursor-pointer"
+          onClick={() => router.push(`/sokh/${params.id}/utilities?type=water`)}
         >
-          <span className="text-2xl">💳</span>
+          <span className="text-2xl">💧</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-700">Миний өр</p>
-            <p className="text-xs text-amber-600">{myDebt.toLocaleString()}₮ төлөгдөөгүй</p>
+            <p className="text-sm font-semibold text-blue-700">Төлбөрийн үлдэгдэл</p>
+            <p className="text-xs text-blue-600">{myDebt.toLocaleString()}₮</p>
           </div>
-          <span className="text-amber-300">›</span>
+          <span className="text-blue-300">›</span>
         </div>
       )}
 

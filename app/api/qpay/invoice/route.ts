@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { amount, description, orderId } = body;
+    const { amount, description, orderId, sokhId } = body;
 
     if (!amount || typeof amount !== 'number' || amount <= 0 || amount > 100_000_000) {
       return NextResponse.json({ error: 'amount required (1 - 100,000,000)' }, { status: 400 });
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const result = await createInvoice({
       amount,
       description: description || 'Тоот — СӨХ төлбөр',
-      senderInvoiceNo: `TOOT-${Date.now()}`,
+      senderInvoiceNo: sokhId ? `TOOT-${sokhId}-${Date.now()}` : `TOOT-${Date.now()}`,
       callbackUrl,
     });
 

@@ -22,6 +22,9 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'cctv_requests', 'marketplace_listings', 'scheduled_notifications',
     'push_subscriptions', 'visitor_passes', 'org_features', 'points_ledger',
     'resident_points', 'finance_entries', 'budget_categories', 'error_logs',
+    'platform_plans', 'sokh_subscriptions', 'platform_invoices',
+    'platform_bank_accounts', 'platform_transactions', 'sokh_tiers',
+    'ebarimt_configs',
   ]),
   admin: new Set([
     // Admin өөрийн СӨХ-д холбогдох хүснэгтүүд

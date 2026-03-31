@@ -46,13 +46,18 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
-var CACHE_NAME = 'toot-cache-v1';
+var CACHE_NAME = 'toot-cache-v2';
 var OFFLINE_URL = '/offline';
 var CACHED_URLS = [
   '/',
   '/offline',
   '/login',
+  '/admin',
+  '/inspector',
   '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/manifest.json',
+  '/manifest-admin.json',
 ];
 
 self.addEventListener('install', function(event) {

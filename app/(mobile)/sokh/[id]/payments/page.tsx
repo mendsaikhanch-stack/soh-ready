@@ -121,23 +121,33 @@ export default function PaymentsPage() {
       // 0₮ төлбөрүүдийг нуух (ОСНААК тооцоогүй бол)
       setBills(baseBills.filter(b => b.amount > 0 || b.paid));
 
-      // 3. Оршин суугчийн өр
-      const { data: residents } = await supabase
-        .from('residents')
-        .select('debt')
-        .eq('sokh_id', params.id);
+      // 3. Тухайн хэрэглэгчийн өр
+      if (profile) {
+        const { data: myResident } = await supabase
+          .from('residents')
+          .select('id, debt')
+          .eq('sokh_id', params.id)
+          .eq('phone', profile.phone)
+          .limit(1)
+          .single();
 
-      if (residents && residents.length > 0) {
-        const debt = residents.reduce((s, r) => s + Number(r.debt || 0), 0);
-        setTotalDebt(debt);
+        if (myResident) {
+          setTotalDebt(Number(myResident.debt || 0));
+        }
       }
 
-      // 4. Төлбөрийн түүх
-      const { data: payData } = await supabase
+      // 4. Тухайн хэрэглэгчийн төлбөрийн түүх
+      let payQuery = supabase
         .from('payments')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(20);
+
+      if (profile) {
+        payQuery = payQuery.eq('resident_id', profile.id);
+      }
+
+      const { data: payData } = await payQuery;
       setPayments(payData || []);
 
       setLoading(false);

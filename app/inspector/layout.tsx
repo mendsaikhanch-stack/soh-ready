@@ -2,6 +2,7 @@
 
 import { useState, useEffect, createContext, useContext } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
 
 interface InspectorUser { id: number; name: string; kontorNumber: number | null; }
 const InspectorCtx = createContext<InspectorUser | null>(null);
@@ -24,6 +25,18 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Админ PWA manifest солих (байцаагч = Тоот Удирдлага апп)
+  useEffect(() => {
+    const link = document.querySelector('link[rel="manifest"]');
+    if (link) link.setAttribute('href', '/manifest-admin.json');
+    const meta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (meta) meta.setAttribute('content', 'Тоот Удирдлага');
+    return () => {
+      if (link) link.setAttribute('href', '/manifest.json');
+      if (meta) meta.setAttribute('content', 'Тоот');
+    };
+  }, []);
 
   useEffect(() => { checkAuth(); }, []);
 
@@ -143,6 +156,8 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
 
         {/* Content */}
         {children}
+
+        <PWAInstallPrompt appName="Тоот Удирдлага" />
 
         {/* Bottom tabs */}
         <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t flex z-50">
