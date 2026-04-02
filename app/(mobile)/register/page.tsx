@@ -32,7 +32,6 @@ export default function RegisterPage() {
   const [entrance, setEntrance] = useState('');
   const [floor, setFloor] = useState('');
   const [door, setDoor] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -43,13 +42,24 @@ export default function RegisterPage() {
 
   const stepLabels = ['Хот', 'Дүүрэг', 'Хороо', 'СӨХ', 'Мэдээлэл'];
 
-  // Хот татах
+  // Хот татах (Улаанбаатар → Эрдэнэт → Дархан → бусад)
   useEffect(() => {
-    const fetch = async () => {
+    const fetchCities = async () => {
       const { data } = await supabase.from('cities').select('*').order('name');
-      setCities(data || []);
+      if (data) {
+        const priority = ['Улаанбаатар', 'Эрдэнэт', 'Дархан'];
+        data.sort((a, b) => {
+          const ai = priority.indexOf(a.name);
+          const bi = priority.indexOf(b.name);
+          if (ai !== -1 && bi !== -1) return ai - bi;
+          if (ai !== -1) return -1;
+          if (bi !== -1) return 1;
+          return a.name.localeCompare(b.name, 'mn');
+        });
+        setCities(data);
+      }
     };
-    fetch();
+    fetchCities();
   }, []);
 
   const selectCity = async (city: City) => {
@@ -95,8 +105,8 @@ export default function RegisterPage() {
 
   const handleRegister = async () => {
     setError('');
-    if (!name || !phone) { setError('Нэр, утас заавал бөглөнө'); return; }
-    if (!email || !password) { setError('Имэйл, нууц үг заавал бөглөнө'); return; }
+    if (!name.trim()) { setError('Нэрээ оруулна уу'); return; }
+    if (!/^\d{8}$/.test(phone.trim())) { setError('Утасны дугаар 8 оронтой байна'); return; }
     if (password.trim().length < 6) { setError('Нууц үг хамгийн багадаа 6 тэмдэгт'); return; }
     if (password.trim() !== confirmPassword.trim()) { setError('Нууц үг таарахгүй байна'); return; }
 
@@ -104,32 +114,43 @@ export default function RegisterPage() {
 
     const fullAddress = [apartment, entrance ? `${entrance}-р орц` : '', floor ? `${floor} давхар` : '', door].filter(Boolean).join(', ');
 
-    // Серверт бүртгэх — имэйл шууд баталгаажна
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email, password, name, phone,
-        apartment: fullAddress,
-        sokh_id: selectedSokh?.id,
-      }),
-    });
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: phone.trim(),
+          name: name.trim(),
+          password: password.trim(),
+          apartment: fullAddress,
+          sokh_id: selectedSokh?.id,
+        }),
+      });
 
-    const result = await res.json();
-    if (!res.ok) { setError(result.error); setLoading(false); return; }
+      const result = await res.json();
+      if (!res.ok) { setError(result.error); setLoading(false); return; }
 
-    // Шууд нэвтрэх
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) { setError('Бүртгэл амжилттай. Нэвтрэхэд алдаа гарлаа.'); setLoading(false); return; }
+      // Автоматаар нэвтрэх (утаснаас үүссэн имэйлээр)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: result.email,
+        password: password.trim(),
+      });
+      if (signInError) {
+        setError('Бүртгэл амжилттай. Нэвтрэхэд алдаа гарлаа.');
+        setLoading(false);
+        return;
+      }
 
-    // СӨХ хуудас руу шилжих
-    if (selectedSokh?.id) {
-      router.replace(`/sokh/${selectedSokh.id}`);
-    } else {
-      router.replace('/select');
+      if (selectedSokh?.id) {
+        router.replace(`/sokh/${selectedSokh.id}`);
+      } else {
+        router.replace('/select');
+      }
+    } catch {
+      setError('Серверийн алдаа');
+      setLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -169,11 +190,11 @@ export default function RegisterPage() {
         {/* Step 1: Хот */}
         {step === 1 && (
           <div>
-            <h2 className="text-base font-semibold mb-3">Хот сонгоно уу</h2>
-            <div className="space-y-2">
+            <h2 className="text-base font-semibold mb-3 text-center">Хот/Аймаг сонгоно уу</h2>
+            <div className="space-y-2 max-w-sm mx-auto">
               {cities.map(c => (
                 <button key={c.id} onClick={() => selectCity(c)}
-                  className="w-full bg-white p-4 rounded-xl shadow-sm text-left hover:bg-blue-50 active:bg-blue-100 transition">
+                  className="w-full bg-white p-4 rounded-xl shadow-sm text-center hover:bg-blue-50 active:bg-blue-100 transition">
                   <span className="font-medium">{c.name}</span>
                 </button>
               ))}
@@ -251,8 +272,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Утас *</label>
-                <input type="tel" placeholder="99001122" value={phone} onChange={e => setPhone(e.target.value)}
+                <label className="text-xs text-gray-500 mb-1 block">Утасны дугаар *</label>
+                <input type="tel" placeholder="99001122" value={phone}
+                  onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 8))}
                   className="w-full border rounded-xl px-4 py-3 text-sm bg-white" />
               </div>
 
@@ -271,13 +293,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="border-t pt-3 mt-2">
-                <p className="text-xs text-gray-500 mb-2 font-medium">Нэвтрэх мэдээлэл</p>
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Имэйл *</label>
-                <input type="email" placeholder="example@mail.com" value={email} onChange={e => setEmail(e.target.value)}
-                  className="w-full border rounded-xl px-4 py-3 text-sm bg-white" />
+                <p className="text-xs text-gray-500 mb-2 font-medium">Нууц үг тохируулах</p>
               </div>
 
               <div>
@@ -294,10 +310,8 @@ export default function RegisterPage() {
 
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Нууц үг давтах *</label>
-                <div className="relative">
-                  <input type={showPassword ? 'text' : 'password'} placeholder="Дахин оруулна уу" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                    className={`w-full border rounded-xl px-4 py-3 text-sm bg-white pr-12 ${confirmPassword && (password.trim() === confirmPassword.trim() ? 'border-green-400' : 'border-red-400')}`} />
-                </div>
+                <input type={showPassword ? 'text' : 'password'} placeholder="Дахин оруулна уу" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                  className={`w-full border rounded-xl px-4 py-3 text-sm bg-white ${confirmPassword && (password.trim() === confirmPassword.trim() ? 'border-green-400' : 'border-red-400')}`} />
                 {confirmPassword && password.trim() !== confirmPassword.trim() && (
                   <p className="text-xs text-red-500 mt-1">Нууц үг таарахгүй байна</p>
                 )}

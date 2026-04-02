@@ -40,8 +40,30 @@ CREATE POLICY "public read khoroos" ON khoroos FOR SELECT USING (true);
 CREATE POLICY "public read sokh" ON sokh_organizations FOR SELECT USING (true);
 CREATE POLICY "public insert sokh" ON sokh_organizations FOR INSERT WITH CHECK (true);
 
--- Хот
-INSERT INTO cities (name) VALUES ('Улаанбаатар'), ('Дархан'), ('Эрдэнэт');
+-- Хот (Улаанбаатар + Дархан + Эрдэнэт + 19 аймгийн төв)
+INSERT INTO cities (name) VALUES
+  ('Улаанбаатар'),
+  ('Дархан'),
+  ('Эрдэнэт'),
+  ('Цэцэрлэг'),      -- Архангай
+  ('Өлгий'),          -- Баян-Өлгий
+  ('Баянхонгор'),     -- Баянхонгор
+  ('Булган'),          -- Булган
+  ('Алтай'),           -- Говь-Алтай
+  ('Чойр'),            -- Говьсүмбэр
+  ('Сайншанд'),        -- Дорноговь
+  ('Чойбалсан'),       -- Дорнод
+  ('Мандалговь'),      -- Дундговь
+  ('Улиастай'),        -- Завхан
+  ('Арвайхээр'),       -- Өвөрхангай
+  ('Даланзадгад'),     -- Өмнөговь
+  ('Баруун-Урт'),      -- Сүхбаатар
+  ('Сүхбаатар хот'),   -- Сэлэнгэ
+  ('Зуунмод'),         -- Төв
+  ('Улаангом'),        -- Увс
+  ('Ховд'),            -- Ховд
+  ('Мөрөн'),           -- Хөвсгөл
+  ('Өндөрхаан');       -- Хэнтий
 
 -- Дүүрэг (Улаанбаатар = id 1)
 INSERT INTO districts (city_id, name) VALUES

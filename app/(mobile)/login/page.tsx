@@ -9,7 +9,7 @@ import TootLogo from '@/app/components/TootLogo';
 export default function LoginPage() {
   const router = useRouter();
   const { user, profile, loading: authLoading } = useAuth();
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,12 +24,20 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setError('');
 
-    if (!email || !password) {
-      setError('Имэйл, нууц үг бөглөнө үү');
+    if (!phone || !password) {
+      setError('Утас, нууц үг бөглөнө үү');
+      return;
+    }
+
+    if (!/^\d{8}$/.test(phone.trim())) {
+      setError('Утасны дугаар 8 оронтой байна');
       return;
     }
 
     setLoading(true);
+
+    // Утаснаас имэйл үүсгэж нэвтрэх
+    const email = `${phone.trim()}@toot.app`;
 
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -37,22 +45,21 @@ export default function LoginPage() {
     });
 
     if (authError) {
-      setError('Имэйл эсвэл нууц үг буруу байна');
+      setError('Утас эсвэл нууц үг буруу байна');
       setLoading(false);
       return;
     }
 
-    // Auth context profile-г хүлээх — onAuthStateChange trigger хийнэ
-    // Profile ачаалагдсны дараа useEffect redirect хийнэ
-    // Түр хүлээх: resident мэдээлэл авах
+    // Resident мэдээлэл авах
     const { data: { user: loggedInUser } } = await supabase.auth.getUser();
     if (loggedInUser) {
-      const phone = loggedInUser.user_metadata?.phone;
-      let query = supabase.from('residents').select('sokh_id');
-      if (phone) {
-        query = query.eq('phone', phone);
-      }
-      const { data: resident } = await query.limit(1).single();
+      const userPhone = loggedInUser.user_metadata?.phone || phone.trim();
+      const { data: resident } = await supabase
+        .from('residents')
+        .select('sokh_id')
+        .eq('phone', userPhone)
+        .limit(1)
+        .single();
 
       if (resident?.sokh_id) {
         router.replace(`/sokh/${resident.sokh_id}`);
@@ -60,7 +67,6 @@ export default function LoginPage() {
       }
     }
 
-    // sokh_id олдохгүй бол select хуудас руу
     router.replace('/select');
   };
 
@@ -98,12 +104,12 @@ export default function LoginPage() {
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Имэйл хаяг</label>
+            <label className="text-xs text-gray-500 mb-1 block">Утасны дугаар</label>
             <input
-              type="email"
-              placeholder="example@mail.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="tel"
+              placeholder="99001122"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 8))}
               className="w-full border rounded-xl px-4 py-3 text-sm bg-white"
             />
           </div>
