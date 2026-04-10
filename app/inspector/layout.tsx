@@ -26,15 +26,15 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Админ PWA manifest солих (байцаагч = Тоот Удирдлага апп)
+  // Админ PWA manifest солих (байцаагч = Хотол Удирдлага апп)
   useEffect(() => {
     const link = document.querySelector('link[rel="manifest"]');
     if (link) link.setAttribute('href', '/manifest-admin.json');
     const meta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-    if (meta) meta.setAttribute('content', 'Тоот Удирдлага');
+    if (meta) meta.setAttribute('content', 'Хотол Удирдлага');
     return () => {
       if (link) link.setAttribute('href', '/manifest.json');
-      if (meta) meta.setAttribute('content', 'Тоот');
+      if (meta) meta.setAttribute('content', 'Хотол');
     };
   }, []);
 
@@ -157,7 +157,7 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
         {/* Content */}
         {children}
 
-        <PWAInstallPrompt appName="Тоот Удирдлага" />
+        <PWAInstallPrompt appName="Хотол Удирдлага" />
 
         {/* Bottom tabs */}
         <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t flex z-50">

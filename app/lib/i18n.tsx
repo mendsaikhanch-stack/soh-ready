@@ -6,7 +6,7 @@ type Locale = 'mn' | 'en';
 
 const translations: Record<Locale, Record<string, string>> = {
   mn: {
-    'app.name': 'Тоот',
+    'app.name': 'Хотол',
     'nav.home': 'Нүүр',
     'nav.payments': 'Төлбөр',
     'nav.reports': 'Тайлан',

@@ -211,7 +211,7 @@ export default function UtilitiesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: bill.amount,
-          description: `Тоот — ${typeMap[bill.utility_type]?.label || bill.utility_type} (${months[bill.month - 1]} ${bill.year})`,
+          description: `Хотол — ${typeMap[bill.utility_type]?.label || bill.utility_type} (${months[bill.month - 1]} ${bill.year})`,
           orderId: `UTIL-${bill.id}-${Date.now()}`,
         }),
       });

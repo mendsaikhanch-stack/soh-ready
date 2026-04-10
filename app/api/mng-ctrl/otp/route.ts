@@ -30,13 +30,13 @@ async function sendOTP(code: string): Promise<boolean> {
   });
 
   await transporter.sendMail({
-    from: `"Тоот Платформ" <${smtpUser}>`,
+    from: `"Хотол Платформ" <${smtpUser}>`,
     to: SUPERADMIN_EMAIL,
-    subject: 'Тоот — Нэвтрэх код',
+    subject: 'Хотол — Нэвтрэх код',
     text: `Таны нэвтрэх код: ${code}\n\nХүчинтэй хугацаа: 5 минут`,
     html: `
       <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px">
-        <h2 style="color:#2563eb">Тоот Платформ</h2>
+        <h2 style="color:#2563eb">Хотол Платформ</h2>
         <p>Таны нэвтрэх код:</p>
         <div style="font-size:32px;font-weight:bold;letter-spacing:8px;text-align:center;background:#f3f4f6;padding:20px;border-radius:12px;margin:16px 0">${code}</div>
         <p style="color:#6b7280;font-size:14px">Хүчинтэй хугацаа: 5 минут</p>

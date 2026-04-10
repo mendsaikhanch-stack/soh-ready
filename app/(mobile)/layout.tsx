@@ -9,7 +9,7 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
       <div className="flex justify-center bg-gray-200 min-h-screen">
         <div className="w-full max-w-[430px] min-h-screen bg-white shadow-2xl relative">
           {children}
-          <PWAInstallPrompt appName="Тоот" />
+          <PWAInstallPrompt appName="Хотол" />
         </div>
       </div>
     </AuthProvider>

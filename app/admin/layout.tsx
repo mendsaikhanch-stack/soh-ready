@@ -50,11 +50,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const link = document.querySelector('link[rel="manifest"]');
     if (link) link.setAttribute('href', '/manifest-admin.json');
     const meta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-    if (meta) meta.setAttribute('content', 'Тоот Удирдлага');
-    document.title = 'Тоот Удирдлага';
+    if (meta) meta.setAttribute('content', 'Хотол Удирдлага');
+    document.title = 'Хотол Удирдлага';
     return () => {
       if (link) link.setAttribute('href', '/manifest.json');
-      if (meta) meta.setAttribute('content', 'Тоот');
+      if (meta) meta.setAttribute('content', 'Хотол');
     };
   }, []);
 
@@ -138,7 +138,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm mx-4">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-2"><TootLogo size={144} showText={false} /></div>
-            <h1 className="text-xl font-bold">Тоот Админ</h1>
+            <h1 className="text-xl font-bold">Хотол Админ</h1>
             <p className="text-sm text-gray-500 mt-1">Удирдлагын панелд нэвтрэх</p>
           </div>
 
@@ -242,7 +242,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <main className="flex-1 overflow-auto">
         {children}
       </main>
-      <PWAInstallPrompt appName="Тоот Удирдлага" />
+      <PWAInstallPrompt appName="Хотол Удирдлага" />
     </div>
   );
 }

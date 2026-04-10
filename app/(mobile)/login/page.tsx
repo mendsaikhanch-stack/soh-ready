@@ -93,7 +93,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-2"><TootLogo size={168} showText={false} /></div>
-          <p className="text-sm text-gray-500">Тоот апп-д нэвтрэх</p>
+          <p className="text-sm text-gray-500">Хотол апп-д нэвтрэх</p>
         </div>
 
         {error && (

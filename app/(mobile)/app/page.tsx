@@ -54,7 +54,7 @@ export default function WelcomePage() {
           <TootLogo size={180} showText={false} />
         </div>
 
-        <h1 className="text-3xl font-bold tracking-tight mb-1">Тоот</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-1">Хотол</h1>
         <p className="text-blue-200 text-sm mb-8">Таны байрны бүх зүйл нэг дор</p>
 
         {/* Feature grid */}
@@ -106,7 +106,7 @@ export default function WelcomePage() {
           Нэвтрэх
         </button>
 
-        <p className="text-center text-blue-300/60 text-xs mt-4">v1.0 · Тоот</p>
+        <p className="text-center text-blue-300/60 text-xs mt-4">v1.0 · Хотол</p>
       </div>
     </div>
   );

@@ -122,7 +122,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-blue-600 text-white px-4 py-4">
-        <h1 className="text-lg font-bold text-center">🏠 Тоот</h1>
+        <h1 className="text-lg font-bold text-center">🏠 Хотол</h1>
       </div>
 
       {/* Progress */}

@@ -176,8 +176,8 @@ export default function NotificationsPage() {
     notifs.push({
       id: 'welcome',
       type: 'info',
-      title: 'Тоот апп-д тавтай морил',
-      message: 'Тоот апп-д тавтай морил! Төлбөр, зарлал, засварын мэдээллээ энд хянаарай.',
+      title: 'Хотол апп-д тавтай морил',
+      message: 'Хотол апп-д тавтай морил! Төлбөр, зарлал, засварын мэдээллээ энд хянаарай.',
       date: new Date(now.getTime() - 86400000 * 7).toISOString(),
       read: true,
       icon: '👋',

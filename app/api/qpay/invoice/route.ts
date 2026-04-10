@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     const result = await createInvoice({
       amount,
-      description: description || 'Тоот — СӨХ төлбөр',
+      description: description || 'Хотол — СӨХ төлбөр',
       senderInvoiceNo: sokhId ? `TOOT-${sokhId}-${Date.now()}` : `TOOT-${Date.now()}`,
       callbackUrl,
     });

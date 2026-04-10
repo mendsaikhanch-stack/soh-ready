@@ -1,9 +1,9 @@
-// Тоот Push Notification Service Worker
+// Хотол Push Notification Service Worker
 
 self.addEventListener('push', function(event) {
   const data = event.data ? event.data.json() : {};
 
-  const title = data.title || 'Тоот';
+  const title = data.title || 'Хотол';
   const options = {
     body: data.body || 'Шинэ мэдэгдэл байна',
     icon: '/icons/icon-192.png',

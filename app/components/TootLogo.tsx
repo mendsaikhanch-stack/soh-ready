@@ -14,7 +14,7 @@ export default function TootLogo({ size = 48, showText = false, className = '' }
     <div className={`flex items-center gap-2 ${className}`}>
       <Image
         src="/logo.jpg"
-        alt="Тоот"
+        alt="Хотол"
         width={size}
         height={size}
         className="object-contain"

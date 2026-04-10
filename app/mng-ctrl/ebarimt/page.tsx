@@ -19,14 +19,14 @@ interface EbarimtConfig {
 }
 
 const ENTITY_TYPES = [
-  { value: 'platform', label: 'Тоот платформ', icon: '🏠' },
+  { value: 'platform', label: 'Хотол платформ', icon: '🏠' },
   { value: 'sokh', label: 'СӨХ', icon: '🏢' },
   { value: 'osnaa', label: 'ОСНАА', icon: '🏗️' },
   { value: 'tsah', label: 'Цахилгаан', icon: '⚡' },
 ];
 
 const ENTITY_TYPE_LABELS: Record<string, string> = {
-  platform: 'Тоот платформ',
+  platform: 'Хотол платформ',
   sokh: 'СӨХ',
   osnaa: 'ОСНАА',
   tsah: 'Цахилгаан',

@@ -68,7 +68,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-500">
-            © 2026 Тоот. Бүх эрх хуулиар хамгаалагдсан.
+            © 2026 Хотол. Бүх эрх хуулиар хамгаалагдсан.
           </div>
         </div>
       </footer>
