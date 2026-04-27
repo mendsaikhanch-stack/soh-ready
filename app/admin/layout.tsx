@@ -35,6 +35,12 @@ const navItems = [
   { icon: '🎛', label: 'Үйлчилгээ тохиргоо', href: '/admin/features' },
 ];
 
+const infoItems = [
+  { icon: '❓', label: 'Тусламж', href: '/help' },
+  { icon: '📄', label: 'Үйлчилгээний нөхцөл', href: '/terms/admin' },
+  { icon: '🔒', label: 'Нууцлалын бодлого', href: '/privacy' },
+];
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -229,6 +235,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </button>
             );
           })}
+
+          <div className="mt-4 pt-3 border-t border-gray-800">
+            <p className="px-3 mb-1 text-[10px] uppercase tracking-wider text-gray-500">Мэдээлэл</p>
+            {infoItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <button
+                  key={item.href}
+                  onClick={() => router.push(item.href)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left mb-0.5 transition ${
+                    isActive ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                  }`}
+                >
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </nav>
         <div className="p-3 border-t border-gray-700">
           <button

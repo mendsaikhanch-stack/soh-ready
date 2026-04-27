@@ -171,6 +171,14 @@ export default function LoginPage() {
             Бүртгүүлэх
           </button>
         </p>
+
+        <p className="text-center text-xs text-gray-400 mt-3">
+          <a href="/help" className="hover:text-gray-600">Тусламж</a>
+          <span className="mx-1.5">·</span>
+          <a href="/privacy" className="hover:text-gray-600">Нууцлал</a>
+          <span className="mx-1.5">·</span>
+          <a href="/terms/resident" className="hover:text-gray-600">Нөхцөл</a>
+        </p>
       </div>
     </div>
   );

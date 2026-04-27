@@ -42,6 +42,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [consent, setConsent] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(false);
@@ -187,6 +188,7 @@ export default function RegisterPage() {
     if (!/^\d{8}$/.test(phone.trim())) { setError('Утасны дугаар 8 оронтой байна'); return; }
     if (password.trim().length < 6) { setError('Нууц үг хамгийн багадаа 6 тэмдэгт'); return; }
     if (password.trim() !== confirmPassword.trim()) { setError('Нууц үг таарахгүй байна'); return; }
+    if (!consent) { setError('Үйлчилгээний нөхцөл, нууцлалын бодлоготой танилцаж зөвшөөрнө үү'); return; }
 
     setLoading(true);
 
@@ -482,14 +484,42 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <button onClick={handleRegister} disabled={loading}
-              className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold text-sm mt-6 disabled:opacity-50 active:bg-blue-700 transition">
+            <label className="flex items-start gap-2 mt-5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={e => setConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-blue-600"
+              />
+              <span className="text-xs text-gray-600 leading-relaxed">
+                Би{' '}
+                <a href="/terms/resident" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                  Оршин суугчийн үйлчилгээний нөхцөл
+                </a>
+                {' '}болон{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                  Нууцлалын бодлого
+                </a>
+                -той танилцаж, зөвшөөрч байна.
+              </span>
+            </label>
+
+            <button onClick={handleRegister} disabled={loading || !consent}
+              className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold text-sm mt-4 disabled:opacity-50 active:bg-blue-700 transition">
               {loading ? 'Бүртгэж байна...' : 'Бүртгүүлэх'}
             </button>
 
             <p className="text-center text-sm text-gray-500 mt-4">
               Бүртгэлтэй юу?{' '}
               <button onClick={() => router.push('/login')} className="text-blue-600 font-medium">Нэвтрэх</button>
+            </p>
+
+            <p className="text-center text-xs text-gray-400 mt-2">
+              <a href="/help" className="hover:text-gray-600">Тусламж</a>
+              <span className="mx-1.5">·</span>
+              <a href="/privacy" className="hover:text-gray-600">Нууцлал</a>
+              <span className="mx-1.5">·</span>
+              <a href="/terms/resident" className="hover:text-gray-600">Нөхцөл</a>
             </p>
           </div>
         )}

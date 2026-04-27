@@ -172,6 +172,22 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Help / Legal links */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y">
+          <a href="/help" className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 active:bg-gray-100">
+            <span className="text-sm text-gray-700"><span className="mr-2">❓</span>Тусламж · FAQ</span>
+            <span className="text-gray-400">›</span>
+          </a>
+          <a href="/terms/resident" className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 active:bg-gray-100">
+            <span className="text-sm text-gray-700"><span className="mr-2">📄</span>Үйлчилгээний нөхцөл</span>
+            <span className="text-gray-400">›</span>
+          </a>
+          <a href="/privacy" className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 active:bg-gray-100">
+            <span className="text-sm text-gray-700"><span className="mr-2">🔒</span>Нууцлалын бодлого</span>
+            <span className="text-gray-400">›</span>
+          </a>
+        </div>
       </div>
     </div>
   );

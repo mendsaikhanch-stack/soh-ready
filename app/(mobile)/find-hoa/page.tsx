@@ -122,6 +122,12 @@ export default function FindHoaPage() {
             />
           </div>
         )}
+
+        <div className="mt-8 pt-4 border-t flex justify-center gap-4 text-xs text-gray-400">
+          <a href="/help" className="hover:text-gray-600">Тусламж</a>
+          <a href="/privacy" className="hover:text-gray-600">Нууцлал</a>
+          <a href="/legal" className="hover:text-gray-600">Бүх нөхцөл</a>
+        </div>
       </div>
     </div>
   );
