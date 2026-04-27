@@ -13,7 +13,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { phone, password, name, apartment, sokh_id } = await req.json();
+    const { phone, password, name, apartment, sokh_id: sokhIdRaw, sokh_name, khoroo_id } = await req.json();
+    let sokh_id: number | undefined = sokhIdRaw;
 
     if (!phone || !password || !name) {
       return NextResponse.json({ error: 'Бүх талбарыг бөглөнө үү' }, { status: 400 });
@@ -48,6 +49,32 @@ export async function POST(req: NextRequest) {
       if (!org) {
         return NextResponse.json({ error: 'Байгууллага олдсонгүй' }, { status: 400 });
       }
+    } else if (sokh_name) {
+      // Хэрэглэгч өөрөө СӨХ-ийн нэрээ оруулсан тохиолдолд шинэ байгууллага үүсгэх
+      if (typeof sokh_name !== 'string' || sokh_name.trim().length < 2 || sokh_name.trim().length > 100) {
+        return NextResponse.json({ error: 'СӨХ-ийн нэр 2-100 тэмдэгт байна' }, { status: 400 });
+      }
+      if (typeof khoroo_id !== 'number' || khoroo_id <= 0) {
+        return NextResponse.json({ error: 'Хороо буруу' }, { status: 400 });
+      }
+      const { data: khoroo } = await supabaseAdmin
+        .from('khoroos')
+        .select('id')
+        .eq('id', khoroo_id)
+        .single();
+      if (!khoroo) {
+        return NextResponse.json({ error: 'Хороо олдсонгүй' }, { status: 400 });
+      }
+      const { data: newOrg, error: orgErr } = await supabaseAdmin
+        .from('sokh_organizations')
+        .insert([{ name: sokh_name.trim(), khoroo_id, address: '', phone: '' }])
+        .select('id')
+        .single();
+      if (orgErr || !newOrg) {
+        console.error('[register] sokh insert', orgErr?.message);
+        return NextResponse.json({ error: 'СӨХ үүсгэж чадсангүй' }, { status: 500 });
+      }
+      sokh_id = newOrg.id as number;
     }
 
     // Утаснаас имэйл автоматаар үүсгэх (Supabase auth шаардлага)
@@ -99,7 +126,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const response = NextResponse.json({ success: true, email, claim });
+    const response = NextResponse.json({ success: true, email, claim, sokh_id });
     if (claim?.anythingLinked) {
       // Token-ыг нэгэнт хэрэглэсэн тул cookie-г цэвэрлэнэ
       response.cookies.delete(CLAIM_COOKIE);

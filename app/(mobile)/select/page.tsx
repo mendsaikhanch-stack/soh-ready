@@ -21,6 +21,10 @@ export default function Home() {
   const [selectedKhoroo, setSelectedKhoroo] = useState<Khoroo | null>(null);
   const [selectedSokh, setSelectedSokh] = useState<SokhOrg | null>(null);
 
+  // Хороонд бүртгэлтэй СӨХ байхгүй үед хэрэглэгч өөрөө нэрээ оруулдаг горим
+  const [enteringCustomSokh, setEnteringCustomSokh] = useState(false);
+  const [customSokhName, setCustomSokhName] = useState('');
+
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -33,8 +37,17 @@ export default function Home() {
       if (error) {
         setError(error.message);
         console.error('Cities error:', error);
-      } else {
-        setCities(data || []);
+      } else if (data) {
+        const priority = ['Улаанбаатар', 'Эрдэнэт', 'Дархан'];
+        data.sort((a, b) => {
+          const ai = priority.indexOf(a.name);
+          const bi = priority.indexOf(b.name);
+          if (ai !== -1 && bi !== -1) return ai - bi;
+          if (ai !== -1) return -1;
+          if (bi !== -1) return 1;
+          return a.name.localeCompare(b.name, 'mn');
+        });
+        setCities(data);
       }
     };
     fetchCities();
@@ -99,8 +112,27 @@ export default function Home() {
     router.push(`/sokh/${sokh.id}`);
   };
 
+  // Хэрэглэгчийн оруулсан СӨХ-ийн нэрийг батлаад бүртгэлийн хуудас руу шилжих
+  const confirmCustomSokh = () => {
+    const trimmed = customSokhName.trim();
+    if (trimmed.length < 2) { setError('СӨХ-ийн нэрээ оруулна уу'); return; }
+    if (!selectedCity || !selectedDistrict || !selectedKhoroo) return;
+    try {
+      window.sessionStorage.setItem('register-prefill', JSON.stringify({
+        cityId: selectedCity.id,
+        districtId: selectedDistrict.id,
+        khorooId: selectedKhoroo.id,
+        sokhName: trimmed,
+      }));
+    } catch {
+      // sessionStorage хязгаартай — алдаа гарвал шууд шилжих
+    }
+    router.push('/register');
+  };
+
   // Буцах
   const goBack = () => {
+    setError('');
     if (step === 2) {
       setSelectedCity(null);
       setStep(1);
@@ -108,8 +140,8 @@ export default function Home() {
       setSelectedDistrict(null);
       setStep(2);
     } else if (step === 4) {
-      setSelectedKhoroo(null);
-      setStep(3);
+      if (enteringCustomSokh) { setEnteringCustomSokh(false); setCustomSokhName(''); }
+      else { setSelectedKhoroo(null); setStep(3); }
     } else if (step === 5) {
       setSelectedSokh(null);
       setStep(4);
@@ -231,25 +263,66 @@ export default function Home() {
             <h2 className="text-lg font-semibold mb-3">СӨХ сонгоно уу</h2>
             {loading ? (
               <p className="text-gray-400 text-center py-8">Ачаалж байна...</p>
-            ) : sokhList.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-400 mb-2">Энэ хороонд бүртгэлтэй СӨХ байхгүй байна</p>
-                <p className="text-gray-300 text-sm">Удахгүй нэмэгдэнэ</p>
-              </div>
             ) : (
-              <div className="space-y-2">
-                {sokhList.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => selectSokh(s)}
-                    className="w-full bg-white p-4 rounded-xl shadow-sm text-left hover:bg-blue-50 active:bg-blue-100 transition"
-                  >
-                    <p className="font-medium">{s.name}</p>
-                    <p className="text-sm text-gray-500">{s.address}</p>
-                    {s.phone && <p className="text-sm text-gray-400">📞 {s.phone}</p>}
-                  </button>
-                ))}
-              </div>
+              <>
+                {sokhList.length > 0 && !enteringCustomSokh && (
+                  <div className="space-y-2 mb-3">
+                    {sokhList.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => selectSokh(s)}
+                        className="w-full bg-white p-4 rounded-xl shadow-sm text-left hover:bg-blue-50 active:bg-blue-100 transition"
+                      >
+                        <p className="font-medium">{s.name}</p>
+                        <p className="text-sm text-gray-500">{s.address}</p>
+                        {s.phone && <p className="text-sm text-gray-400">📞 {s.phone}</p>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {!enteringCustomSokh ? (
+                  <div className={sokhList.length === 0 ? 'text-center py-8' : 'pt-2 border-t'}>
+                    {sokhList.length === 0 && (
+                      <p className="text-gray-400 mb-3 text-sm">Энэ хороонд бүртгэлтэй СӨХ байхгүй байна</p>
+                    )}
+                    <button
+                      onClick={() => { setEnteringCustomSokh(true); setError(''); }}
+                      className="w-full bg-white border-2 border-dashed border-blue-400 text-blue-600 p-4 rounded-xl font-medium text-sm hover:bg-blue-50 active:bg-blue-100 transition"
+                    >
+                      + СӨХийн нэрээ оруулна уу
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-white p-4 rounded-xl shadow-sm space-y-3">
+                    <label className="text-xs text-gray-500 block">Таны СӨХ-ийн нэр</label>
+                    <input
+                      autoFocus
+                      value={customSokhName}
+                      onChange={e => setCustomSokhName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') confirmCustomSokh(); }}
+                      placeholder="Жишээ нь: Нарантуул СӨХ"
+                      className="w-full border rounded-xl px-4 py-3 text-sm"
+                    />
+                    {error && <p className="text-xs text-red-500">{error}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setEnteringCustomSokh(false); setCustomSokhName(''); setError(''); }}
+                        className="flex-1 border border-gray-300 text-gray-600 py-3 rounded-xl text-sm font-medium"
+                      >
+                        Болих
+                      </button>
+                      <button
+                        onClick={confirmCustomSokh}
+                        disabled={customSokhName.trim().length < 2}
+                        className="flex-1 bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-50 active:bg-blue-700 transition"
+                      >
+                        Үргэлжлүүлэх
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

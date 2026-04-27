@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { useAuth } from '@/app/lib/auth-context';
 
 interface City { id: number; name: string; }
 interface District { id: number; city_id: number; name: string; }
@@ -11,6 +12,8 @@ interface SokhOrg { id: number; khoroo_id: number; name: string; address: string
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, profile, signOut } = useAuth();
 
   // Step: 1=хот, 2=дүүрэг, 3=хороо, 4=сөх, 5=хувийн мэдээлэл
   const [step, setStep] = useState(1);
@@ -24,6 +27,10 @@ export default function RegisterPage() {
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
   const [selectedKhoroo, setSelectedKhoroo] = useState<Khoroo | null>(null);
   const [selectedSokh, setSelectedSokh] = useState<SokhOrg | null>(null);
+
+  // Хороонд бүртгэлтэй СӨХ байхгүй үед хэрэглэгч өөрөө нэрээ оруулдаг горим
+  const [enteringCustomSokh, setEnteringCustomSokh] = useState(false);
+  const [customSokhName, setCustomSokhName] = useState('');
 
   // Хувийн мэдээлэл
   const [name, setName] = useState('');
@@ -41,6 +48,64 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
 
   const stepLabels = ['Хот', 'Дүүрэг', 'Хороо', 'СӨХ', 'Мэдээлэл'];
+
+  // /select хуудсаас ирсэн prefill (хот/дүүрэг/хороо + хэрэглэгчийн оруулсан СӨХ-ийн нэр)
+  // sessionStorage-аас уншаад шууд step 5 руу шилжүүлнэ
+  useEffect(() => {
+    const raw = (() => { try { return window.sessionStorage.getItem('register-prefill'); } catch { return null; } })();
+    if (!raw) return;
+    try { window.sessionStorage.removeItem('register-prefill'); } catch { /* ignore */ }
+    let prefill: { cityId?: number; districtId?: number; khorooId?: number; sokhName?: string };
+    try { prefill = JSON.parse(raw); } catch { return; }
+    if (!prefill.cityId || !prefill.districtId || !prefill.khorooId || !prefill.sokhName) return;
+
+    (async () => {
+      const [{ data: city }, { data: district }, { data: khoroo }] = await Promise.all([
+        supabase.from('cities').select('*').eq('id', prefill.cityId).single(),
+        supabase.from('districts').select('*').eq('id', prefill.districtId).single(),
+        supabase.from('khoroos').select('*').eq('id', prefill.khorooId).single(),
+      ]);
+      if (!city || !district || !khoroo) return;
+      setSelectedCity(city);
+      setSelectedDistrict(district);
+      setSelectedKhoroo(khoroo);
+      setSelectedSokh(null);
+      setCustomSokhName(prefill.sokhName!);
+      setStep(5);
+    })();
+  }, []);
+
+  // ?sokh=ID query — урьдчилан мэдэгдсэн СӨХ контекстээр шууд step 5 руу.
+  // Жишээ: User B-д ирсэн invite link `/register?sokh=123` → байр/тоот шууд оруулна.
+  useEffect(() => {
+    const sokhParam = searchParams.get('sokh');
+    if (!sokhParam) return;
+    const sokhIdNum = parseInt(sokhParam, 10);
+    if (!sokhIdNum) return;
+
+    (async () => {
+      const { data: sokh } = await supabase
+        .from('sokh_organizations').select('*').eq('id', sokhIdNum).single();
+      if (!sokh) return;
+      const { data: khoroo } = await supabase
+        .from('khoroos').select('*').eq('id', sokh.khoroo_id).single();
+      if (!khoroo) return;
+      const { data: district } = await supabase
+        .from('districts').select('*').eq('id', khoroo.district_id).single();
+      if (!district) return;
+      const { data: city } = await supabase
+        .from('cities').select('*').eq('id', district.city_id).single();
+      if (!city) return;
+
+      setSelectedCity(city);
+      setSelectedDistrict(district);
+      setSelectedKhoroo(khoroo);
+      setSelectedSokh(sokh);
+      setCustomSokhName('');
+      setEnteringCustomSokh(false);
+      setStep(5);
+    })();
+  }, [searchParams]);
 
   // Хот татах (Улаанбаатар → Эрдэнэт → Дархан → бусад)
   useEffect(() => {
@@ -91,6 +156,16 @@ export default function RegisterPage() {
 
   const selectSokh = (sokh: SokhOrg) => {
     setSelectedSokh(sokh);
+    setCustomSokhName('');
+    setEnteringCustomSokh(false);
+    setStep(5);
+  };
+
+  const confirmCustomSokh = () => {
+    const trimmed = customSokhName.trim();
+    if (trimmed.length < 2) { setError('СӨХ-ийн нэрээ оруулна уу'); return; }
+    setSelectedSokh(null);
+    setError('');
     setStep(5);
   };
 
@@ -98,8 +173,11 @@ export default function RegisterPage() {
     setError('');
     if (step === 2) { setSelectedCity(null); setStep(1); }
     else if (step === 3) { setSelectedDistrict(null); setStep(2); }
-    else if (step === 4) { setSelectedKhoroo(null); setStep(3); }
-    else if (step === 5) { setSelectedSokh(null); setStep(4); }
+    else if (step === 4) {
+      if (enteringCustomSokh) { setEnteringCustomSokh(false); setCustomSokhName(''); }
+      else { setSelectedKhoroo(null); setStep(3); }
+    }
+    else if (step === 5) { setSelectedSokh(null); setCustomSokhName(''); setEnteringCustomSokh(false); setStep(4); }
     else { router.push('/app'); }
   };
 
@@ -124,6 +202,8 @@ export default function RegisterPage() {
           password: password.trim(),
           apartment: fullAddress,
           sokh_id: selectedSokh?.id,
+          sokh_name: !selectedSokh && customSokhName.trim() ? customSokhName.trim() : undefined,
+          khoroo_id: !selectedSokh && customSokhName.trim() ? selectedKhoroo?.id : undefined,
         }),
       });
 
@@ -160,8 +240,9 @@ export default function RegisterPage() {
         }
       }
 
-      if (selectedSokh?.id) {
-        router.replace(`/sokh/${selectedSokh.id}`);
+      const newSokhId = result.sokh_id ?? selectedSokh?.id;
+      if (newSokhId) {
+        router.replace(`/sokh/${newSokhId}`);
       } else {
         router.replace('/select');
       }
@@ -178,6 +259,21 @@ export default function RegisterPage() {
         <button onClick={goBack} className="text-white/80 text-sm mb-1">← Буцах</button>
         <h1 className="text-lg font-bold">Бүртгүүлэх</h1>
       </div>
+
+      {/* Аль хэдийн нэвтэрсэн хэрэглэгчид мэдэгдэх */}
+      {user && (
+        <div className="mx-4 mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-3">
+          <div className="text-xs text-amber-800 leading-relaxed">
+            Та одоо <span className="font-semibold">{profile?.name || user.email}</span> нэрээр нэвтэрсэн байна. Шинэ хэрэглэгч бүртгэхийн тулд эхлээд гарна уу.
+          </div>
+          <button
+            onClick={async () => { await signOut(); router.refresh(); }}
+            className="shrink-0 bg-amber-600 text-white text-xs px-3 py-2 rounded-lg font-medium active:bg-amber-700"
+          >
+            Гарах
+          </button>
+        </div>
+      )}
 
       {/* Progress */}
       <div className="flex px-4 py-3 gap-1">
@@ -196,7 +292,7 @@ export default function RegisterPage() {
             {selectedCity?.name}
             {selectedDistrict ? ` → ${selectedDistrict.name}` : ''}
             {selectedKhoroo ? ` → ${selectedKhoroo.name}` : ''}
-            {selectedSokh ? ` → ${selectedSokh.name}` : ''}
+            {selectedSokh ? ` → ${selectedSokh.name}` : (step === 5 && customSokhName.trim() ? ` → ${customSokhName.trim()}` : '')}
           </p>
         </div>
       )}
@@ -264,20 +360,61 @@ export default function RegisterPage() {
         {step === 4 && (
           <div>
             <h2 className="text-base font-semibold mb-3">СӨХ сонгоно уу</h2>
-            {listLoading ? <p className="text-gray-400 text-center py-8">Ачаалж байна...</p> : sokhList.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-400 mb-2">Энэ хороонд бүртгэлтэй СӨХ байхгүй</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {sokhList.map(s => (
-                  <button key={s.id} onClick={() => selectSokh(s)}
-                    className="w-full bg-white p-4 rounded-xl shadow-sm text-left hover:bg-blue-50 active:bg-blue-100 transition">
-                    <p className="font-medium">{s.name}</p>
-                    <p className="text-sm text-gray-500">{s.address}</p>
-                  </button>
-                ))}
-              </div>
+            {listLoading ? <p className="text-gray-400 text-center py-8">Ачаалж байна...</p> : (
+              <>
+                {sokhList.length > 0 && !enteringCustomSokh && (
+                  <div className="space-y-2 mb-3">
+                    {sokhList.map(s => (
+                      <button key={s.id} onClick={() => selectSokh(s)}
+                        className="w-full bg-white p-4 rounded-xl shadow-sm text-left hover:bg-blue-50 active:bg-blue-100 transition">
+                        <p className="font-medium">{s.name}</p>
+                        <p className="text-sm text-gray-500">{s.address}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {!enteringCustomSokh ? (
+                  <div className={sokhList.length === 0 ? 'text-center py-8' : 'pt-2 border-t'}>
+                    {sokhList.length === 0 && (
+                      <p className="text-gray-400 mb-3 text-sm">Энэ хороонд бүртгэлтэй СӨХ байхгүй байна</p>
+                    )}
+                    <button
+                      onClick={() => { setEnteringCustomSokh(true); setError(''); }}
+                      className="w-full bg-white border-2 border-dashed border-blue-400 text-blue-600 p-4 rounded-xl font-medium text-sm hover:bg-blue-50 active:bg-blue-100 transition"
+                    >
+                      + СӨХийн нэрээ оруулна уу
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-white p-4 rounded-xl shadow-sm space-y-3">
+                    <label className="text-xs text-gray-500 block">Таны СӨХ-ийн нэр</label>
+                    <input
+                      autoFocus
+                      value={customSokhName}
+                      onChange={e => setCustomSokhName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') confirmCustomSokh(); }}
+                      placeholder="Жишээ нь: Нарантуул СӨХ"
+                      className="w-full border rounded-xl px-4 py-3 text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setEnteringCustomSokh(false); setCustomSokhName(''); setError(''); }}
+                        className="flex-1 border border-gray-300 text-gray-600 py-3 rounded-xl text-sm font-medium"
+                      >
+                        Болих
+                      </button>
+                      <button
+                        onClick={confirmCustomSokh}
+                        disabled={customSokhName.trim().length < 2}
+                        className="flex-1 bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-50 active:bg-blue-700 transition"
+                      >
+                        Үргэлжлүүлэх
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -286,7 +423,7 @@ export default function RegisterPage() {
         {step === 5 && (
           <div>
             <h2 className="text-base font-semibold mb-1">Хувийн мэдээлэл</h2>
-            <p className="text-xs text-gray-400 mb-4">{selectedSokh?.name}-д бүртгүүлэх</p>
+            <p className="text-xs text-gray-400 mb-4">{(selectedSokh?.name || customSokhName.trim())}-д бүртгүүлэх</p>
 
             <div className="space-y-3">
               <div>

@@ -117,7 +117,7 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
 export default function SokhDashboard() {
   const params = useParams();
   const router = useRouter();
-  const { profile, signOut } = useAuth();
+  const { user, profile, loading: authLoading, signOut } = useAuth();
   const { dark, toggle: toggleDark } = useDarkMode();
   const { locale, setLocale, t } = useI18n();
   const [sokh, setSokh] = useState<SokhOrg | null>(null);
@@ -152,95 +152,64 @@ export default function SokhDashboard() {
 
   const fetchData = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
-      const { data } = await supabase
-        .from('sokh_organizations')
-        .select('*')
-        .eq('id', params.id)
-        .single();
 
-      if (data) setSokh(data);
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
 
-      const { count: resCount } = await supabase
-        .from('residents')
-        .select('*', { count: 'exact', head: true })
-        .eq('sokh_id', params.id);
+    // Бүх query-г параллель ажиллуулах
+    const [
+      sokhRes,
+      resCountRes,
+      debtRes,
+      annCountRes,
+      newAnnRes,
+      recentAnnsRes,
+      reqDataRes,
+      elecBillRes,
+    ] = await Promise.all([
+      supabase.from('sokh_organizations').select('*').eq('id', params.id).single(),
+      supabase.from('residents').select('*', { count: 'exact', head: true }).eq('sokh_id', params.id),
+      supabase.from('residents').select('debt').eq('sokh_id', params.id).gt('debt', 0),
+      supabase.from('announcements').select('*', { count: 'exact', head: true }).eq('sokh_id', params.id),
+      supabase.from('announcements').select('*', { count: 'exact', head: true }).eq('sokh_id', params.id).gte('created_at', weekAgo),
+      supabase.from('announcements').select('id, title, type, created_at').eq('sokh_id', params.id).order('created_at', { ascending: false }).limit(3),
+      supabase.from('maintenance_requests').select('id, title, status, created_at').eq('sokh_id', params.id).order('created_at', { ascending: false }).limit(3),
+      profile
+        ? supabase.from('utility_bills').select('id, amount, month, year')
+            .eq('resident_id', profile.id).eq('utility_type', 'electricity').eq('status', 'unpaid')
+            .order('year', { ascending: false }).order('month', { ascending: false }).limit(1).single()
+        : Promise.resolve({ data: null }),
+    ]);
 
-      const { data: debtData } = await supabase
-        .from('residents')
-        .select('debt')
-        .eq('sokh_id', params.id)
-        .gt('debt', 0);
+    if (sokhRes.data) setSokh(sokhRes.data);
 
-      const totalDebt = debtData?.reduce((sum, r) => sum + Number(r.debt), 0) || 0;
+    const debtData = debtRes.data;
+    const totalDebt = debtData?.reduce((sum, r) => sum + Number(r.debt), 0) || 0;
 
-      const { count: annCount } = await supabase
-        .from('announcements')
-        .select('*', { count: 'exact', head: true })
-        .eq('sokh_id', params.id);
+    setStats({
+      residents: resCountRes.count || 0,
+      totalDebt,
+      announcements: annCountRes.count || 0,
+    });
 
-      setStats({
-        residents: resCount || 0,
-        totalDebt,
-        announcements: annCount || 0,
-      });
+    // Мэдэгдлийн тоо
+    let nc = 0;
+    if (totalDebt > 0) nc++;
+    if (debtData && debtData.some(r => Number(r.debt) >= 200000)) nc++;
+    nc += newAnnRes.count || 0;
+    const day = new Date().getDate();
+    if (day <= 3 || (day >= 20 && day <= 25)) nc++;
+    setNotifCount(nc);
 
-      // Мэдэгдлийн тоо
-      let nc = 0;
-      if (totalDebt > 0) nc++; // Өрийн мэдэгдэл
-      if (debtData && debtData.some(r => Number(r.debt) >= 200000)) nc++; // Их өр
+    setRecentAnnouncements(recentAnnsRes.data || []);
+    setMyRequests(reqDataRes.data || []);
 
-      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-      const { count: newAnn } = await supabase
-        .from('announcements')
-        .select('*', { count: 'exact', head: true })
-        .eq('sokh_id', params.id)
-        .gte('created_at', weekAgo);
-      nc += newAnn || 0;
+    if (profile) {
+      setMyDebt(Number(profile.debt) || 0);
+      setElectricityBill(elecBillRes.data || null);
+    }
 
-      const day = new Date().getDate();
-      if (day <= 3 || (day >= 20 && day <= 25)) nc++;
-
-      setNotifCount(nc);
-
-      // Сүүлийн 3 зарлал
-      const { data: recentAnns } = await supabase
-        .from('announcements')
-        .select('id, title, type, created_at')
-        .eq('sokh_id', params.id)
-        .order('created_at', { ascending: false })
-        .limit(3);
-      setRecentAnnouncements(recentAnns || []);
-
-      // Миний хувийн өр
-      if (profile) {
-        setMyDebt(Number(profile.debt) || 0);
-
-        // Цахилгааны төлөгдөөгүй нэхэмжлэх
-        const { data: elecBill } = await supabase
-          .from('utility_bills')
-          .select('id, amount, month, year')
-          .eq('resident_id', profile.id)
-          .eq('utility_type', 'electricity')
-          .eq('status', 'unpaid')
-          .order('year', { ascending: false })
-          .order('month', { ascending: false })
-          .limit(1)
-          .single();
-
-        setElectricityBill(elecBill || null);
-      }
-
-      // Миний засвар хүсэлтүүд
-      const { data: reqData } = await supabase
-        .from('maintenance_requests')
-        .select('id, title, status, created_at')
-        .eq('sokh_id', params.id)
-        .order('created_at', { ascending: false })
-        .limit(3);
-      setMyRequests(reqData || []);
-
-      setLoading(false);
-    }, [params.id, profile]);
+    setLoading(false);
+  }, [params.id, profile]);
 
   useEffect(() => {
     fetchData();
@@ -386,6 +355,32 @@ export default function SokhDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Нэвтрээгүй зочинд — энэ СӨХ-ийн контекст хадгалсан Бүртгүүлэх / Нэвтрэх */}
+      {!authLoading && !user && (
+        <div className="mx-4 mt-3 bg-blue-50 border border-blue-200 rounded-xl p-3">
+          <p className="text-sm font-semibold text-blue-800 mb-2">
+            Энэ СӨХ-д бүртгүүлэх үү?
+          </p>
+          <p className="text-xs text-blue-700 mb-3 leading-relaxed">
+            Та зөвхөн байр, давхар, тоотоо оруулаад бүртгэлээ дуусгана.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => router.push(`/register?sokh=${params.id}`)}
+              className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold active:bg-blue-700 transition"
+            >
+              Бүртгүүлэх
+            </button>
+            <button
+              onClick={() => router.push(`/login?sokh=${params.id}`)}
+              className="flex-1 border border-blue-300 text-blue-700 py-2.5 rounded-lg text-sm font-semibold active:bg-blue-100 transition"
+            >
+              Нэвтрэх
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Хайлт */}
       <div className="px-4 mt-3">

@@ -36,7 +36,7 @@ export default function FinancePage() {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [monthlyFee, setMonthlyFee] = useState(50000);
+  const [monthlyFee, setMonthlyFee] = useState(0);
 
   useEffect(() => {
     fetchItems();

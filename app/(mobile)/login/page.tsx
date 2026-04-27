@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
 import TootLogo from '@/app/components/TootLogo';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sokhParam = searchParams.get('sokh');
   const { user, profile, loading: authLoading } = useAuth();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -162,7 +164,10 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-500 mt-4">
           Бүртгэлгүй юу?{' '}
-          <button onClick={() => router.push('/register')} className="text-blue-600 font-medium">
+          <button
+            onClick={() => router.push(sokhParam ? `/register?sokh=${sokhParam}` : '/register')}
+            className="text-blue-600 font-medium"
+          >
             Бүртгүүлэх
           </button>
         </p>
