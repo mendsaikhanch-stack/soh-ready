@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { registerLimiter } from '@/app/lib/rate-limit';
 import { linkManualSignupToUser, type LinkReport } from '@/app/lib/directory/link-manual-signup';
+import { enqueueRepair } from '@/app/lib/jobs/dispatch';
 
 const CLAIM_COOKIE = 'manual-hoa-claim';
 
@@ -123,6 +124,16 @@ export async function POST(req: NextRequest) {
         });
       } catch (e) {
         console.error('[register] link error', e);
+        // Self-healing: link бүтэлгүйтсэн бол retry job enqueue хийнэ
+        await enqueueRepair('retry_manual_claim_link', {
+          residentId: resident.id,
+          phone: cleanPhone,
+          email,
+          claimToken,
+        }, {
+          idempotencyKey: `claim:resident:${resident.id}`,
+          delaySec: 30,
+        });
       }
     }
 

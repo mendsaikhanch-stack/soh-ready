@@ -4,6 +4,7 @@ import { checkAnyAuth } from '@/app/lib/session-token';
 import { normalizeSohName, buildSearchText } from '@/app/lib/directory/normalize';
 import type { MappedDirectoryRow } from '@/app/lib/import/validate-directory';
 import { autoMergeProvisionals } from '@/app/lib/directory/merge-provisional';
+import { enqueueRepair } from '@/app/lib/jobs/dispatch';
 
 interface ConfirmBody {
   jobId: number;
@@ -233,6 +234,13 @@ export async function POST(req: NextRequest) {
         autoMerge = await autoMergeProvisionals({ mergedBy: `import:job:${body.jobId}` });
       } catch (e) {
         console.error('[directory/confirm] auto-merge error', e);
+        // Self-healing: auto-merge crash хийсэн бол background-аас retry хийнэ
+        await enqueueRepair('auto_merge_provisionals_scan', {
+          mergedBy: `import:job:${body.jobId}:retry`,
+        }, {
+          idempotencyKey: `auto-merge:after-import:${body.jobId}`,
+          delaySec: 60,
+        });
       }
     }
 

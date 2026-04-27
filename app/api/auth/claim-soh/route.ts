@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { linkManualSignupToUser } from '@/app/lib/directory/link-manual-signup';
+import { enqueueRepair } from '@/app/lib/jobs/dispatch';
 
 const CLAIM_COOKIE = 'manual-hoa-claim';
 
@@ -43,12 +44,28 @@ export async function POST(req: NextRequest) {
     const claimToken = req.cookies.get(CLAIM_COOKIE)?.value || null;
     const email = `${phoneRaw}@toot.app`;
 
-    const claim = await linkManualSignupToUser({
-      userId: resident.id as number,
-      phone: phoneRaw,
-      email,
-      claimToken,
-    });
+    let claim: Awaited<ReturnType<typeof linkManualSignupToUser>> | null = null;
+    try {
+      claim = await linkManualSignupToUser({
+        userId: resident.id as number,
+        phone: phoneRaw,
+        email,
+        claimToken,
+      });
+    } catch (e) {
+      console.error('[claim-soh] link error', e);
+      // Self-healing: link бүтэлгүйтсэн бол retry job enqueue хийнэ
+      await enqueueRepair('retry_manual_claim_link', {
+        residentId: resident.id,
+        phone: phoneRaw,
+        email,
+        claimToken,
+      }, {
+        idempotencyKey: `claim:resident:${resident.id}`,
+        delaySec: 30,
+      });
+      return NextResponse.json({ success: true, queued: true });
+    }
 
     const response = NextResponse.json({ success: true, claim });
     if (claim.anythingLinked && claimToken) {
