@@ -22,47 +22,32 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       const sokhId = await getAdminSokhId();
 
-      const { count: resCount } = await supabase.from('residents').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId);
+      const [resCountRes, resDataRes, payDataRes, annCountRes, maintCountRes, complaintCountRes, pollCountRes, msgCountRes] = await Promise.all([
+        supabase.from('residents').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId),
+        supabase.from('residents').select('debt').eq('sokh_id', sokhId),
+        supabase.from('payments').select('amount, residents!inner(sokh_id)').eq('residents.sokh_id', sokhId),
+        supabase.from('announcements').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId),
+        supabase.from('maintenance_requests').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId).eq('status', 'pending'),
+        supabase.from('complaints').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId).eq('status', 'pending'),
+        supabase.from('polls').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId).eq('status', 'active'),
+        supabase.from('messages').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId),
+      ]);
 
-      const { data: resData } = await supabase.from('residents').select('debt').eq('sokh_id', sokhId);
+      const resData = resDataRes.data;
       const debtResidents = resData?.filter(r => Number(r.debt) > 0).length || 0;
       const totalDebt = resData?.reduce((sum, r) => sum + Number(r.debt), 0) || 0;
-
-      const { data: payData } = await supabase.from('payments').select('amount, residents!inner(sokh_id)').eq('residents.sokh_id', sokhId);
-      const totalPaid = payData?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-
-      const { count: annCount } = await supabase.from('announcements').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId);
-
-      const { count: maintCount } = await supabase
-        .from('maintenance_requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('sokh_id', sokhId)
-        .eq('status', 'pending');
-
-      const { count: complaintCount } = await supabase
-        .from('complaints')
-        .select('*', { count: 'exact', head: true })
-        .eq('sokh_id', sokhId)
-        .eq('status', 'pending');
-
-      const { count: pollCount } = await supabase
-        .from('polls')
-        .select('*', { count: 'exact', head: true })
-        .eq('sokh_id', sokhId)
-        .eq('status', 'active');
-
-      const { count: msgCount } = await supabase.from('messages').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId);
+      const totalPaid = payDataRes.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
       setStats({
-        residents: resCount || 0,
+        residents: resCountRes.count || 0,
         debtResidents,
         totalDebt,
         totalPaid,
-        announcements: annCount || 0,
-        pendingMaintenance: maintCount || 0,
-        pendingComplaints: complaintCount || 0,
-        activePolls: pollCount || 0,
-        unreadMessages: msgCount || 0,
+        announcements: annCountRes.count || 0,
+        pendingMaintenance: maintCountRes.count || 0,
+        pendingComplaints: complaintCountRes.count || 0,
+        activePolls: pollCountRes.count || 0,
+        unreadMessages: msgCountRes.count || 0,
       });
       setLoading(false);
     };
