@@ -21,10 +21,10 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <button onClick={() => router.push('/demo')} className="text-blue-600 font-medium hover:text-blue-700">Demo</button>
           </nav>
           <div className="flex items-center gap-2">
-            <button onClick={() => router.push('/app')} className="text-sm text-gray-600 hover:text-gray-900 px-3 py-2">
+            <button onClick={() => router.push('/login')} className="text-sm text-gray-600 hover:text-gray-900 px-3 py-2">
               Нэвтрэх
             </button>
-            <button onClick={() => router.push('/app')} className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+            <button onClick={() => router.push('/register')} className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
               Үнэгүй эхлэх
             </button>
           </div>

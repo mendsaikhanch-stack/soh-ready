@@ -85,7 +85,7 @@ export default function LandingPage() {
               Demo үзэх →
             </button>
             <button
-              onClick={() => router.push('/app')}
+              onClick={() => router.push('/register')}
               className="px-8 py-3.5 bg-white/10 backdrop-blur border border-white/25 text-white rounded-xl font-semibold text-sm hover:bg-white/20 transition"
             >
               Үнэгүй эхлэх
@@ -170,7 +170,10 @@ export default function LandingPage() {
                   <span className={`text-sm ${p.popular ? 'text-blue-200' : 'text-gray-400'}`}>{p.period}</span>
                 </div>
                 <button
-                  onClick={() => router.push('/app')}
+                  onClick={() => {
+                    if (p.cta === 'Холбогдох') window.location.href = 'tel:+97677001122';
+                    else router.push('/register');
+                  }}
                   className={`w-full py-3 rounded-xl font-semibold text-sm mb-4 transition ${
                     p.popular ? 'bg-white text-blue-600 hover:bg-gray-100' : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
@@ -219,7 +222,7 @@ export default function LandingPage() {
           <h2 className="text-2xl md:text-3xl font-bold mb-4">Таны байранд шинэ түвшний удирдлага</h2>
           <p className="text-blue-200 mb-8">Өнөөдөр бүртгүүлж, 3 сар үнэгүй ашиглаарай. Банкны карт шаардахгүй.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => router.push('/app')} className="px-8 py-3.5 bg-white text-blue-700 rounded-xl font-bold text-sm shadow-lg">
+            <button onClick={() => router.push('/register')} className="px-8 py-3.5 bg-white text-blue-700 rounded-xl font-bold text-sm shadow-lg">
               Үнэгүй эхлэх →
             </button>
             <button onClick={() => router.push('/demo')} className="px-8 py-3.5 border border-white/30 text-white rounded-xl font-semibold text-sm hover:bg-white/10 transition">
