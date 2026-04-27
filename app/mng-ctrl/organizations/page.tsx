@@ -14,7 +14,17 @@ interface Sokh {
   phone: string;
   khoroo_id: number;
   created_at: string;
+  claim_status?: 'unclaimed' | 'pending' | 'active';
+  activated_at?: string | null;
   khoroos?: { name: string; districts?: { name: string; cities?: { name: string } } };
+}
+
+interface ActivationResult {
+  sokh_id: number;
+  sokh_name: string;
+  code: string;
+  contact_phone: string;
+  expires_at: string;
 }
 
 interface ParsedSokh {
@@ -72,6 +82,13 @@ export default function OrganizationsPage() {
   const [filterKhorooId, setFilterKhorooId] = useState<number | ''>('');
   const [searchText, setSearchText] = useState('');
 
+  // Идэвхжүүлэх код модал
+  const [activatePrompt, setActivatePrompt] = useState<{ id: number; name: string } | null>(null);
+  const [activatePhone, setActivatePhone] = useState('');
+  const [activateLoading, setActivateLoading] = useState(false);
+  const [activateError, setActivateError] = useState('');
+  const [activateResult, setActivateResult] = useState<ActivationResult | null>(null);
+
   const nameRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
@@ -81,7 +98,7 @@ export default function OrganizationsPage() {
   useEffect(() => {
     const load = async () => {
       const [{ data: s }, { data: r }, { data: c }, { data: d }, { data: k }] = await Promise.all([
-        supabase.from('sokh_organizations').select('*, khoroos(name, districts(name, cities(name)))').order('created_at', { ascending: false }),
+        supabase.from('sokh_organizations').select('id, name, address, phone, khoroo_id, created_at, claim_status, activated_at, khoroos(name, districts(name, cities(name)))').order('created_at', { ascending: false }),
         supabase.from('residents').select('sokh_id, debt'),
         supabase.from('cities').select('*').order('id'),
         supabase.from('districts').select('*').order('name'),
@@ -560,6 +577,64 @@ export default function OrganizationsPage() {
 
   const matchedCount = parsedRows.filter(r => r.matched).length;
   const unmatchedCount = parsedRows.filter(r => !r.matched).length;
+
+  const openActivate = (s: Sokh) => {
+    setActivatePrompt({ id: s.id, name: s.name });
+    setActivatePhone(s.phone || '');
+    setActivateError('');
+    setActivateResult(null);
+  };
+
+  const closeActivate = () => {
+    setActivatePrompt(null);
+    setActivatePhone('');
+    setActivateError('');
+    setActivateResult(null);
+    setActivateLoading(false);
+  };
+
+  const submitActivate = async () => {
+    if (!activatePrompt) return;
+    if (!/^\d{8}$/.test(activatePhone.trim())) {
+      setActivateError('Утасны дугаар 8 оронтой байна');
+      return;
+    }
+    setActivateLoading(true);
+    setActivateError('');
+    try {
+      const res = await fetch(`/api/admin/organizations/${activatePrompt.id}/issue-activation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_phone: activatePhone.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActivateError(data.error || 'Алдаа гарлаа');
+      } else {
+        setActivateResult({
+          sokh_id: activatePrompt.id,
+          sokh_name: activatePrompt.name,
+          code: data.code,
+          contact_phone: data.contact_phone,
+          expires_at: data.expires_at,
+        });
+        // Жагсаалтад claim_status='pending' болсныг тусгах
+        setSokhs(prev => prev.map(x => x.id === activatePrompt.id
+          ? { ...x, claim_status: x.claim_status === 'active' ? x.claim_status : 'pending' }
+          : x));
+      }
+    } catch {
+      setActivateError('Сүлжээний алдаа');
+    } finally {
+      setActivateLoading(false);
+    }
+  };
+
+  const claimBadge = (status?: Sokh['claim_status']) => {
+    if (status === 'active') return { label: 'Идэвхтэй', cls: 'bg-green-900/30 text-green-400 border border-green-800/50' };
+    if (status === 'pending') return { label: 'Хүлээгдэж буй', cls: 'bg-amber-900/30 text-amber-400 border border-amber-800/50' };
+    return { label: 'Гэрээгүй', cls: 'bg-gray-800 text-gray-500 border border-gray-700' };
+  };
 
   return (
     <div className="p-6">
@@ -1482,7 +1557,7 @@ export default function OrganizationsPage() {
                   <th className="px-4 py-3 font-medium">Утас</th>
                   <th className="px-4 py-3 font-medium text-center">Айл</th>
                   <th className="px-4 py-3 font-medium text-center">Өр</th>
-                  <th className="px-4 py-3 font-medium text-center">Төлөв</th>
+                  <th className="px-4 py-3 font-medium text-center">Гэрээ</th>
                   <th className="px-4 py-3 font-medium"></th>
                 </tr>
               </thead>
@@ -1505,13 +1580,18 @@ export default function OrganizationsPage() {
                         {stats.debt > 0 ? <span className="text-red-400">{(stats.debt/1000).toFixed(0)}к₮</span> : <span className="text-gray-600">0₮</span>}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {stats.count > 0
-                          ? <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-green-900/30 text-green-400 border border-green-800/50">Идэвхтэй</span>
-                          : <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-gray-800 text-gray-500 border border-gray-700">Шинэ</span>
-                        }
+                        {(() => {
+                          const b = claimBadge(s.claim_status);
+                          return <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${b.cls}`}>{b.label}</span>;
+                        })()}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition">
+                          {s.claim_status !== 'active' && (
+                            <button onClick={() => openActivate(s)} className="text-xs bg-amber-900/40 hover:bg-amber-800/60 px-2.5 py-1 rounded-lg text-amber-300">
+                              {s.claim_status === 'pending' ? '🔁 Шинэ код' : '🔑 Идэвхжүүлэх'}
+                            </button>
+                          )}
                           <button onClick={() => handleEdit(s)} className="text-xs bg-gray-700 hover:bg-gray-600 px-2.5 py-1 rounded-lg text-gray-300">✏️</button>
                           <button onClick={() => handleDelete(s)} className="text-xs bg-red-900/50 hover:bg-red-800/50 px-2.5 py-1 rounded-lg text-red-400">🗑️</button>
                         </div>
@@ -1526,6 +1606,61 @@ export default function OrganizationsPage() {
           </>);
         })()}
         </>
+      )}
+
+      {/* Идэвхжүүлэх код модал */}
+      {activatePrompt && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={closeActivate}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+            {!activateResult ? (
+              <>
+                <h3 className="text-lg font-bold mb-1">🔑 Идэвхжүүлэх код илгээх</h3>
+                <p className="text-sm text-gray-400 mb-4">{activatePrompt.name}</p>
+                <p className="text-xs text-gray-500 mb-2">СӨХ-н дарга/няраваас баталгаажсан утасны дугаар</p>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={activatePhone}
+                  onChange={e => setActivatePhone(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder="99XXXXXX"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm mb-3"
+                  autoFocus
+                />
+                {activateError && <p className="text-red-400 text-xs mb-3">{activateError}</p>}
+                <div className="flex gap-2">
+                  <button onClick={closeActivate} className="flex-1 py-2 border border-gray-700 rounded-lg text-sm text-gray-300 hover:bg-gray-800">Цуцлах</button>
+                  <button onClick={submitActivate} disabled={activateLoading || activatePhone.length !== 8}
+                    className="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm disabled:opacity-50">
+                    {activateLoading ? '...' : 'Код үүсгэх'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-bold mb-1">✅ Код үүсгэлээ</h3>
+                <p className="text-sm text-gray-400 mb-4">{activateResult.sokh_name}</p>
+                <div className="bg-gray-800 border border-amber-700/50 rounded-xl p-4 text-center mb-3">
+                  <p className="text-xs text-amber-400 mb-1">Идэвхжүүлэх код</p>
+                  <p className="text-3xl font-bold tracking-[0.4em] text-amber-300">{activateResult.code}</p>
+                </div>
+                <p className="text-xs text-gray-500 mb-1">📱 {activateResult.contact_phone}</p>
+                <p className="text-xs text-gray-500 mb-3">⏳ {new Date(activateResult.expires_at).toLocaleString('mn-MN')} хүртэл</p>
+                <div className="bg-amber-950/30 border border-amber-900/50 rounded-lg p-3 text-xs text-amber-200/80 mb-4">
+                  ⚠️ Энэ кодыг зөвхөн нэг удаа харуулна. СӨХ-н даргад утсаар, SMS-ээр дамжуулна уу.
+                  Хэрэглэгч <code className="bg-black/30 px-1 rounded">/activate</code> хуудсаар орж нууц үгээ тавина.
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(activateResult.code); }}
+                    className="flex-1 py-2 border border-gray-700 rounded-lg text-sm text-gray-300 hover:bg-gray-800">
+                    📋 Код хуулах
+                  </button>
+                  <button onClick={closeActivate} className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm">Хаах</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

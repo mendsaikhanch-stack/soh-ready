@@ -62,3 +62,5 @@ export const directoryImportLimiter = rateLimit({ name: 'directory-import', wind
 export const directorySearchLimiter = rateLimit({ name: 'directory-search', windowMs: 60 * 1000, maxRequests: 60 });
 export const directoryRequestLimiter = rateLimit({ name: 'directory-request', windowMs: 60 * 60 * 1000, maxRequests: 5 });
 export const manualHoaLimiter = rateLimit({ name: 'manual-hoa', windowMs: 60 * 60 * 1000, maxRequests: 10 });
+export const activationIssueLimiter = rateLimit({ name: 'activation-issue', windowMs: 60 * 1000, maxRequests: 10 });
+export const activationConsumeLimiter = rateLimit({ name: 'activation-consume', windowMs: 15 * 60 * 1000, maxRequests: 8 });
