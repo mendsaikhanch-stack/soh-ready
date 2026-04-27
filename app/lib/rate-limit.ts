@@ -58,3 +58,7 @@ export const adminUsersLimiter = rateLimit({ name: 'admin-users', windowMs: 60 *
 export const authCheckLimiter = rateLimit({ name: 'auth-check', windowMs: 60 * 1000, maxRequests: 60 });
 export const pushSendLimiter = rateLimit({ name: 'push-send', windowMs: 60 * 1000, maxRequests: 20 });
 export const profileLimiter = rateLimit({ name: 'profile', windowMs: 60 * 1000, maxRequests: 20 });
+export const directoryImportLimiter = rateLimit({ name: 'directory-import', windowMs: 60 * 60 * 1000, maxRequests: 30 });
+export const directorySearchLimiter = rateLimit({ name: 'directory-search', windowMs: 60 * 1000, maxRequests: 60 });
+export const directoryRequestLimiter = rateLimit({ name: 'directory-request', windowMs: 60 * 60 * 1000, maxRequests: 5 });
+export const manualHoaLimiter = rateLimit({ name: 'manual-hoa', windowMs: 60 * 60 * 1000, maxRequests: 10 });

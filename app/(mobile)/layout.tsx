@@ -2,6 +2,7 @@
 
 import { AuthProvider } from '@/app/lib/auth-context';
 import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
+import ClaimResultToast from '@/app/components/signup/ClaimResultToast';
 
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
         <div className="w-full max-w-[430px] min-h-screen bg-white shadow-2xl relative">
           {children}
           <PWAInstallPrompt appName="Хотол" />
+          <ClaimResultToast />
         </div>
       </div>
     </AuthProvider>

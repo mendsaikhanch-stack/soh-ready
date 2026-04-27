@@ -141,6 +141,25 @@ export default function RegisterPage() {
         return;
       }
 
+      // Pre-auth manual signup (find-hoa) бичлэгүүд холбогдсон бол сүүлдээ
+      // sessionStorage-д тэмдэглэж амжилтын toast харуулна.
+      if (typeof window !== 'undefined' && result?.claim?.anythingLinked) {
+        try {
+          window.sessionStorage.setItem(
+            'manual-hoa-claim-result',
+            JSON.stringify({
+              membershipsLinked: result.claim.membershipsLinked,
+              activationRequestsLinked: result.claim.activationRequestsLinked,
+              signupRequestsLinked: result.claim.signupRequestsLinked,
+              hasDirectory: (result.claim.matchedDirectoryIds || []).length > 0,
+              hasProvisional: (result.claim.matchedProvisionalIds || []).length > 0,
+            })
+          );
+        } catch {
+          // ignore
+        }
+      }
+
       if (selectedSokh?.id) {
         router.replace(`/sokh/${selectedSokh.id}`);
       } else {
@@ -198,6 +217,11 @@ export default function RegisterPage() {
                   <span className="font-medium">{c.name}</span>
                 </button>
               ))}
+            </div>
+            <div className="text-center mt-4">
+              <button onClick={() => router.push('/find-hoa')} className="text-sm text-blue-600 hover:underline">
+                Эсвэл нэрээр шууд хайх →
+              </button>
             </div>
           </div>
         )}

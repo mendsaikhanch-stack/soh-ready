@@ -20,6 +20,17 @@ interface QPayInvoice {
   urls: { name: string; logo: string; link: string }[];
 }
 
+interface MyInvoice {
+  id: number;
+  year: number;
+  month: number;
+  amount: number;
+  due_date: string;
+  status: string;
+  paid_at: string | null;
+  description: string;
+}
+
 const BILL_COLORS: Record<string, string> = {
   'service': 'bg-blue-50 border-blue-200',
   'utility': 'bg-orange-50 border-orange-200',
@@ -42,6 +53,7 @@ export default function PaymentsPage() {
   const [checking, setChecking] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'select' | 'qpay'>('select');
   const [receiptPayment, setReceiptPayment] = useState<any>(null);
+  const [myInvoices, setMyInvoices] = useState<MyInvoice[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -114,6 +126,38 @@ export default function PaymentsPage() {
                 color: typeToColor[ub.utility_type] || 'bg-gray-50 border-gray-200',
               });
             }
+          }
+        }
+      }
+
+      // 2.5. Тухайн хэрэглэгчийн нэхэмжлэх (invoices) — СӨХ хураамжийн бодит дүн
+      if (profile) {
+        const { data: invs } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('resident_id', profile.id)
+          .order('year', { ascending: false })
+          .order('month', { ascending: false })
+          .limit(12);
+        setMyInvoices(invs || []);
+
+        const thisMonthInv = invs?.find(i => i.year === currentYear && i.month === currentMonth);
+        if (thisMonthInv) {
+          const sokhBillIdx = baseBills.findIndex(b => /СӨХ|хураамж/i.test(b.name));
+          const isPaid = thisMonthInv.status === 'paid';
+          if (sokhBillIdx >= 0) {
+            baseBills[sokhBillIdx].amount = Number(thisMonthInv.amount);
+            baseBills[sokhBillIdx].paid = isPaid;
+            baseBills[sokhBillIdx].id = thisMonthInv.id + 50000;
+          } else {
+            baseBills.unshift({
+              id: thisMonthInv.id + 50000,
+              name: 'СӨХ сарын хураамж',
+              icon: '🏢',
+              amount: Number(thisMonthInv.amount),
+              paid: isPaid,
+              color: 'bg-blue-50 border-blue-200',
+            });
           }
         }
       }
@@ -221,7 +265,18 @@ export default function PaymentsPage() {
           await supabase.from('payments').insert([{
             amount: bill.amount,
             description: `QPay — ${bill.name}`,
+            resident_id: profile?.id,
           }]);
+
+          // Хэрэв энэ нь invoice (bill.id > 50000) бол invoice-г paid болгох
+          if (bill.id > 50000) {
+            const invoiceId = bill.id - 50000;
+            await supabase.from('invoices').update({
+              status: 'paid',
+              paid_amount: bill.amount,
+              paid_at: new Date().toISOString(),
+            }).eq('id', invoiceId);
+          }
 
           setTimeout(() => {
             setPayingBill(null);

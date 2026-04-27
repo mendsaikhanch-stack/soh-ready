@@ -28,7 +28,7 @@ const mainTabs: { id: MainTab; icon: string; label: string; color: string; activ
   { id: 'tsah', icon: '⚡', label: 'Цахилгаан', color: 'bg-yellow-50 border-yellow-200 text-yellow-700', activeColor: 'bg-yellow-500 text-white border-yellow-500' },
 ];
 
-const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: string; desc: string; href: string; color: string }[] }[]> = {
+const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: string; desc: string; href: string; color: string; comingSoon?: boolean }[] }[]> = {
   sokh: [
     {
       title: '💵 Санхүү',
@@ -56,6 +56,8 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
         { icon: '🎬', label: 'Камер бичлэг', desc: 'Бичлэг шүүх хүсэлт илгээх', href: 'cctv-request', color: 'bg-gray-50 border-gray-300' },
         { icon: '🏢', label: 'Зай захиалга', desc: 'Хурлын өрөө, спорт заал', href: 'booking', color: 'bg-indigo-50 border-indigo-200' },
         { icon: '📦', label: 'Илгээмж', desc: 'Ачаа, бандероль хүлээн авах', href: 'packages', color: 'bg-orange-50 border-orange-200' },
+        { icon: '🚧', label: 'Хотхоны хаалга', desc: 'Авто хаалга удирдлага (удахгүй)', href: 'gate', color: 'bg-slate-50 border-slate-200', comingSoon: true },
+        { icon: '🛗', label: 'Лифт', desc: 'Автомат лифтний холболт (удахгүй)', href: 'elevator', color: 'bg-slate-50 border-slate-200', comingSoon: true },
       ],
     },
     {
@@ -588,7 +590,21 @@ export default function SokhDashboard() {
             <div key={cat.title}>
               <h2 className="text-sm font-semibold text-gray-500 mb-2">{cat.title}</h2>
               <div className="space-y-2">
-                {filteredItems.map((item) => (
+                {filteredItems.map((item) => item.comingSoon ? (
+                  <div
+                    key={item.href}
+                    className={`w-full flex items-center gap-3 p-4 rounded-xl border ${item.color} text-left opacity-70 cursor-not-allowed`}
+                  >
+                    <span className="text-2xl grayscale">{item.icon}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm text-gray-600">{item.label}</p>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">УДАХГҮЙ</span>
+                      </div>
+                      <p className="text-xs text-gray-400">{item.desc}</p>
+                    </div>
+                  </div>
+                ) : (
                   <button
                     key={item.href}
                     onClick={() => router.push(`/sokh/${params.id}/${item.href}`)}

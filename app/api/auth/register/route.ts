@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { registerLimiter } from '@/app/lib/rate-limit';
+import { linkManualSignupToUser, type LinkReport } from '@/app/lib/directory/link-manual-signup';
+
+const CLAIM_COOKIE = 'manual-hoa-claim';
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') || 'unknown';
@@ -66,16 +69,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Бүртгэл амжилтгүй' }, { status: 400 });
     }
 
-    // Оршин суугчийн мэдээлэл хадгалах
-    await supabaseAdmin.from('residents').insert([{
-      name: name.trim(),
-      phone: cleanPhone,
-      apartment: apartment || '',
-      debt: 0,
-      sokh_id,
-    }]);
+    // Оршин суугчийн мэдээлэл хадгалах. id-г буцааж авч claim хийхэд ашиглана.
+    const { data: resident } = await supabaseAdmin
+      .from('residents')
+      .insert([{
+        name: name.trim(),
+        phone: cleanPhone,
+        apartment: apartment || '',
+        debt: 0,
+        sokh_id,
+      }])
+      .select('id')
+      .single();
 
-    return NextResponse.json({ success: true, email });
+    // Pre-auth manual signup-аас үлдсэн provisional бичлэгүүдийг тус хэрэглэгч рүү
+    // claim хийж оролдох. Алдаа гарвал register-ийг fail хийхгүй.
+    let claim: LinkReport | null = null;
+    if (resident?.id) {
+      const claimToken = req.cookies.get(CLAIM_COOKIE)?.value || null;
+      try {
+        claim = await linkManualSignupToUser({
+          userId: resident.id as number,
+          phone: cleanPhone,
+          email,
+          claimToken,
+        });
+      } catch (e) {
+        console.error('[register] link error', e);
+      }
+    }
+
+    const response = NextResponse.json({ success: true, email, claim });
+    if (claim?.anythingLinked) {
+      // Token-ыг нэгэнт хэрэглэсэн тул cookie-г цэвэрлэнэ
+      response.cookies.delete(CLAIM_COOKIE);
+    }
+    return response;
   } catch {
     return NextResponse.json({ error: 'Серверийн алдаа' }, { status: 500 });
   }

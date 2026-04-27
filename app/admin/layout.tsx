@@ -28,6 +28,8 @@ const navItems = [
   { icon: '🚗', label: 'Зогсоол', href: '/admin/parking' },
   { icon: '📹', label: 'Камер (CCTV)', href: '/admin/cctv' },
   { icon: '📤', label: 'Файл импорт', href: '/admin/import' },
+  { icon: '📚', label: 'СӨХ Directory', href: '/admin/directory' },
+  { icon: '📈', label: 'Эрэлт', href: '/admin/demand' },
   { icon: '🛗', label: 'Лифт засвар', href: '/admin/elevator' },
   { icon: '🎨', label: 'Брэнд тохиргоо', href: '/admin/branding' },
   { icon: '🎛', label: 'Үйлчилгээ тохиргоо', href: '/admin/features' },

@@ -54,6 +54,19 @@ export default function LoginPage() {
     const { data: { user: loggedInUser } } = await supabase.auth.getUser();
     if (loggedInUser) {
       const userPhone = loggedInUser.user_metadata?.phone || phone.trim();
+
+      // Pre-auth /find-hoa-аас үлдсэн provisional бичлэгүүдийг claim хийж оролдох.
+      // Алдаа гарвал энгийн login fail биш — claim бол bonus.
+      try {
+        await fetch('/api/auth/claim-soh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: userPhone }),
+        });
+      } catch {
+        // ignore
+      }
+
       const { data: resident } = await supabase
         .from('residents')
         .select('sokh_id')

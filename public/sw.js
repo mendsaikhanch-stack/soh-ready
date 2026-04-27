@@ -8,7 +8,7 @@ self.addEventListener('push', function(event) {
     body: data.body || 'Шинэ мэдэгдэл байна',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    tag: data.tag || 'toot-notification',
+    tag: data.tag || 'hotol-notification',
     vibrate: [200, 100, 200],
     requireInteraction: true,
     actions: [
@@ -46,7 +46,7 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
-var CACHE_NAME = 'toot-cache-v2';
+var CACHE_NAME = 'hotol-cache-v3';
 var OFFLINE_URL = '/offline';
 var CACHED_URLS = [
   '/',
