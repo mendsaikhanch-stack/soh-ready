@@ -13,7 +13,8 @@ export async function PUT(request: Request) {
   }
 
   try {
-    if (!(await checkAnyAuth('admin', 'superadmin')).valid) {
+    const auth = await checkAnyAuth('admin', 'superadmin');
+    if (!auth.valid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -21,6 +22,26 @@ export async function PUT(request: Request) {
 
     if (!residentId || typeof residentId !== 'number') {
       return NextResponse.json({ error: 'residentId шаардлагатай (тоо)' }, { status: 400 });
+    }
+
+    // Tenant ownership шалгах: admin зөвхөн өөрийн СӨХ-ийн оршин суугчийг өөрчилнө.
+    // Superadmin аль ч resident-ыг өөрчилж чадна.
+    if (auth.role === 'admin') {
+      const callerSokhId = auth.sokhId ? parseInt(auth.sokhId, 10) : 0;
+      if (!callerSokhId) {
+        return NextResponse.json({ error: 'Session-д sokh_id байхгүй' }, { status: 403 });
+      }
+      const { data: target } = await sb
+        .from('residents')
+        .select('sokh_id')
+        .eq('id', residentId)
+        .single();
+      if (!target) {
+        return NextResponse.json({ error: 'Resident олдсонгүй' }, { status: 404 });
+      }
+      if (Number(target.sokh_id) !== callerSokhId) {
+        return NextResponse.json({ error: 'Cross-tenant access denied' }, { status: 403 });
+      }
     }
 
     const updates: Record<string, string> = {};
