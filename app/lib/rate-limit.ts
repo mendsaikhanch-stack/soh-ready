@@ -65,3 +65,4 @@ export const manualHoaLimiter = rateLimit({ name: 'manual-hoa', windowMs: 60 * 6
 export const activationIssueLimiter = rateLimit({ name: 'activation-issue', windowMs: 60 * 1000, maxRequests: 10 });
 export const activationConsumeLimiter = rateLimit({ name: 'activation-consume', windowMs: 15 * 60 * 1000, maxRequests: 8 });
 export const bulkOnboardLimiter = rateLimit({ name: 'bulk-onboard', windowMs: 60 * 1000, maxRequests: 5 });
+export const leadClaimLimiter = rateLimit({ name: 'lead-claim', windowMs: 24 * 60 * 60 * 1000, maxRequests: 5 });

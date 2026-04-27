@@ -15,6 +15,7 @@ const navItems = [
   { icon: '👥', label: 'Хэрэглэгчид', href: '/mng-ctrl/users' },
   { icon: '📈', label: 'Аналитик', href: '/mng-ctrl/analytics' },
   { icon: '🔑', label: 'Админ эрх', href: '/mng-ctrl/admins' },
+  { icon: '📞', label: 'Холбоо хүсэлтүүд', href: '/mng-ctrl/leads' },
   { icon: '🛠', label: 'Дэмжлэг', href: '/mng-ctrl/support' },
   { icon: '📍', label: 'Дүүрэг & Хороо', href: '/mng-ctrl/locations' },
   { icon: '⚙️', label: 'Тохиргоо', href: '/mng-ctrl/settings' },

@@ -18,6 +18,7 @@ interface SokhOrg {
   logo_url: string | null;
   theme: string | null;
   disabled_features: string[] | null;
+  claim_status?: 'unclaimed' | 'pending' | 'active' | null;
 }
 
 type MainTab = 'sokh' | 'osnaa' | 'tsah';
@@ -377,6 +378,26 @@ export default function SokhDashboard() {
               className="flex-1 border border-blue-300 text-blue-700 py-2.5 rounded-lg text-sm font-semibold active:bg-blue-100 transition"
             >
               Нэвтрэх
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Гэрээгүй СӨХ banner */}
+      {sokh && sokh.claim_status && sokh.claim_status !== 'active' && (
+        <div className="px-4 mt-3">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+            <p className="text-xs font-semibold text-amber-800">
+              🔔 Энэ СӨХ Хотол платформтой хараахан гэрээ байгуулаагүй байна
+            </p>
+            <p className="text-[11px] text-amber-700 mt-1">
+              Та СӨХ-н дарга, нярав уу? Бидэнтэй холбогдоход СӨХ-нийхээ үйлчилгээг бүрэн нээх боломжтой.
+            </p>
+            <button
+              onClick={() => router.push(`/sokh-leadership-contact?sokh=${params.id}`)}
+              className="mt-2 px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-lg active:bg-amber-700"
+            >
+              📞 Бидэнтэй холбогдох
             </button>
           </div>
         </div>
