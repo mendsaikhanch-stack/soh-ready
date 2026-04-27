@@ -80,11 +80,11 @@ export default function PaymentsPage() {
         }));
       } else {
         baseBills = [
-          { id: 1, name: 'СӨХ хураамж', icon: '🏢', amount: 15000, paid: false, color: 'bg-blue-50 border-blue-200' },
+          { id: 1, name: 'СӨХ хураамж', icon: '🏢', amount: 0, paid: false, color: 'bg-blue-50 border-blue-200' },
           { id: 2, name: 'Ус', icon: '💧', amount: 0, paid: false, color: 'bg-cyan-50 border-cyan-200' },
           { id: 3, name: 'Дулаан', icon: '🔥', amount: 0, paid: false, color: 'bg-orange-50 border-orange-200' },
           { id: 4, name: 'Цахилгаан', icon: '⚡', amount: 0, paid: false, color: 'bg-yellow-50 border-yellow-200' },
-          { id: 5, name: 'Ашиглалт', icon: '🔧', amount: 5000, paid: false, color: 'bg-gray-50 border-gray-200' },
+          { id: 5, name: 'Ашиглалт', icon: '🔧', amount: 0, paid: false, color: 'bg-gray-50 border-gray-200' },
         ];
       }
 
@@ -222,7 +222,8 @@ export default function PaymentsPage() {
         body: JSON.stringify({
           amount: payingBill.amount,
           description: `Хотол — ${payingBill.name}`,
-          orderId: `${params.id}-${payingBill.id}-${Date.now()}`,
+          sokhId: Number(params.id),
+          entityType: 'sokh',
         }),
       });
       const data = await res.json();

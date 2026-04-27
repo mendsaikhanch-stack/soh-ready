@@ -4,7 +4,10 @@ import { checkPayment } from '@/app/lib/qpay';
 import { createReceipt, isEbarimtConfigured } from '@/app/lib/ebarimt';
 import type { EbarimtEntityType } from '@/app/lib/ebarimt';
 
-// QPay callback — төлбөр төлөгдсөн үед QPay дуудна
+// QPay callback — төлбөр төлөгдсөн үед QPay дуудна.
+// Анхаарал: order_id нь манай үүсгэсэн sender_invoice_no байх ёстой.
+// Forge хийхээс сэргийлэхийн тулд тухайн invoice-ыг манай DB-д бүртгэгдсэн эсэх,
+// QPay-аас баталгаажсан төлбөр манай хадгалсан amount-той тохирч байгаа эсэхийг шалгана.
 export async function GET(request: NextRequest) {
   const orderId = request.nextUrl.searchParams.get('order_id');
 
@@ -12,41 +15,65 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Valid order_id required' }, { status: 400 });
   }
 
-  // Давхар callback шалгах — аль хэдийн бичигдсэн бол дахин бичихгүй
-  const { data: existing } = await supabaseAdmin
-    .from('payments')
-    .select('id')
-    .eq('description', `QPay төлбөр #${orderId}`)
-    .limit(1);
+  // 1. Манай DB-д бүртгэгдсэн эсэхийг шалгах (forged callback-аас сэргийлнэ)
+  const { data: tracked } = await supabaseAdmin
+    .from('qpay_invoices')
+    .select('id, sender_invoice_no, qpay_invoice_id, sokh_id, resident_id, entity_type, amount, description, status')
+    .eq('sender_invoice_no', orderId)
+    .single();
 
-  if (existing && existing.length > 0) {
+  if (!tracked) {
+    console.warn('[qpay/callback] unknown order_id', orderId);
+    return NextResponse.json({ error: 'Unknown order' }, { status: 404 });
+  }
+
+  if (tracked.status === 'paid') {
     return NextResponse.json({ success: true, duplicate: true });
   }
 
-  // QPay API-аар төлбөр баталгаажуулах
+  // 2. QPay-аас баталгаажуулах — манай хадгалсан qpay_invoice_id ашиглана
   try {
-    const result = await checkPayment(orderId);
+    const lookupId = tracked.qpay_invoice_id || tracked.sender_invoice_no;
+    const result = await checkPayment(lookupId);
     const paid = result.count > 0 && result.rows?.some(
       (r: { payment_status: string }) => r.payment_status === 'PAID'
     );
 
     if (!paid) {
+      await supabaseAdmin.from('qpay_invoices')
+        .update({ callback_received_at: new Date().toISOString() })
+        .eq('sender_invoice_no', orderId);
       return NextResponse.json({ error: 'Payment not verified' }, { status: 400 });
     }
 
-    const paidAmount = result.paid_amount || 0;
+    const paidAmount = Number(result.paid_amount || 0);
+
+    // 3. Amount-ыг манай хадгалсан утгатай тулгах (QPay-аас өөр дүн ирсэн бол үл итгэх)
+    if (paidAmount < Number(tracked.amount)) {
+      console.error('[qpay/callback] amount mismatch', { orderId, tracked: tracked.amount, paid: paidAmount });
+      return NextResponse.json({ error: 'Amount mismatch' }, { status: 400 });
+    }
+
+    // 4. invoice-ыг paid болгох
+    await supabaseAdmin.from('qpay_invoices')
+      .update({
+        status: 'paid',
+        paid_amount: paidAmount,
+        paid_at: new Date().toISOString(),
+        callback_received_at: new Date().toISOString(),
+      })
+      .eq('sender_invoice_no', orderId);
 
     // Баталгаажсан төлбөрийг хадгалах
     await supabaseAdmin.from('payments').insert([{
       amount: paidAmount,
       description: `QPay төлбөр #${orderId}`,
+      resident_id: tracked.resident_id || null,
     }]);
 
-    // Комисс бүртгэх: orderId-аас sokh_id олох (TOOT-{sokhId}-{ts} формат)
-    const sokhMatch = orderId.match(/^TOOT-(\d+)-/);
-    if (sokhMatch) {
-      const sokhId = parseInt(sokhMatch[1], 10);
-      // Идэвхтэй захиалгын комисс хувийг авах
+    // Платформын комисс бүртгэх
+    if (tracked.sokh_id) {
+      const sokhId = Number(tracked.sokh_id);
       const { data: sub } = await supabaseAdmin
         .from('sokh_subscriptions')
         .select('id, custom_pricing, platform_plans(commission_percent)')
@@ -73,39 +100,25 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // eBarimt баримт автомат үүсгэх
-    // orderId формат: TOOT-{sokhId}-{ts} эсвэл OSNAA-{id}-{ts} эсвэл TSAH-{id}-{ts}
+    // eBarimt баримт
     let ebarimtResult = null;
-    let ebarimtEntityType: EbarimtEntityType = 'sokh';
-    let ebarimtEntityId: number | undefined;
+    const entityType = (tracked.entity_type as EbarimtEntityType) || 'sokh';
+    const entityId = entityType === 'sokh'
+      ? (tracked.sokh_id ? Number(tracked.sokh_id) : undefined)
+      : undefined; // OSNAA/TSAH-ийн entityId-г trackedlogic-аас хэрэгцээтэй бол өөрчилнө
 
-    if (sokhMatch) {
-      ebarimtEntityType = 'sokh';
-      ebarimtEntityId = parseInt(sokhMatch[1], 10);
-    }
-    const osnaaMatch = orderId.match(/^OSNAA-(\d+)-/);
-    if (osnaaMatch) {
-      ebarimtEntityType = 'osnaa';
-      ebarimtEntityId = parseInt(osnaaMatch[1], 10);
-    }
-    const tsahMatch = orderId.match(/^TSAH-(\d+)-/);
-    if (tsahMatch) {
-      ebarimtEntityType = 'tsah';
-      ebarimtEntityId = parseInt(tsahMatch[1], 10);
-    }
-
-    if (paidAmount > 0 && await isEbarimtConfigured(ebarimtEntityType, ebarimtEntityId)) {
+    if (paidAmount > 0 && await isEbarimtConfigured(entityType, entityId)) {
       try {
         const labelMap: Record<EbarimtEntityType, string> = {
           sokh: 'СӨХ хураамж', osnaa: 'ОСНАА төлбөр', tsah: 'Цахилгааны төлбөр', platform: 'Платформ төлбөр',
         };
         ebarimtResult = await createReceipt({
-          entityType: ebarimtEntityType,
-          entityId: ebarimtEntityId,
+          entityType,
+          entityId,
           amount: paidAmount,
-          description: `${labelMap[ebarimtEntityType]} #${orderId}`,
+          description: `${labelMap[entityType]} #${orderId}`,
           items: [{
-            name: labelMap[ebarimtEntityType],
+            name: labelMap[entityType],
             quantity: 1,
             unitPrice: paidAmount,
             totalAmount: paidAmount,
@@ -127,7 +140,8 @@ export async function GET(request: NextRequest) {
         lottery: ebarimtResult.lottery,
       } : null,
     });
-  } catch {
+  } catch (err) {
+    console.error('[qpay/callback] verify error:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'Payment verification failed' }, { status: 500 });
   }
 }

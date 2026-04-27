@@ -212,7 +212,8 @@ export default function UtilitiesPage() {
         body: JSON.stringify({
           amount: bill.amount,
           description: `Хотол — ${typeMap[bill.utility_type]?.label || bill.utility_type} (${months[bill.month - 1]} ${bill.year})`,
-          orderId: `UTIL-${bill.id}-${Date.now()}`,
+          sokhId: Number(params.id),
+          entityType: 'sokh',
         }),
       });
       const data = await res.json();
