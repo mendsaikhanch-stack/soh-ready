@@ -643,16 +643,24 @@ export default function OrganizationsPage() {
           <h1 className="text-2xl font-bold">🏢 СӨХ-үүд</h1>
           <p className="text-gray-400 text-sm">{sokhs.length} бүртгэлтэй</p>
         </div>
-        <button
-          onClick={() => { setShowForm(!showForm); if (showForm) resetFormFull(); }}
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
-            showForm
-              ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              : 'bg-blue-600 text-white hover:bg-blue-500'
-          }`}
-        >
-          {showForm ? 'Хаах ✕' : '+ СӨХ нэмэх'}
-        </button>
+        <div className="flex gap-2">
+          <a
+            href="/mng-ctrl/organizations/bulk-onboard"
+            className="px-4 py-2 rounded-xl text-sm font-medium transition bg-amber-600 text-white hover:bg-amber-500"
+          >
+            🚀 Бөөн онбординг
+          </a>
+          <button
+            onClick={() => { setShowForm(!showForm); if (showForm) resetFormFull(); }}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+              showForm
+                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                : 'bg-blue-600 text-white hover:bg-blue-500'
+            }`}
+          >
+            {showForm ? 'Хаах ✕' : '+ СӨХ нэмэх'}
+          </button>
+        </div>
       </div>
 
       {/* Оруулах хэсэг */}
