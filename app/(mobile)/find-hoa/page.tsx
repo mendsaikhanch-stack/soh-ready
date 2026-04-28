@@ -34,36 +34,57 @@ export default function FindHoaPage() {
       </div>
 
       <div className="px-4 py-4">
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <input
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder="Хот"
-            className="border rounded-xl px-3 py-2.5 text-sm bg-white"
-          />
-          <input
-            value={district}
-            onChange={(e) => setDistrict(e.target.value)}
-            placeholder="Дүүрэг"
-            className="border rounded-xl px-3 py-2.5 text-sm bg-white"
-          />
-          <input
-            value={khoroo}
-            onChange={(e) => setKhoroo(e.target.value)}
-            placeholder="Хороо"
-            className="border rounded-xl px-3 py-2.5 text-sm bg-white"
-          />
-        </div>
+        {/* 1. Байршил — Хот / Дүүрэг / Хороо нь үргэлж дээд талд харагдана */}
+        <section className="bg-white border rounded-2xl p-4 mb-3">
+          <h2 className="text-sm font-semibold text-gray-900 mb-3">1. Байршил</h2>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Хот</label>
+              <input
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Жишээ: Улаанбаатар"
+                className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Дүүрэг</label>
+                <input
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  placeholder="Дүүрэг"
+                  className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Хороо</label>
+                <input
+                  value={khoroo}
+                  onChange={(e) => setKhoroo(e.target.value)}
+                  placeholder="Хороо"
+                  className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
 
         {mode === 'search' && (
           <>
-            <HoaSearch
-              autoFocus
-              district={district || undefined}
-              khoroo={khoroo || undefined}
-              onSelect={onSelect}
-              onNotFound={() => setMode('manual')}
-            />
+            {/* 2. СӨХ-ийн нэрээр хайх — байршлын талбаруудын доор */}
+            <section className="bg-white border rounded-2xl p-4 mb-3">
+              <h2 className="text-sm font-semibold text-gray-900 mb-1">2. СӨХ-ийн нэр</h2>
+              <p className="text-xs text-gray-500 mb-3">Байршлаа сонгосны дараа СӨХ-ийн нэрийг бичиж хайна уу.</p>
+              <HoaSearch
+                autoFocus
+                district={district || undefined}
+                khoroo={khoroo || undefined}
+                onSelect={onSelect}
+                onNotFound={() => setMode('manual')}
+                placeholder="СӨХ-ийн нэр"
+              />
+            </section>
 
             {selected && !selected.is_active_tenant && (
               <div className="mt-4 bg-white border rounded-xl p-4">
