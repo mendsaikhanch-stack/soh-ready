@@ -7,6 +7,11 @@ import { supabase } from '@/app/lib/supabase';
 interface City { id: number; name: string }
 interface District { id: number; city_id: number; name: string }
 interface Khoroo { id: number; district_id: number; name: string }
+interface KhorooJoin {
+  name?: string;
+  districts?: { name?: string; cities?: { name?: string } | { name?: string }[] } | { name?: string; cities?: { name?: string } | { name?: string }[] }[];
+}
+
 interface Sokh {
   id: number;
   name: string;
@@ -16,7 +21,12 @@ interface Sokh {
   created_at: string;
   claim_status?: 'unclaimed' | 'pending' | 'active';
   activated_at?: string | null;
-  khoroos?: { name: string; districts?: { name: string; cities?: { name: string } } };
+  khoroos?: KhorooJoin | KhorooJoin[];
+}
+
+function firstOrSelf<T>(v: T | T[] | undefined | null): T | undefined {
+  if (Array.isArray(v)) return v[0];
+  return v ?? undefined;
 }
 
 interface ActivationResult {
@@ -566,11 +576,13 @@ export default function OrganizationsPage() {
   };
 
   const getLocation = (s: Sokh) => {
-    const k = s.khoroos;
+    const k = firstOrSelf(s.khoroos);
     if (!k) return '';
-    const parts = [];
-    if (k.districts?.cities?.name) parts.push(k.districts.cities.name);
-    if (k.districts?.name) parts.push(k.districts.name);
+    const d = firstOrSelf(k.districts);
+    const c = firstOrSelf(d?.cities);
+    const parts: string[] = [];
+    if (c?.name) parts.push(c.name);
+    if (d?.name) parts.push(d.name);
     if (k.name) parts.push(k.name);
     return parts.join(' · ');
   };
@@ -1572,8 +1584,9 @@ export default function OrganizationsPage() {
               <tbody>
                 {filtered.map((s, idx) => {
                   const stats = getOrgStats(s.id);
-                  const k = s.khoroos;
-                  const districtName = k?.districts?.name || '—';
+                  const k = firstOrSelf(s.khoroos);
+                  const d = firstOrSelf(k?.districts);
+                  const districtName = d?.name || '—';
                   const khorooName = k?.name || '—';
                   return (
                     <tr key={s.id} className="border-b border-gray-800/50 hover:bg-gray-800/80 transition group">

@@ -78,8 +78,6 @@ export default function AdminFinanceHub() {
   const [generating, setGenerating] = useState(false);
   const [genMessage, setGenMessage] = useState('');
 
-  const [printInvoice, setPrintInvoice] = useState<Invoice | null>(null);
-  const [orgInfo, setOrgInfo] = useState<{ name: string; address: string; phone: string }>({ name: '', address: '', phone: '' });
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -108,7 +106,6 @@ export default function AdminFinanceHub() {
 
     setMonthlyFee(org?.monthly_fee || 0);
     setFeeInput(String(org?.monthly_fee || ''));
-    setOrgInfo({ name: org?.name || '', address: org?.address || '', phone: org?.phone || '' });
     setResidents(res || []);
     setPayments((pay || []) as unknown as Payment[]);
     setAllPayments((allPay || []) as unknown as Payment[]);
@@ -601,7 +598,6 @@ export default function AdminFinanceHub() {
                           <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${overdue ? STATUS_LABEL.overdue.color : st.color}`}>{overdue ? 'Хугацаа хэтэрсэн' : st.label}</span></td>
                           <td className="px-4 py-3 text-gray-500">{inv.due_date ? new Date(inv.due_date).toLocaleDateString('mn-MN') : '—'}</td>
                           <td className="px-4 py-3 text-right">
-                            <button onClick={() => setPrintInvoice(inv)} className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded mr-1">🖨 PDF</button>
                             {inv.status !== 'paid' && (
                               <button onClick={() => markInvoicePaid(inv)} className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded mr-1">✓ Төлсөн</button>
                             )}
@@ -678,15 +674,6 @@ export default function AdminFinanceHub() {
           )}
 
           {/* ============ DEBTS ============ */}
-          {/* PDF MODAL */}
-          {printInvoice && (
-            <InvoicePrintModal
-              invoice={printInvoice}
-              resident={residents.find(r => r.id === printInvoice.resident_id)}
-              org={orgInfo}
-              onClose={() => setPrintInvoice(null)}
-            />
-          )}
 
           {tab === 'debts' && (
             <div>
