@@ -7,6 +7,25 @@ import { randomUUID } from 'crypto';
 import * as Sentry from '@sentry/nextjs';
 import type { JobHandler, JobType, SystemJob } from './types';
 import { handlers } from './handlers';
+import { raiseAlert } from '@/app/lib/alerts';
+
+class JobTimeoutError extends Error {
+  constructor(seconds: number) {
+    super(`Job timed out after ${seconds}s`);
+    this.name = 'JobTimeoutError';
+  }
+}
+
+/** Promise-ыг тогтоосон секундын дараа JobTimeoutError-оор reject хийдэг wrapper. */
+function withTimeout<T>(p: Promise<T>, seconds: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<T>((_, reject) => {
+    timer = setTimeout(() => reject(new JobTimeoutError(seconds)), seconds * 1000);
+  });
+  return Promise.race([p, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
 
 // Алдаа давтагдвал хойшлуулах хүснэгт (секундээр)
 function backoffSec(attempts: number): number {
@@ -84,12 +103,14 @@ export async function runJob(job: SystemJob): Promise<void> {
   }
 
   try {
-    await handler(job.payload, { job, supabase: supabaseAdmin });
+    const timeoutSec = job.timeout_sec ?? 60;
+    await withTimeout(handler(job.payload, { job, supabase: supabaseAdmin }), timeoutSec);
     await markSuccess(job, attemptNo, attempt?.id);
   } catch (e) {
     const msg = (e as Error)?.message || String(e);
+    const isTimeout = e instanceof JobTimeoutError;
     Sentry.captureException(e, {
-      tags: { job_type: job.job_type, job_id: String(job.id) },
+      tags: { job_type: job.job_type, job_id: String(job.id), timeout: String(isTimeout) },
       extra: { attempt: attemptNo, payload: job.payload },
     });
     await markFailure(job, attemptNo, attempt?.id, msg, false);
@@ -144,6 +165,13 @@ async function markFailure(
       })
       .eq('id', job.id);
     console.error(`[job DEAD] #${job.id} ${job.job_type}: ${errorMessage}`);
+    await raiseAlert({
+      severity: 'critical',
+      source: 'job:dead',
+      message: `${job.job_type} job DEAD (${attemptNo}/${job.max_attempts}): ${errorMessage}`,
+      payload: { jobId: job.id, jobType: job.job_type, payload: job.payload },
+      dedupKey: `job:dead:${job.id}`,
+    });
   } else {
     const nextAvailable = new Date(Date.now() + backoffSec(attemptNo) * 1000).toISOString();
     await supabaseAdmin

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { checkAuth } from '@/app/lib/session-token';
 import { retryDeadJob } from '@/app/lib/jobs/worker';
+import { acknowledgeAlert } from '@/app/lib/alerts';
 
 export async function GET() {
   const auth = await checkAuth('superadmin');
@@ -81,10 +82,19 @@ export async function GET() {
     .select('id', { count: 'exact', head: true })
     .in('status', ['PENDING', 'MATCH_CANDIDATE', 'HAS_DEMAND']);
 
+  // Идэвхтэй (ack хийгдээгүй) алертууд
+  const { data: alerts } = await supabaseAdmin
+    .from('system_alerts')
+    .select('id, severity, source, message, payload, created_at')
+    .is('acknowledged_at', null)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
   return NextResponse.json({
     jobs: { pending, running, failed, dead, succeeded24h },
     deadJobs: deadJobs || [],
     pendingRetries: pendingRetries || [],
+    alerts: alerts || [],
     drift: {
       activationSummaryMismatches: mismatches,
       unclaimedMemberships: unclaimedMemberships ?? 0,
@@ -98,11 +108,21 @@ export async function PATCH(req: NextRequest) {
   if (!auth.valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json().catch(() => null) as { id?: number; action?: string } | null;
-  if (!body?.id || body.action !== 'retry') {
-    return NextResponse.json({ error: 'id болон action=retry заавал' }, { status: 400 });
+  if (!body?.id || !body.action) {
+    return NextResponse.json({ error: 'id болон action заавал' }, { status: 400 });
   }
 
-  const ok = await retryDeadJob(body.id);
-  if (!ok) return NextResponse.json({ error: 'Retry амжилтгүй' }, { status: 500 });
-  return NextResponse.json({ success: true });
+  if (body.action === 'retry') {
+    const ok = await retryDeadJob(body.id);
+    if (!ok) return NextResponse.json({ error: 'Retry амжилтгүй' }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  if (body.action === 'ack') {
+    const ok = await acknowledgeAlert(body.id, auth.userId ? `superadmin:${auth.userId}` : 'superadmin');
+    if (!ok) return NextResponse.json({ error: 'Acknowledge амжилтгүй' }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
 }

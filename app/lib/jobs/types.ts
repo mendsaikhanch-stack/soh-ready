@@ -22,6 +22,7 @@ export interface SystemJob {
   locked_by: string | null;
   last_error: string | null;
   idempotency_key: string | null;
+  timeout_sec: number;
   created_at: string;
   updated_at: string;
 }
@@ -33,6 +34,8 @@ export interface EnqueueOptions {
   maxAttempts?: number;
   /** Идэмпотент түлхүүр — ижил түлхүүртэй pending/running job дахин үүсгэхгүй */
   idempotencyKey?: string;
+  /** Job-ын дээд хугацаа секундээр (default 60) */
+  timeoutSec?: number;
 }
 
 // Job handler signature — payload авч идэмпотент үйлдэл хийнэ.

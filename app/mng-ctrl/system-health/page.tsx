@@ -12,6 +12,10 @@ interface Health {
   pendingRetries: Array<{
     id: number; job_type: string; attempts: number; available_at: string; last_error: string | null;
   }>;
+  alerts: Array<{
+    id: number; severity: 'info' | 'warning' | 'critical';
+    source: string; message: string; payload: Record<string, unknown>; created_at: string;
+  }>;
   drift: {
     activationSummaryMismatches: number;
     unclaimedMemberships: number;
@@ -23,6 +27,7 @@ export default function SystemHealthPage() {
   const [data, setData] = useState<Health | null>(null);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState<number | null>(null);
+  const [acking, setAcking] = useState<number | null>(null);
   const [error, setError] = useState('');
 
   const load = async () => {
@@ -61,6 +66,20 @@ export default function SystemHealthPage() {
     }
   };
 
+  const ack = async (id: number) => {
+    setAcking(id);
+    try {
+      await fetch('/api/admin/system-health', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'ack' }),
+      });
+      await load();
+    } finally {
+      setAcking(null);
+    }
+  };
+
   if (loading) return <div className="p-6 text-gray-400">Ачаалж байна...</div>;
   if (error) return <div className="p-6 text-red-400">{error}</div>;
   if (!data) return null;
@@ -71,6 +90,41 @@ export default function SystemHealthPage() {
         <h1 className="text-2xl font-bold">🩺 Системийн эрүүл мэнд</h1>
         <p className="text-sm text-gray-500 mt-1">Background job, reconciliation, drift тоонууд</p>
       </div>
+
+      {data.alerts.length > 0 && (
+        <div className="mb-6 space-y-2">
+          {data.alerts.map(a => {
+            const cls = a.severity === 'critical'
+              ? 'border-red-700 bg-red-900/30 text-red-100'
+              : a.severity === 'warning'
+                ? 'border-amber-700 bg-amber-900/30 text-amber-100'
+                : 'border-blue-700 bg-blue-900/30 text-blue-100';
+            const icon = a.severity === 'critical' ? '🚨' : a.severity === 'warning' ? '⚠️' : 'ℹ️';
+            return (
+              <div key={a.id} className={`rounded-xl border p-3 ${cls}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span>{icon}</span>
+                      <span className="font-mono opacity-70">{a.source}</span>
+                      <span className="opacity-60">·</span>
+                      <span className="opacity-60">{new Date(a.created_at).toLocaleString('mn-MN')}</span>
+                    </div>
+                    <p className="text-sm mt-1.5 break-words">{a.message}</p>
+                  </div>
+                  <button
+                    onClick={() => ack(a.id)}
+                    disabled={acking === a.id}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-gray-800/80 hover:bg-gray-700 text-white disabled:opacity-50 shrink-0"
+                  >
+                    {acking === a.id ? '...' : '✓ Ack'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         <Stat label="Pending" value={data.jobs.pending} cls="border-amber-800/50 bg-amber-900/20 text-amber-400" />

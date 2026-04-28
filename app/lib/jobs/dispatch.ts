@@ -10,7 +10,7 @@ export async function enqueueJob(
   payload: Record<string, unknown> = {},
   options: EnqueueOptions = {}
 ): Promise<{ jobId: number | null; created: boolean; error?: string }> {
-  const { delaySec = 0, maxAttempts = 5, idempotencyKey } = options;
+  const { delaySec = 0, maxAttempts = 5, idempotencyKey, timeoutSec } = options;
 
   const available_at = new Date(Date.now() + delaySec * 1000).toISOString();
 
@@ -37,6 +37,7 @@ export async function enqueueJob(
       available_at,
       max_attempts: maxAttempts,
       idempotency_key: idempotencyKey || null,
+      ...(timeoutSec ? { timeout_sec: timeoutSec } : {}),
     }])
     .select('id')
     .single();

@@ -7,6 +7,8 @@ import { recomputeActivationSummary } from '@/app/lib/directory/activation';
 import { mergeProvisionalIntoDirectory, autoMergeProvisionals } from '@/app/lib/directory/merge-provisional';
 import { reconcileClaimsForResident } from '@/app/lib/directory/reconcile-claims';
 import { repairResidentSignupFlow } from '@/app/lib/directory/reconcile-merges';
+import { raiseAlert } from '@/app/lib/alerts';
+import { deliverPendingForSokh } from '@/app/lib/notifications/deliver';
 
 // 1. repair_manual_signup_flow
 // Payload: { residentId: number }
@@ -90,23 +92,71 @@ const auto_merge_provisionals_scan: JobHandler<{
 };
 
 // 6. retry_notification_delivery
-// Payload: { notificationId?: number, scheduledNotificationId?: number }
-// Одоогоор scaffold — push retry хэрэв scheduled_notifications хүснэгтэд retryable төлөв байвал
+// Payload: { sokhId?: number, scheduledNotificationId?: number }
+// Бодит outbox retry: failed бичлэгүүдийг attempts < max_attempts бол pending руу буцаана,
+// дараагийн trigger-scheduled дуудлагад дахин илгээгдэнэ. Max давсан бол dead alert raise хийнэ.
 const retry_notification_delivery: JobHandler<{
+  sokhId?: number;
   scheduledNotificationId?: number;
 }> = async (payload, { supabase }) => {
-  if (!payload.scheduledNotificationId) {
-    // Scaffold — одоохон notification дахин илгээх логик систем дотор бэлэн биш.
-    // Ирээдүйд notifications outbox-той болсон үед энд retry логик нэмэгдэнэ.
-    return;
-  }
-  // Scheduled-ыг "PENDING" руу буцаагаад debt-reminder cron эргэн илгээнэ
-  const { error } = await supabase
+  // Тодорхой нэг notif-ыг target хийсэн бол түүн дээр л ажиллана
+  let q = supabase
     .from('scheduled_notifications')
-    .update({ status: 'PENDING' })
-    .eq('id', payload.scheduledNotificationId)
-    .in('status', ['FAILED']);
-  if (error) throw new Error(`Notification reset failed: ${error.message}`);
+    .select('id, sokh_id, attempts, max_attempts, last_error')
+    .eq('status', 'failed');
+  if (payload.scheduledNotificationId) {
+    q = q.eq('id', payload.scheduledNotificationId);
+  } else if (payload.sokhId) {
+    q = q.eq('sokh_id', payload.sokhId);
+  }
+
+  const { data: failedNotifs, error: selErr } = await q.limit(100);
+  if (selErr) throw new Error(`select failed notifs: ${selErr.message}`);
+  if (!failedNotifs || failedNotifs.length === 0) return;
+
+  const retryIds: number[] = [];
+  const deadIds: Array<{ id: number; sokhId: number; attempts: number; lastError: string | null }> = [];
+
+  for (const n of failedNotifs) {
+    const max = Number(n.max_attempts ?? 3);
+    const attempts = Number(n.attempts ?? 0);
+    if (attempts >= max) {
+      deadIds.push({
+        id: n.id as number,
+        sokhId: n.sokh_id as number,
+        attempts,
+        lastError: (n.last_error as string | null) ?? null,
+      });
+    } else {
+      retryIds.push(n.id as number);
+    }
+  }
+
+  if (retryIds.length > 0) {
+    const { error: upErr } = await supabase
+      .from('scheduled_notifications')
+      .update({ status: 'pending', failed_at: null })
+      .in('id', retryIds);
+    if (upErr) throw new Error(`reset to pending failed: ${upErr.message}`);
+
+    // pending-д буцаасан notif-уудыг шууд push-аар дахин илгээнэ
+    const sokhIds = Array.from(new Set(failedNotifs
+      .filter(n => retryIds.includes(n.id as number))
+      .map(n => n.sokh_id as number)));
+    for (const sokhId of sokhIds) {
+      await deliverPendingForSokh(sokhId);
+    }
+  }
+
+  for (const dead of deadIds) {
+    await raiseAlert({
+      severity: 'critical',
+      source: 'notif:dead',
+      message: `Scheduled notification #${dead.id} (sokh ${dead.sokhId}) max retries (${dead.attempts}) давлаа: ${dead.lastError || 'unknown'}`,
+      payload: dead,
+      dedupKey: `notif:dead:${dead.id}`,
+    });
+  }
 };
 
 export const handlers: Record<JobType, JobHandler<never>> = {
