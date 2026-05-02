@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { Suspense, useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 
@@ -11,6 +11,18 @@ interface SokhRow {
 }
 
 export default function ActivatePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-400">Ачаалж байна...</p>
+      </div>
+    }>
+      <ActivateInner />
+    </Suspense>
+  );
+}
+
+function ActivateInner() {
   const router = useRouter();
   const params = useSearchParams();
   const presetSokhId = params.get('sokh');

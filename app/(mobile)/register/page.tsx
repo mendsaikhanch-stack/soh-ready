@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
@@ -11,6 +11,18 @@ interface Khoroo { id: number; district_id: number; name: string; }
 interface SokhOrg { id: number; khoroo_id: number; name: string; address: string; phone: string; }
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-400">Ачаалж байна...</p>
+      </div>
+    }>
+      <RegisterInner />
+    </Suspense>
+  );
+}
+
+function RegisterInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, profile, signOut } = useAuth();
