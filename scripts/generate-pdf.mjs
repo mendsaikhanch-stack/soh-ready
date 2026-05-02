@@ -5,8 +5,8 @@ import path from 'node:path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 
-const htmlPath = path.join(root, 'presentations', '4-Дээд-зөвлөл-танилцуулга.html');
-const pdfPath = path.join(root, 'public', 'hotol-tanilzuulga.pdf');
+const htmlPath = path.join(root, 'presentations', '5-hotol-latest.html');
+const pdfPath = path.join(root, 'public', 'hotol-2026-05.pdf');
 
 const browser = await puppeteer.launch();
 const page = await browser.newPage();

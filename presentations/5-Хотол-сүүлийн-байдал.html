@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<title>Хотол — Сүүлийн байдлаар танилцуулга</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; background: #f1f5f9; }
+
+  .slide {
+    width: 297mm; height: 210mm;
+    padding: 40px 50px;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+    margin: 12px auto;
+    box-shadow: 0 4px 24px rgba(15,23,42,0.08);
+  }
+  .slide:last-child { page-break-after: avoid; }
+
+  /* Cover */
+  .cover {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
+    color: #fff;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center;
+  }
+  .cover .logo { font-size: 84px; margin-bottom: 18px; }
+  .cover h1 { font-size: 56px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 10px; }
+  .cover h2 { font-size: 22px; font-weight: 400; opacity: 0.92; margin-bottom: 32px; }
+  .cover .tagline {
+    background: rgba(255,255,255,0.14); border-radius: 14px;
+    padding: 16px 30px; font-size: 17px; max-width: 760px; line-height: 1.5;
+  }
+  .cover .date { position: absolute; bottom: 28px; right: 50px; font-size: 13px; opacity: 0.75; }
+  .cover .badge {
+    position: absolute; top: 28px; left: 50px;
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+    padding: 6px 14px; border-radius: 999px; font-size: 12px; letter-spacing: 0.5px;
+  }
+
+  /* Slide header */
+  .slide-header {
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 12px; margin-bottom: 24px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .slide-header .num {
+    background: #2563eb; color: #fff; width: 40px; height: 40px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 17px;
+  }
+  .slide-header h2 { font-size: 26px; color: #1e3a8a; }
+  .slide-header .sub { font-size: 13px; color: #64748b; margin-left: auto; }
+
+  /* Grids */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+  /* Cards */
+  .card {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .card .icon { font-size: 26px; margin-bottom: 6px; }
+  .card h3 { font-size: 15px; font-weight: 700; color: #1e3a8a; margin-bottom: 6px; }
+  .card p { font-size: 12.5px; color: #475569; line-height: 1.55; }
+  .card.accent { background: #eff6ff; border-color: #bfdbfe; }
+  .card.highlight { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .card.highlight h3 { color: #fff; }
+  .card.highlight p { color: rgba(255,255,255,0.92); }
+  .card.green { background: #ecfdf5; border-color: #a7f3d0; }
+  .card.green h3 { color: #047857; }
+  .card.amber { background: #fffbeb; border-color: #fde68a; }
+  .card.amber h3 { color: #b45309; }
+  .card .new {
+    display: inline-block; background: #2563eb; color: #fff;
+    font-size: 10px; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle;
+  }
+
+  /* Стат */
+  .stat {
+    text-align: center; background: #fff; border-radius: 12px;
+    padding: 18px; border: 2px solid #dbeafe;
+  }
+  .stat .value { font-size: 32px; font-weight: 800; color: #2563eb; }
+  .stat .label { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+  /* List */
+  .feature-list { list-style: none; }
+  .feature-list li {
+    padding: 9px 14px; margin-bottom: 7px;
+    background: #f8fafc; border-radius: 8px; border-left: 4px solid #2563eb;
+    font-size: 13px; display: flex; align-items: center; gap: 10px;
+  }
+  .feature-list li .emoji { font-size: 18px; }
+
+  /* Section title */
+  .section-title {
+    font-size: 13px; font-weight: 700; color: #2563eb;
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+  }
+
+  /* Footer */
+  .slide-footer {
+    position: absolute; bottom: 18px; left: 50px; right: 50px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px;
+  }
+
+  /* Pricing table */
+  .price-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 10px; }
+  .price {
+    border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px;
+    background: #fff; position: relative;
+  }
+  .price.popular { border-color: #2563eb; box-shadow: 0 4px 16px rgba(37,99,235,0.12); }
+  .price .ribbon {
+    position: absolute; top: -10px; right: 14px;
+    background: #2563eb; color: #fff; font-size: 10px;
+    padding: 3px 10px; border-radius: 999px;
+  }
+  .price h3 { font-size: 16px; color: #1e3a8a; margin-bottom: 4px; }
+  .price .amount { font-size: 28px; font-weight: 800; color: #1e3a8a; }
+  .price .amount span { font-size: 12px; font-weight: 500; color: #64748b; }
+  .price .desc { font-size: 11px; color: #64748b; margin: 6px 0 10px; }
+  .price ul { list-style: none; }
+  .price ul li {
+    font-size: 11.5px; padding: 4px 0; color: #334155;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .price ul li::before { content: "✓"; color: #16a34a; font-weight: 700; }
+
+  /* QR slide */
+  .qr-wrap {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
+    align-items: center; margin-top: 10px;
+  }
+  .qr-card {
+    background: #fff; border: 2px solid #2563eb; border-radius: 18px;
+    padding: 20px; text-align: center;
+  }
+  .qr-card img { width: 280px; height: 280px; display: block; margin: 8px auto; }
+  .qr-card .url {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px; color: #1e3a8a; background: #eff6ff;
+    padding: 8px 12px; border-radius: 8px; margin-top: 8px; word-break: break-all;
+  }
+  .qr-step {
+    background: #f8fafc; border-left: 4px solid #2563eb; border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 8px;
+  }
+  .qr-step b { color: #1e3a8a; font-size: 14px; }
+  .qr-step p { font-size: 12.5px; color: #475569; margin-top: 2px; }
+
+  /* Roadmap timeline */
+  .timeline {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-top: 10px;
+  }
+  .tl-item {
+    background: #f8fafc; border-radius: 12px; padding: 14px;
+    border-top: 4px solid #2563eb;
+  }
+  .tl-item .when { font-size: 11px; color: #2563eb; font-weight: 700; text-transform: uppercase; }
+  .tl-item h4 { font-size: 14px; color: #1e3a8a; margin: 4px 0; }
+  .tl-item p { font-size: 11.5px; color: #475569; line-height: 1.5; }
+
+  /* Callout */
+  .callout {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px;
+    padding: 14px 18px; margin-top: 14px; font-size: 13px; color: #1e3a8a;
+  }
+  .callout b { color: #1e40af; }
+
+  @media print {
+    body { background: #fff; }
+    .slide { margin: 0; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: COVER -->
+<div class="slide cover">
+  <div class="badge">2026 ОНЫ 5-Р САР · СҮҮЛИЙН БАЙДЛААР</div>
+  <div class="logo">🏢</div>
+  <h1>ХОТОЛ</h1>
+  <h2>СӨХ-ийн цахим удирдлагын платформ</h2>
+  <div class="tagline">
+    Орон сууцны менежмент, төлбөр, мэдээлэл харилцаа — бүгдийг нэг утсан дотор.
+    Энэхүү танилцуулгад одоогийн бэлэн байгаа хувилбарын ерөнхий тойм багтсан.
+  </div>
+  <div class="date">2026 он</div>
+</div>
+
+<!-- SLIDE 2: ЮУ ХИЙДЭГ ВЭ -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">1</div>
+    <h2>Хотол гэж юу вэ?</h2>
+    <span class="sub">Нэг өгүүлбэрээр</span>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div class="section-title">❓ Одоогийн нийтлэг асуудал</div>
+      <ul class="feature-list">
+        <li><span class="emoji">📋</span> Төлбөрийг гараар, Excel дээр бүртгэдэг</li>
+        <li><span class="emoji">📞</span> Мэдээллийг утсаар, мессежээр тарааж байгаа</li>
+        <li><span class="emoji">💸</span> Өрийн мэдээлэл бүрэн биш, цуглуулалт удаан</li>
+        <li><span class="emoji">📊</span> Тайлан бэлдэхэд хэдэн өдөр зарцуулдаг</li>
+        <li><span class="emoji">🤷</span> Оршин суугчид өөрсдийн төлбөрөө шалгаж чаддаггүй</li>
+      </ul>
+    </div>
+    <div>
+      <div class="section-title">✅ Хотолын шийдэл</div>
+      <ul class="feature-list">
+        <li><span class="emoji">📱</span> Бүх зүйлийг утаснаасаа — оршин суугч, админ хоёулаа</li>
+        <li><span class="emoji">💳</span> QPay-ээр шууд төлбөр (банкны апп / QR)</li>
+        <li><span class="emoji">🔔</span> Push мэдэгдлээр шууд хүрч очино</li>
+        <li><span class="emoji">📈</span> Тайлан автомат, ил тод</li>
+        <li><span class="emoji">🛟</span> Алдаа гарвал систем автоматаар сэргээдэг</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>Тайлбар:</b> Хотол бол СӨХ-ийн дарга, нягтлан, оршин суугч гурваланд хамтад нь ашиглах нэг систем.
+    Үндсэн зорилго — оршин суугчдын төлбөр, мэдээллийг ил тод болгож, СӨХ-ийн ажлыг хөнгөвчлөх.
+  </div>
+
+  <div class="slide-footer"><span>Хотол · СӨХ цахим платформ</span><span>2 / 8</span></div>
+</div>
+
+<!-- SLIDE 3: ЮУ ШИНЭЧЛЭГДСЭН -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">2</div>
+    <h2>Сүүлийн саруудад юу нэмэгдсэн бэ?</h2>
+    <span class="sub">2026.04 — 2026.05</span>
+  </div>
+
+  <div class="grid-3">
+    <div class="card highlight">
+      <div class="icon">🛟</div>
+      <h3>Self-healing v2 <span class="new">ШИНЭ</span></h3>
+      <p>Алдаа, timeout, мэдэгдэл амжилтгүй болсон үед систем автоматаар дахин оролдож, админд сануулна. Гарын ажиллагаагүй сэргэдэг.</p>
+    </div>
+    <div class="card accent">
+      <div class="icon">🏘️</div>
+      <h3>Self-service бүртгэл</h3>
+      <p>СӨХ өөрөө системд бүртгүүлж, токеноор админаа идэвхжүүлж, оршин суугчдаа bulk-аар оруулна.</p>
+    </div>
+    <div class="card accent">
+      <div class="icon">🔐</div>
+      <h3>QPay callback хамгаалалт</h3>
+      <p>Төлбөрийн callback-г хуурамчаар илгээх боломжгүй болгож, дүн, нэхэмжлэх ID-г заавал шалгана.</p>
+    </div>
+    <div class="card accent">
+      <div class="icon">🏢</div>
+      <h3>Multi-tenant scope</h3>
+      <p>Нэг СӨХ-ийн админ нөгөө СӨХ-ийн өгөгдлийг харах боломжгүй — DB түвшинд хязгаарласан.</p>
+    </div>
+    <div class="card accent">
+      <div class="icon">📜</div>
+      <h3>Хууль/тусламж хуудаснууд</h3>
+      <p>Үйлчилгээний нөхцөл, хувийн нууцлал, тусламж — Хотол брэндээр шинэчлэгдсэн агуулгатай.</p>
+    </div>
+    <div class="card accent">
+      <div class="icon">⚡</div>
+      <h3>Хурд сайжруулсан</h3>
+      <p>Mobile dashboard, admin dashboard өгөгдлийг параллель татдаг болсон. FK индексүүд нэмэгдсэн.</p>
+    </div>
+  </div>
+
+  <div class="slide-footer"><span>Хотол · СӨХ цахим платформ</span><span>3 / 8</span></div>
+</div>
+
+<!-- SLIDE 4: ҮНДСЭН БОЛОМЖУУД -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">3</div>
+    <h2>Үндсэн боломжууд</h2>
+    <span class="sub">Оршин суугчид болон СӨХ-д</span>
+  </div>
+
+  <div class="grid-4">
+    <div class="card"><div class="icon">💰</div><h3>Төлбөр & QPay</h3><p>QR / банкны апп-аар шууд төлбөр. Өрийн жагсаалт автомат.</p></div>
+    <div class="card"><div class="icon">📢</div><h3>Зарлал</h3><p>Усны засвар, хурал, яаралтай мэдээ — push notification-оор.</p></div>
+    <div class="card"><div class="icon">🔧</div><h3>Засвар хүсэлт</h3><p>Зурагтай гомдол илгээж, явцыг хянана.</p></div>
+    <div class="card"><div class="icon">📊</div><h3>Тоолуурын заалт</h3><p>Ус, дулаан, цахилгааны заалтыг өөрөө оруулна.</p></div>
+    <div class="card"><div class="icon">💬</div><h3>Хөрш чат</h3><p>Орцны болон бүх айлын чаттай.</p></div>
+    <div class="card"><div class="icon">🗳️</div><h3>Санал хураалт</h3><p>Хурал хийхгүйгээр шийдвэр гаргана.</p></div>
+    <div class="card"><div class="icon">🚪</div><h3>Зочны код</h3><p>Зочдод нэг удаагийн код өгч, зогсоолд оруулна.</p></div>
+    <div class="card"><div class="icon">📦</div><h3>Илгээмж</h3><p>Орц/ресепшнд ирсэн илгээмжийг мэдэгдэнэ.</p></div>
+    <div class="card"><div class="icon">🚗</div><h3>Зогсоол</h3><p>Машины бүртгэл, орц/гарцын лог.</p></div>
+    <div class="card"><div class="icon">🎬</div><h3>Камер хүсэлт</h3><p>Шаардлагатай үед бичлэг хүсэх албан ёсны flow.</p></div>
+    <div class="card"><div class="icon">📋</div><h3>Тайлан</h3><p>Орлого, зарлага, өр — PDF-ээр хэвлэдэг.</p></div>
+    <div class="card"><div class="icon">🆘</div><h3>Яаралтай</h3><p>Усны асуудал, гал, эмнэлгийн дуудлага — нэг даралтаар.</p></div>
+  </div>
+
+  <div class="callout">
+    <b>Жич:</b> Бүх боломж нь mobile-д зориулж зохиогдсон. СӨХ-ийн админд зориулсан desktop панел тус тусдаа.
+  </div>
+
+  <div class="slide-footer"><span>Хотол · СӨХ цахим платформ</span><span>4 / 8</span></div>
+</div>
+
+<!-- SLIDE 5: ХЭН ХЭРЭГЛЭХ -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">4</div>
+    <h2>Хэн юуны төлөө хэрэглэх вэ?</h2>
+  </div>
+
+  <div class="grid-3">
+    <div class="card green">
+      <div class="icon">👤</div>
+      <h3>Оршин суугч</h3>
+      <p style="margin-bottom:8px">Утсаараа орж:</p>
+      <ul style="font-size:12px;color:#334155;line-height:1.7;list-style:none">
+        <li>• Төлбөр шалгах, шууд төлөх</li>
+        <li>• Тоолуурын заалт оруулах</li>
+        <li>• Засвар хүсэх, явц харах</li>
+        <li>• Зарлал, мэдэгдэл унших</li>
+        <li>• Зочны код үүсгэх</li>
+      </ul>
+    </div>
+    <div class="card accent">
+      <div class="icon">👷</div>
+      <h3>СӨХ-ийн админ / нягтлан</h3>
+      <p style="margin-bottom:8px">Desktop панелд:</p>
+      <ul style="font-size:12px;color:#334155;line-height:1.7;list-style:none">
+        <li>• Оршин суугчдыг bulk оруулах</li>
+        <li>• Хураамж тооцоо, өр</li>
+        <li>• Зарлал илгээх</li>
+        <li>• Тайлан гаргах (PDF)</li>
+        <li>• Засварын хүсэлт хариуцах</li>
+      </ul>
+    </div>
+    <div class="card amber">
+      <div class="icon">🏛️</div>
+      <h3>ОСНААУГ / УБЦТГ</h3>
+      <p style="margin-bottom:8px">Хяналтын самбар:</p>
+      <ul style="font-size:12px;color:#334155;line-height:1.7;list-style:none">
+        <li>• Олон СӨХ-ийн нэгтгэсэн харагдац</li>
+        <li>• Тоолуурын заалт цуглуулах</li>
+        <li>• Тайлан, статистик</li>
+        <li>• Шалгалт, зөрчил бүртгэх</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>Зорилго:</b> Гурвууланд нэг систем — оршин суугч, СӨХ-ийн удирдлага, дээд талын хяналтын байгууллага бүгд адил мэдээллийг харна.
+  </div>
+
+  <div class="slide-footer"><span>Хотол · СӨХ цахим платформ</span><span>5 / 8</span></div>
+</div>
+
+<!-- SLIDE 6: НАЙДВАРТАЙ АЖИЛЛАГАА -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">5</div>
+    <h2>Найдвартай байдал & аюулгүй ажиллагаа</h2>
+    <span class="sub">Юунаас санаа зовох хэрэггүй вэ</span>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div class="section-title">🛟 Self-healing layer</div>
+      <ul class="feature-list">
+        <li><span class="emoji">⏱️</span> Удсан job-ийг автоматаар дахин эхлүүлнэ</li>
+        <li><span class="emoji">🔁</span> Амжилтгүй мэдэгдлийг outbox-оор дахин илгээнэ</li>
+        <li><span class="emoji">🔔</span> Тогтмол хэлбэрийн алдаа гарвал админд анхаарууллага очно</li>
+        <li><span class="emoji">📅</span> Cron-р өдөр бүр өгөгдлийг шалгаж тэгшитгэнэ</li>
+      </ul>
+    </div>
+    <div>
+      <div class="section-title">🔐 Аюулгүй байдал</div>
+      <ul class="feature-list">
+        <li><span class="emoji">🏢</span> СӨХ тус бүрийн өгөгдөл DB түвшинд тусдаа</li>
+        <li><span class="emoji">🛡️</span> RLS (Row-Level Security) бүх хүснэгтэд</li>
+        <li><span class="emoji">💳</span> QPay callback хуурамчаар илгээгдэхээс хамгаалсан</li>
+        <li><span class="emoji">🚦</span> Rate limiting (нэг IP-с нэг минутын хязгаар)</li>
+        <li><span class="emoji">📡</span> Алдааг Sentry-р хяналтад барих</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid-4" style="margin-top: 18px;">
+    <div class="stat"><div class="value">99%+</div><div class="label">Зорилтот uptime</div></div>
+    <div class="stat"><div class="value">24/7</div><div class="label">Автомат хяналт</div></div>
+    <div class="stat"><div class="value">HTTPS</div><div class="label">Бүх холболт шифрлэгдсэн</div></div>
+    <div class="stat"><div class="value">Backup</div><div class="label">Өдөр тутмын автомат</div></div>
+  </div>
+
+  <div class="slide-footer"><span>Хотол · СӨХ цахим платформ</span><span>6 / 8</span></div>
+</div>
+
+<!-- SLIDE 7: ҮНЭ -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">6</div>
+    <h2>Үнийн санал</h2>
+    <span class="sub">СӨХ-ийн хэмжээнд тохирсон</span>
+  </div>
+
+  <div class="price-grid">
+    <div class="price">
+      <h3>Эхлэх</h3>
+      <div class="amount">1,000<span> ₮ /айл/сар</span></div>
+      <div class="desc">50–150 айлтай жижиг СӨХ-д. Эхний 3 сар үнэгүй.</div>
+      <ul>
+        <li>QPay онлайн төлбөр</li>
+        <li>Зарлал/мэдэгдэл</li>
+        <li>Засвар хүсэлт</li>
+        <li>Оршин суугчдын бүртгэл</li>
+      </ul>
+    </div>
+    <div class="price popular">
+      <div class="ribbon">ХАМГИЙН ТҮГЭЭМЭЛ</div>
+      <h3>Стандарт</h3>
+      <div class="amount">800<span> ₮ /айл/сар + 50,000₮ суурь</span></div>
+      <div class="desc">150–300 айлтай дундаж СӨХ-д. QPay комисс 0.7%.</div>
+      <ul>
+        <li>Бүх үндсэн функц</li>
+        <li>Push мэдэгдэл</li>
+        <li>Санхүүгийн тайлан</li>
+        <li>Excel/CSV импорт</li>
+        <li>Санал хураалт</li>
+        <li>Имэйл дэмжлэг</li>
+      </ul>
+    </div>
+    <div class="price">
+      <h3>Дэвшилтэт</h3>
+      <div class="amount">500<span> ₮ /айл/сар + 150,000₮ суурь</span></div>
+      <div class="desc">300+ айлтай том СӨХ. QPay комисс 0.5%.</div>
+      <ul>
+        <li>Бүх функц</li>
+        <li>Нарийвчилсан аналитик</li>
+        <li>Тусгай дэмжлэг</li>
+        <li>Custom branding</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>Pilot санал:</b> 5–10 СӨХ-тэй 1–3 сарын турш үнэгүй туршилт хийж, үр дүнг харсны үндсэн дээр хамтрах.
+    Тохиролцоонд тулгуурласан уян хатан нөхцөл боломжтой.
+  </div>
+
+  <div class="slide-footer"><span>Хотол · СӨХ цахим платформ</span><span>7 / 8</span></div>
+</div>
+
+<!-- SLIDE 8: QR ДЕМО -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="num">7</div>
+    <h2>Утсаараа демо үзэх</h2>
+    <span class="sub">QR код сканнаад шууд орно</span>
+  </div>
+
+  <div class="qr-wrap">
+    <div class="qr-card">
+      <div style="font-size:13px;color:#1e3a8a;font-weight:700;margin-bottom:6px">📱 Демо хувилбар</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=https%3A%2F%2Fsoh-ready.vercel.app%2Fdemo" alt="QR демо">
+      <div class="url">soh-ready.vercel.app/demo</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px">Жишээ өгөгдөлтэй, нэвтрэх шаардлагагүй</div>
+    </div>
+
+    <div>
+      <div class="section-title">📲 Хэрхэн үзэх вэ</div>
+      <div class="qr-step">
+        <b>1. Утасны камераа онгойлгоно</b>
+        <p>iPhone Camera эсвэл Android Google Lens / Камер аппаар шууд унших боломжтой.</p>
+      </div>
+      <div class="qr-step">
+        <b>2. QR код руу чиглүүлнэ</b>
+        <p>Камер автоматаар линк илрүүлж, "Open in Browser" гэж гарч ирнэ.</p>
+      </div>
+      <div class="qr-step">
+        <b>3. Демо нээгдэнэ</b>
+        <p>Зүүн-баруун шудрах байдлаар 7 хуудсыг үзэж болно: Нүүр, Төлбөр, Тоолуур, Зарлал, Засвар, Зочин, Профайл.</p>
+      </div>
+      <div class="qr-step">
+        <b>4. Бодит хувилбар үзэх бол</b>
+        <p><code style="font-size:12px">soh-ready.vercel.app/register</code> — өөрөө бүртгүүлээд тоглож үзэх боломжтой.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer"><span>Хотол · СӨХ цахим платформ</span><span>8 / 8</span></div>
+</div>
+
+</body>
+</html>
