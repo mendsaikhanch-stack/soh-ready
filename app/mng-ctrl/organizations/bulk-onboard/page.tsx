@@ -316,7 +316,16 @@ export default function BulkOnboardPage() {
           </div>
 
           <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-5 mb-4">
-            <h3 className="font-semibold text-sm mb-3">📁 Файлаар оруулах</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-sm">📁 Файлаар оруулах</h3>
+              <a
+                href="/templates/bulk-onboard-template.csv"
+                download
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+              >
+                ⬇ Загвар татах
+              </a>
+            </div>
             <p className="text-xs text-gray-400 mb-3">
               Заавал багана: <code className="text-amber-300">Хороо</code>,{' '}
               <code className="text-amber-300">СӨХ нэр</code>,{' '}
