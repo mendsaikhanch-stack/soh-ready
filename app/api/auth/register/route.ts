@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     const email = `${cleanPhone}@toot.app`;
 
     // Supabase auth хэрэглэгч үүсгэх
-    const { error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -98,6 +98,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Оршин суугчийн мэдээлэл хадгалах. id-г буцааж авч claim хийхэд ашиглана.
+    // auth_user_id холбоо нь tenant-scoped RLS policy-д шаардлагатай.
     const { data: resident } = await supabaseAdmin
       .from('residents')
       .insert([{
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
         apartment: apartment || '',
         debt: 0,
         sokh_id,
+        auth_user_id: authData.user?.id ?? null,
       }])
       .select('id')
       .single();
