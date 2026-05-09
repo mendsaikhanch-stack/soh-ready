@@ -73,6 +73,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </footer>
+
+      <PWAInstallPrompt appName="Хотол" />
     </div>
   );
 }

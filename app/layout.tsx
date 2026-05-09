@@ -28,20 +28,11 @@ export const metadata: Metadata = {
     siteName: "Хотол",
     title: "Хотол — Байрны бүх зүйл нэг дор",
     description: "СӨХ-ийн төлбөр, мэдэгдэл, засвар, тайлан — бүгд нэг апп дээр. Утсандаа суулгаж ашиглаарай.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Хотол — СӨХ удирдлагын систем",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Хотол — Байрны бүх зүйл нэг дор",
     description: "СӨХ-ийн төлбөр, мэдэгдэл, засвар, тайлан — бүгд нэг апп дээр.",
-    images: ["/og-image.png"],
   },
 };
 
