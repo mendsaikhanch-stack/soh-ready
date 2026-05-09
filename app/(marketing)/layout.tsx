@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import TootLogo from '@/app/components/TootLogo';
+import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();

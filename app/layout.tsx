@@ -9,14 +9,39 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://soh-ready.vercel.app";
+
 export const metadata: Metadata = {
-  title: "Хотол",
-  description: "Таны байрны бүх зүйл нэг дор",
+  metadataBase: new URL(siteUrl),
+  title: "Хотол — СӨХ удирдлагын систем",
+  description: "Байрны төлбөр, зарлал, засвар, тайлан — бүгд нэг апп дээр. Утсандаа суулгаж ашиглаарай.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Хотол",
+  },
+  openGraph: {
+    type: "website",
+    locale: "mn_MN",
+    url: siteUrl,
+    siteName: "Хотол",
+    title: "Хотол — Байрны бүх зүйл нэг дор",
+    description: "СӨХ-ийн төлбөр, мэдэгдэл, засвар, тайлан — бүгд нэг апп дээр. Утсандаа суулгаж ашиглаарай.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Хотол — СӨХ удирдлагын систем",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Хотол — Байрны бүх зүйл нэг дор",
+    description: "СӨХ-ийн төлбөр, мэдэгдэл, засвар, тайлан — бүгд нэг апп дээр.",
+    images: ["/og-image.png"],
   },
 };
 
