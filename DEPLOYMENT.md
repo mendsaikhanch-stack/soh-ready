@@ -1,4 +1,4 @@
-# Тоот — Deployment, Play Store, Өөрчлөлтийн Заавар
+# Хотол — Deployment, Play Store, Өөрчлөлтийн Заавар
 
 ## 1. Хүнд үзүүлэх / Демо харуулах
 
@@ -22,7 +22,7 @@
 
 ## 2. Google Play Store-д байрлуулах (TWA)
 
-Тоот апп нь **PWA** (Progressive Web App) тул Play Store-д **TWA** (Trusted Web Activity) ашиглаж байрлуулна.
+Хотол апп нь **PWA** (Progressive Web App) тул Play Store-д **TWA** (Trusted Web Activity) ашиглаж байрлуулна.
 
 ### Алхам 1: Бэлтгэл
 1. **Google Play Developer Account** үүсгэх — https://play.google.com/console
@@ -43,9 +43,9 @@ npm install -g @nicolo-ribaudo/bubblewrap
 bubblewrap init --manifest https://soh-ready.vercel.app/manifest.json
 
 # Асуултуудад хариулна:
-#   - Package name: mn.toot.app
-#   - App name: Тоот
-#   - Launcher name: Тоот
+#   - Package name: mn.hotol.app
+#   - App name: Хотол
+#   - Launcher name: Хотол
 #   - Display mode: standalone
 #   - Host: soh-ready.vercel.app
 #   - Start URL: /app
@@ -65,7 +65,7 @@ Bubblewrap-с SHA256 fingerprint өгнө. Үүнийг Vercel-д тохируу
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
-    "package_name": "mn.toot.app",
+    "package_name": "mn.hotol.app",
     "sha256_cert_fingerprints": ["YOUR_SHA256_FINGERPRINT"]
   }
 }]
@@ -107,7 +107,7 @@ PWA-г App Store-д шууд байрлуулах боломжгүй. 2 сонг
 ### Сонголт B: Capacitor ашиглан native wrapper
 ```bash
 npm install @capacitor/core @capacitor/cli
-npx cap init "Тоот" "mn.toot.app"
+npx cap init "Хотол" "mn.hotol.app"
 npx cap add ios
 npx cap sync
 npx cap open ios  # Xcode-д нээгдэнэ
@@ -121,7 +121,7 @@ npx cap open ios  # Xcode-д нээгдэнэ
 
 ### Vercel дээр domain нэмэх
 ```bash
-npx vercel domains add toot.mn
+npx vercel domains add hotol.mn
 ```
 Эсвэл Vercel Dashboard → Settings → Domains → Add
 
@@ -132,8 +132,8 @@ Domain provider дээр:
 
 ### Supabase-д site URL шинэчлэх
 Supabase Dashboard → Authentication → URL Configuration:
-- Site URL: `https://toot.mn`
-- Redirect URLs: `https://toot.mn/**`
+- Site URL: `https://hotol.mn`
+- Redirect URLs: `https://hotol.mn/**`
 
 ---
 
@@ -331,7 +331,7 @@ echo "утга" | npx vercel env add VARIABLE_NAME production --force
 | QPay | Sandbox credentials | QPay-с бодит merchant key авах |
 | Нууц үг | .env.local-д | ✅ Солигдсон |
 | Session secret | .env.local-д | ✅ Солигдсон |
-| Domain | soh-ready.vercel.app | toot.mn (custom domain) |
+| Domain | soh-ready.vercel.app | hotol.mn (custom domain) |
 | RLS | SELECT нээлттэй | sokh_id-р хязгаарлах |
 | Supabase | Free tier | Pro plan ($25/сар) - backup, 8GB |
 | Vercel | Free tier | Pro plan ($20/сар) - bandwidth |

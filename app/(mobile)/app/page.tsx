@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
-import TootLogo from '@/app/components/TootLogo';
+import HotolLogo from '@/app/components/HotolLogo';
 
 const features = [
   { icon: '💰', title: 'Төлбөр', desc: 'Онлайнаар төлбөр төлөх, үлдэгдэл шалгах', delay: '0.1s' },
@@ -33,7 +33,7 @@ export default function WelcomePage() {
   if (checking) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center">
-        <div className="animate-pulse"><TootLogo size={192} showText={false} /></div>
+        <div className="animate-pulse"><HotolLogo size={192} showText={false} /></div>
       </div>
     );
   }
@@ -51,7 +51,7 @@ export default function WelcomePage() {
       <div className={`flex-1 flex flex-col items-center px-6 text-white relative z-10 transition-all duration-700 ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         {/* Logo */}
         <div className="mb-5">
-          <TootLogo size={180} showText={false} />
+          <HotolLogo size={180} showText={false} />
         </div>
 
         <h1 className="text-3xl font-bold tracking-tight mb-1">Хотол</h1>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import TootLogo from '@/app/components/TootLogo';
+import HotolLogo from '@/app/components/HotolLogo';
 import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
 import { supabase } from '@/app/lib/supabase';
 import Image from 'next/image';
@@ -145,7 +145,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm mx-4">
           <div className="text-center mb-6">
-            <div className="flex justify-center mb-2"><TootLogo size={144} showText={false} /></div>
+            <div className="flex justify-center mb-2"><HotolLogo size={144} showText={false} /></div>
             <h1 className="text-xl font-bold">Хотол Админ</h1>
             <p className="text-sm text-gray-500 mt-1">Удирдлагын панелд нэвтрэх</p>
           </div>
@@ -214,7 +214,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           ) : (
             <>
-              <TootLogo size={84} textColor="text-white" />
+              <HotolLogo size={84} textColor="text-white" />
               <p className="text-xs text-gray-400 mt-1">Удирдлагын панел</p>
             </>
           )}

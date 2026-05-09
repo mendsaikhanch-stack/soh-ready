@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import TootLogo from '@/app/components/TootLogo';
+import HotolLogo from '@/app/components/HotolLogo';
 import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
@@ -13,7 +13,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <button onClick={() => router.push('/')}>
-            <TootLogo size={108} />
+            <HotolLogo size={108} />
           </button>
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <a href="#features" className="text-gray-600 hover:text-gray-900 transition">Боломжууд</a>
@@ -40,7 +40,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="mb-3">
-                <TootLogo size={96} textColor="text-white" />
+                <HotolLogo size={96} textColor="text-white" />
               </div>
               <p className="text-gray-400 text-sm">Таны байрны бүх зүйл нэг дор</p>
             </div>
@@ -56,7 +56,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               <h4 className="font-semibold mb-3">Холбоо барих</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>📞 7700-1122</li>
-                <li>📧 info@toot.mn</li>
+                <li>📧 info@hotol.mn</li>
                 <li>📍 Улаанбаатар хот</li>
               </ul>
             </div>

@@ -14,7 +14,7 @@ for (const line of envContent.split('\n')) {
 const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
 // Тест хэрэглэгч үүсгэх
-const email = 'test@toot.mn';
+const email = 'test@hotol.mn';
 const password = 'Test1234';
 
 // Supabase Auth хэрэглэгч

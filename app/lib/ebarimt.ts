@@ -130,7 +130,7 @@ export async function createReceipt(input: EbarimtReceiptInput): Promise<Ebarimt
       branchNo: creds.branch_id,
       type: input.customerTin ? '3' : '1', // 3=B2B (ТТД байвал), 1=B2C
       customerTin: input.customerTin || '',
-      invoiceId: input.orderId || `TOOT-${Date.now()}`,
+      invoiceId: input.orderId || `HOTOL-${Date.now()}`,
       reportMonth: new Date().toISOString().slice(0, 7).replace('-', ''),
       stocks: input.items.map(item => ({
         code: '',

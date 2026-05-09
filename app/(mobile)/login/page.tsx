@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
-import TootLogo from '@/app/components/TootLogo';
+import HotolLogo from '@/app/components/HotolLogo';
 
 export default function LoginPage() {
   return (
@@ -119,7 +119,7 @@ function LoginInner() {
       <div className="px-4 py-6">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-2"><TootLogo size={168} showText={false} /></div>
+          <div className="flex justify-center mb-2"><HotolLogo size={168} showText={false} /></div>
           <p className="text-sm text-gray-500">Хотол апп-д нэвтрэх</p>
         </div>
 

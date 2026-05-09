@@ -2,14 +2,14 @@
 
 import Image from 'next/image';
 
-interface TootLogoProps {
+interface HotolLogoProps {
   size?: number;
   showText?: boolean;
   textColor?: string;
   className?: string;
 }
 
-export default function TootLogo({ size = 48, showText = false, className = '' }: TootLogoProps) {
+export default function HotolLogo({ size = 48, showText = false, className = '' }: HotolLogoProps) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <Image

@@ -11,7 +11,7 @@ function ensureVapid() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   if (publicKey && privateKey) {
-    webpush.setVapidDetails('mailto:info@toot.mn', publicKey, privateKey);
+    webpush.setVapidDetails('mailto:info@hotol.mn', publicKey, privateKey);
     vapidConfigured = true;
   }
 }
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       title,
       body: body || '',
       url: url || '/',
-      tag: `toot-${Date.now()}`,
+      tag: `hotol-${Date.now()}`,
     });
 
     let sent = 0;

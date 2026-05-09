@@ -1,7 +1,7 @@
-# Тоот — Хөгжүүлэлтийн гарын авлага
+# Хотол — Хөгжүүлэлтийн гарын авлага
 
 ## Төслийн мэдээлэл
-- **Нэр:** Тоот (СӨХ удирдлагын систем)
+- **Нэр:** Хотол (СӨХ удирдлагын систем)
 - **Tech stack:** Next.js 16.2 + React 19 + Tailwind CSS 4 + TypeScript + Supabase
 - **Repo:** https://github.com/mendsaikhanch-stack/soh-ready
 - **Байршил:** `C:\Users\MNG\Desktop\projects\soh-ready`
@@ -78,7 +78,7 @@ app/
 ├── (marketing)/        # Landing page
 ├── api/auth/           # Server-side auth API
 ├── lib/                # Supabase client, auth, sanitize
-└── components/         # TootLogo гэх мэт
+└── components/         # HotolLogo гэх мэт
 ```
 
 ---

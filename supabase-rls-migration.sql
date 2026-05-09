@@ -1,5 +1,5 @@
 -- ============================================
--- Тоот App: RLS Policy Migration
+-- Хотол App: RLS Policy Migration
 -- USING(true) → бодит RLS policy
 -- ============================================
 

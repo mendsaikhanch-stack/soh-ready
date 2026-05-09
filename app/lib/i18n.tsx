@@ -64,7 +64,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'offline.retry': 'Дахин оролдох',
   },
   en: {
-    'app.name': 'Toot',
+    'app.name': 'Hotol',
     'nav.home': 'Home',
     'nav.payments': 'Payments',
     'nav.reports': 'Reports',

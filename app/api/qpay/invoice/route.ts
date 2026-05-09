@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const prefix =
       entityType === 'osnaa' ? 'OSNAA' :
       entityType === 'tsah' ? 'TSAH' :
-      entityType === 'platform' ? 'PLAT' : 'TOOT';
+      entityType === 'platform' ? 'PLAT' : 'HOTOL';
     const senderInvoiceNo = sokhId
       ? `${prefix}-${sokhId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
       : `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
