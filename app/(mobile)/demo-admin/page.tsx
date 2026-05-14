@@ -69,6 +69,7 @@ const pages = [
   { id: 'announcements', label: 'Зарлал', icon: '📢' },
   { id: 'maintenance', label: 'Засвар', icon: '🔧' },
   { id: 'reports', label: 'Тайлан', icon: '📈' },
+  { id: 'ai', label: 'AI туслах', icon: '🧠' },
 ];
 
 export default function DemoAdminPage() {
@@ -456,6 +457,123 @@ export default function DemoAdminPage() {
             </div>
 
             <button onClick={() => router.push('/')} className="w-full mt-4 text-xs text-gray-400 underline">
+              Үндсэн хуудас руу буцах
+            </button>
+          </div>
+        </section>
+
+        {/* ====== PAGE 7: AI COMMAND CENTER (DEMO) ====== */}
+        <section className="w-full flex-shrink-0 snap-start overflow-y-auto bg-gray-50">
+          <div className="bg-gradient-to-br from-indigo-700 to-purple-700 text-white px-4 py-4">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold">🧠 AI туслах</h1>
+              <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full font-semibold">BETA</span>
+            </div>
+            <p className="text-xs text-white/70 mt-0.5">СӨХ-ийн өдөр тутмын ажлыг хялбарчилна</p>
+          </div>
+
+          <div className="px-4 py-4 pb-24">
+            {/* 3-Layer mini explainer */}
+            <div className="grid grid-cols-3 gap-1.5 mb-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                <p className="text-[9px] font-bold text-blue-700 uppercase">L1 · Rule</p>
+                <p className="text-[10px] text-blue-900 mt-0.5">DB + cron</p>
+              </div>
+              <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-2">
+                <p className="text-[9px] font-bold text-cyan-700 uppercase">L2 · Template</p>
+                <p className="text-[10px] text-cyan-900 mt-0.5">AI-гүй</p>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
+                <p className="text-[9px] font-bold text-purple-700 uppercase">L3 · AI</p>
+                <p className="text-[10px] text-purple-900 mt-0.5">Сонголтоор</p>
+              </div>
+            </div>
+
+            {/* 4-step walkthrough */}
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 mb-3">
+              <p className="text-[11px] font-bold text-indigo-900 mb-2">🎤 3 минутын дараалал</p>
+              <ol className="space-y-1.5 text-[11px] text-indigo-900">
+                <li className="flex gap-2"><span className="font-bold">1.</span><span><strong>🗂️ Өгөгдлөө шалгана</strong> — нэхэмжлэл, оршин суугч, гомдол бэлэн эсэх</span></li>
+                <li className="flex gap-2"><span className="font-bold">2.</span><span><strong>🧠 AI draft үүсгэнэ</strong> — нэг товчоор</span></li>
+                <li className="flex gap-2"><span className="font-bold">3.</span><span><strong>✏️ Админ хянана</strong> — засаж/хуулна</span></li>
+                <li className="flex gap-2"><span className="font-bold">4.</span><span><strong>✓ Зөвшөөрөөд ашиглана</strong> — автомат илгээдэггүй</span></li>
+              </ol>
+            </div>
+
+            {/* Readiness preview (mock) */}
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">🗂️ ӨГӨГДЛИЙН БЭЛЭН БАЙДАЛ</h3>
+            <div className="bg-white rounded-xl p-3 shadow-sm mb-3 space-y-1.5">
+              {[
+                { label: 'Нэхэмжлэл (4-р сар)', count: 124, status: 'ready' as const },
+                { label: 'Төлөөгүй нэхэмжлэл', count: 35, status: 'ready' as const },
+                { label: 'Гомдол (4-р сар)', count: 3, status: 'ready' as const },
+                { label: 'Засварын хүсэлт', count: 8, status: 'ready' as const },
+                { label: 'Reserve fund бичилт', count: 0, status: 'empty' as const },
+              ].map(r => {
+                const chip = r.status === 'ready'
+                  ? { cls: 'bg-green-100 text-green-700', emoji: '✓', text: 'Бэлэн' }
+                  : { cls: 'bg-amber-100 text-amber-700', emoji: '∅', text: 'Хоосон' };
+                return (
+                  <div key={r.label} className="flex items-center gap-2 text-[11px]">
+                    <span className={`inline-flex items-center gap-0.5 font-bold px-1.5 py-0.5 rounded-full ${chip.cls} text-[9px]`}>
+                      <span>{chip.emoji}</span><span>{chip.text}</span>
+                    </span>
+                    <span className="flex-1 truncate">{r.label}</span>
+                    <span className="text-gray-400 font-mono text-[10px]">{r.count}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action cards (mock) */}
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">⚡ AI ҮЙЛДЭЛ</h3>
+            <div className="space-y-2 mb-3">
+              {[
+                { emoji: '💌', title: 'Өртэй айлуудад сануулга', sub: '4 хэлбэр: SMS/Апп/FB/Албан' },
+                { emoji: '📊', title: 'Тайланг ойлгомжтой болгох', sub: 'Энгийн монгол хэлээр' },
+                { emoji: '🔍', title: 'Сарын дүгнэлт гаргах', sub: 'Цуглуулалт, эрсдэл, санал' },
+                { emoji: '🚧', title: 'Асуудлын анализ', sub: 'Давтан гомдол, overdue' },
+                { emoji: '📑', title: 'Зөвлөлд 1 нүүр тайлан', sub: 'Албан ёсны хэлбэр' },
+              ].map(a => (
+                <div key={a.title} className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-3 active:scale-[0.98] transition">
+                  <span className="text-2xl shrink-0">{a.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{a.title}</p>
+                    <p className="text-[11px] text-gray-500 truncate">{a.sub}</p>
+                  </div>
+                  <span className="text-purple-500 text-xl shrink-0">→</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Sample draft preview */}
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">📋 ЖИШЭЭ DRAFT</h3>
+            <div className="bg-white rounded-xl p-3 shadow-sm mb-3">
+              <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                  📝 Template draft
+                </span>
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  🗄️ Бодит өгөгдөл
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-500 mb-1">SMS (≤160 тэмдэгт)</p>
+              <p className="text-xs bg-gray-50 rounded p-2 font-mono leading-relaxed">
+                Сайн байна уу. 2026 оны 4-р сарын СӨХ-ийн төлбөрийн үлдэгдэл байна. Боломжтой бол энэ долоо хоногт төлнө үү. Баярлалаа. — Нарантуул СӨХ
+              </p>
+            </div>
+
+            {/* Safety */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-900 leading-relaxed mb-3">
+              <p className="font-semibold mb-1">⚠️ Илгээхээс өмнө шалгана уу</p>
+              <ul className="list-disc pl-4 space-y-0.5 text-[10px]">
+                <li>AI зөвхөн санал гаргадаг — илгээх эсэхийг та хариуцна</li>
+                <li>Тоо input-аас гарна — AI зохиогоор үүсгэхгүй</li>
+                <li>Workflow дүрэм автомат draft л үүсгэнэ — SMS/push автоматаар явахгүй</li>
+              </ul>
+            </div>
+
+            <button onClick={() => router.push('/')} className="w-full text-xs text-gray-400 underline">
               Үндсэн хуудас руу буцах
             </button>
           </div>
