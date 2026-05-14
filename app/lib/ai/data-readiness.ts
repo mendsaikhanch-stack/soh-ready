@@ -206,7 +206,7 @@ export async function gatherReadiness(sokhId: number): Promise<ReadinessSnapshot
     },
     {
       key: 'residents_with_debt',
-      label: 'Өртэй айл (residents.debt)',
+      label: 'Өртэй айл',
       count: residentsDebt.count ?? 0,
       status: residentsDebt.status,
       hint: hintFor('residents_with_debt', residentsDebt),
@@ -242,7 +242,7 @@ export async function gatherReadiness(sokhId: number): Promise<ReadinessSnapshot
     },
     {
       key: 'reserve_month',
-      label: 'Санхүүгийн бичилт (reserve_fund)',
+      label: 'Санхүүгийн бичилт',
       count: reserveMonth.count ?? 0,
       status: reserveMonth.status,
       hint: hintFor('reserve_month', reserveMonth),
@@ -265,54 +265,54 @@ export async function gatherReadiness(sokhId: number): Promise<ReadinessSnapshot
 
 function hintFor(key: string, result: CountResult): string {
   if (result.status === 'missing_table') {
-    return 'Хүснэгт олдсонгүй — migration ажиллуулаагүй байх магадлалтай.';
+    return 'Энэ хэсэг бэлэн биш байна. Системийн хариуцагчтай холбогдоно уу.';
   }
   if (result.status === 'empty' || result.count === 0) {
     switch (key) {
       case 'invoices_month':
-        return 'AI санхүүгийн дүгнэлт гаргах өгөгдөл алга — энэ сард нэхэмжлэл үүсгэх хэрэгтэй.';
+        return 'Энэ сард нэхэмжлэл үүсгээгүй байна.';
       case 'invoices_paid':
-        return 'Төлөгдсөн нэхэмжлэл байхгүй — цуглуулалтын тооцоо хийгдэхгүй.';
+        return 'Төлбөр бүртгэгдээгүй байна.';
       case 'invoices_unpaid':
-        return 'Өртэй нэхэмжлэл алга — debt reminder draft бий болохгүй.';
+        return 'Өртэй айл одоогоор алга.';
       case 'residents_all':
-        return 'Оршин суугч бүртгэгдээгүй — Файл импорт хэсгээс CSV/Excel оруулна уу.';
+        return 'Оршин суугч бүртгэгдээгүй байна.';
       case 'residents_with_debt':
-        return 'residents.debt > 0 байх айл алга — debt reminder бий болохгүй (invoices-аас fallback хийнэ).';
+        return 'Өртэй айл одоогоор алга.';
       case 'complaints_month':
-        return 'Гомдол ирээгүй байна — Issue insight нь зөвхөн maintenance_requests-аас гарна.';
+        return 'Энэ сард гомдол ирээгүй байна.';
       case 'maintenance_month':
-        return 'Засварын хүсэлт алга — Issue insight нь зөвхөн complaints-аас гарна.';
+        return 'Энэ сард засварын хүсэлт алга.';
       case 'announcements_month':
-        return 'Энэ сард зарлал нийтлэгдээгүй — Board report-д хоосон тоо орно.';
+        return 'Энэ сард зарлал нийтлээгүй байна.';
       case 'reserve_month':
-        return 'Санхүүгийн бичилт алга — financial summary-н зарлага 0 болно.';
+        return 'Энэ сард санхүүгийн бичлэг алга.';
       default:
-        return 'Өгөгдөл алга.';
+        return 'Мэдээлэл алга.';
     }
   }
   // ready
   switch (key) {
     case 'invoices_month':
-      return `${result.count} мөр — AI санхүүгийн дүгнэлт гаргахад бэлэн.`;
+      return `${result.count} нэхэмжлэл бэлэн.`;
     case 'invoices_paid':
-      return `${result.count} мөр — цуглуулалтын хувь бодогдоно.`;
+      return `${result.count} нэхэмжлэл төлөгдсөн.`;
     case 'invoices_unpaid':
-      return `${result.count} мөр — debt reminder draft бэлэн.`;
+      return `${result.count} нэхэмжлэл төлөөгүй.`;
     case 'residents_all':
       return `${result.count} оршин суугч бүртгэлтэй.`;
     case 'residents_with_debt':
-      return `${result.count} айл өртэй (residents.debt fallback бэлэн).`;
+      return `${result.count} айл өртэй байна.`;
     case 'complaints_month':
-      return `${result.count} гомдол — Issue insight гаргахад бэлэн.`;
+      return `${result.count} гомдол ирсэн.`;
     case 'maintenance_month':
-      return `${result.count} засварын хүсэлт — Issue insight гаргахад бэлэн.`;
+      return `${result.count} засварын хүсэлт ирсэн.`;
     case 'announcements_month':
-      return `${result.count} зарлал — Board report-д орно.`;
+      return `${result.count} зарлал нийтлэгдсэн.`;
     case 'reserve_month':
-      return `${result.count} мөр — financial summary гаргахад бэлэн.`;
+      return `${result.count} санхүүгийн бичлэг.`;
     default:
-      return `${result.count} мөр.`;
+      return `${result.count}.`;
   }
 }
 
@@ -327,10 +327,10 @@ function hintFor(key: string, result: CountResult): string {
 // Холбоосыг бодит app/admin маршрутаас л сонгоно — буруу холбоос байж болохгүй.
 
 function actionFor(key: string, result: CountResult): RecommendedAction {
-  // Хүснэгт байхгүй — migration ажил
+  // Хүснэгт байхгүй — системийн ажил
   if (result.status === 'missing_table') {
     return {
-      label: 'Migration ажиллуулах шаардлагатай',
+      label: 'Энэ хэсэг бэлэн биш — системийн хариуцагчтай холбогдоно уу',
       href: null,
       type: 'migrate',
     };
@@ -363,13 +363,13 @@ function actionFor(key: string, result: CountResult): RecommendedAction {
       };
     case 'residents_all':
       return {
-        label: 'Оршин суугч импорт хийх',
+        label: 'Оршин суугч нэмэх',
         href: '/admin/import',
         type: 'import',
       };
     case 'residents_with_debt':
       return {
-        label: 'Өртэй айл алга — debt reminder өгөгдөл invoices-аас гарна',
+        label: 'Өртэй айл алга',
         href: null,
         type: 'none',
       };

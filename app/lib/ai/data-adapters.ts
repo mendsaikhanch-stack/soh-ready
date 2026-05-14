@@ -103,7 +103,7 @@ async function fetchSokhName(sokhId: number): Promise<string> {
   return (data?.name as string) || 'СӨХ';
 }
 
-const EMPTY_NOTE = 'Холбогдох хүснэгтэд өгөгдөл олдсонгүй — input хоосон утгатай.';
+const EMPTY_NOTE = 'Энэ сард мэдээлэл алга байна.';
 
 // ============================================================
 // 1. Debt reminder input

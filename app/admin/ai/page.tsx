@@ -202,146 +202,8 @@ function renderOutput(kind: AiKind, output: unknown): React.ReactNode {
 
 // ============================================================
 // Demo Walkthrough — танилцуулгад зориулсан 3 минутын дараалал
-// ============================================================
-// SOH дарга, удирдах зөвлөлд танилцуулахдаа AI урсгалыг 4 алхамаар
-// харуулна. Энэ нь бүхэлдээ UI — өгөгдөл / AI API дуудахгүй.
-
-interface WalkthroughStep {
-  num: string;
-  emoji: string;
-  title: string;
-  short: string;
-  detail: string;
-}
-
-const WALKTHROUGH_STEPS: WalkthroughStep[] = [
-  {
-    num: '1',
-    emoji: '🗂️',
-    title: 'Өгөгдлөө шалгана',
-    short: 'Readiness panel',
-    detail:
-      'Readiness panel-оос нэхэмжлэл, оршин суугч, гомдол, зарлал зэрэг хүснэгт бэлэн эсэхийг харна. Хоосон бол "Дараагийн алхам" товчоор шууд оруулна.',
-  },
-  {
-    num: '2',
-    emoji: '🧠',
-    title: 'AI draft үүсгэнэ',
-    short: 'Action card',
-    detail:
-      'Action card-ын аль нэгийг дарна — жишээ нь "Өртэй айлуудад сануулга бичүүлэх" эсвэл "Удирдах зөвлөлд 1 нүүр тайлан". Хүсвэл "AI-аар сайжруулах" сонголтоор Layer 3-ыг идэвхжүүлэх боломжтой.',
-  },
-  {
-    num: '3',
-    emoji: '✏️',
-    title: 'Админ хянана',
-    short: 'Edit / copy',
-    detail:
-      'Үүссэн draft нь бүх талбарт засварлагдах байдлаар гарна. SMS, FB пост, албан мэдэгдэл бүрийг шууд засаж эсвэл "📋 Хуулах" товчоор хуулна.',
-  },
-  {
-    num: '4',
-    emoji: '✓',
-    title: 'Зөвшөөрөөд ашиглана',
-    short: 'Review queue',
-    detail:
-      'Бодит илгээхээс өмнө "Draft хадгалах"-аар Review queue-руу явуулна. Удирдлага шалгаж "Зөвшөөрсөн" / "Гараар илгээсэн" гэсэн төлвөөр тэмдэглэдэг — автомат илгээх БАЙХГҮЙ.',
-  },
-];
-
-function DemoWalkthrough({ lastSource }: { lastSource?: AdapterSource }) {
-  const showDemoNote = lastSource === 'demo';
-  return (
-    <details className="mb-6 group border border-indigo-200 bg-indigo-50/40 rounded-2xl overflow-hidden">
-      <summary className="cursor-pointer px-5 py-3 flex items-center justify-between gap-3 list-none">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xl shrink-0">🎤</span>
-          <div className="min-w-0">
-            <p className="font-bold text-sm text-indigo-900">
-              Танилцуулгад ашиглах 3 минутын дараалал
-            </p>
-            <p className="text-xs text-indigo-700/80 truncate">
-              СӨХ-ийн дарга/удирдах зөвлөлд харуулах 4 алхамт демо
-            </p>
-          </div>
-        </div>
-        <span className="text-xs text-indigo-700 group-open:rotate-180 transition-transform shrink-0">
-          ▾
-        </span>
-      </summary>
-
-      {/* Step strip — нээлттэй нэгэнт компакт */}
-      <div className="px-5 pb-3">
-        <ol className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {WALKTHROUGH_STEPS.map((s, i) => (
-            <li
-              key={s.num}
-              className="bg-white rounded-xl p-3 border border-indigo-100 relative"
-            >
-              <div className="flex items-center gap-2">
-                <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold">
-                  {s.num}
-                </span>
-                <span className="text-base">{s.emoji}</span>
-              </div>
-              <p className="mt-2 text-xs font-semibold text-gray-900 leading-tight">
-                {s.title}
-              </p>
-              <p className="mt-0.5 text-[10px] text-gray-500">{s.short}</p>
-              {i < WALKTHROUGH_STEPS.length - 1 && (
-                <span className="hidden sm:block absolute -right-2 top-1/2 -translate-y-1/2 text-indigo-300 text-lg">
-                  →
-                </span>
-              )}
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      {/* Дэлгэрэнгүй */}
-      <div className="px-5 pb-4 space-y-3 text-sm text-gray-700">
-        {WALKTHROUGH_STEPS.map((s) => (
-          <div key={s.num} className="flex gap-3">
-            <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
-              {s.num}
-            </span>
-            <div>
-              <p className="font-semibold text-gray-900">
-                {s.emoji} {s.title}
-              </p>
-              <p className="text-xs text-gray-600 leading-relaxed">{s.detail}</p>
-            </div>
-          </div>
-        ))}
-
-        <div className="border-t border-indigo-100 pt-3 text-xs text-gray-600 space-y-1">
-          <p>
-            <strong>🧪 Demo mode ашиглах:</strong>{' '}
-            <code className="bg-white border border-indigo-100 px-1.5 py-0.5 rounded">
-              KHOTOL_DEMO_MODE=1
-            </code>{' '}
-            env-д тавьбал action card-ууд бодит DB-ийн оронд Нарлаг хотхон СӨХ-ийн жишээ
-            өгөгдлийг ашиглана. Readiness panel-ы тоо бодит DB-аас гардаг тул {'"хоосон"'}
-            гарч магадгүй — энэ нь хэвийн.
-          </p>
-          <p>
-            <strong>🔒 Аюулгүй байдал:</strong> AI хэзээ ч SMS, push мэдэгдэл, FB пост
-            автоматаар илгээдэггүй. Бүх хариу зөвхөн draft. Тоо input-аас гарна — AI
-            зохиогоор үүсгэхгүй.
-          </p>
-        </div>
-
-        {showDemoNote && (
-          <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-900">
-            <strong>🧪 Сүүлд үүссэн draft нь demo өгөгдлөөс гарсан байна.</strong>{' '}
-            (<code>KHOTOL_DEMO_MODE=1</code> идэвхтэй эсвэл client raw input өгсөн.)
-            Production-д суулгахын өмнө энэ env-ийг авч хаяарай.
-          </div>
-        )}
-      </div>
-    </details>
-  );
-}
+// Танилцуулгын Walkthrough card нь хуучин засварт нэмэгдсэн боловч энгийн админд
+// мэргэжлийн хэллэгтэй тул UI-аас хасагдсан.
 
 function actionStyle(type: RecommendedActionType): string {
   switch (type) {
@@ -378,9 +240,9 @@ function readinessChip(status: ReadinessStatus): { label: string; cls: string; e
     case 'ready':
       return { label: 'Бэлэн', cls: 'bg-green-100 text-green-700 border-green-200', emoji: '✓' };
     case 'empty':
-      return { label: 'Хоосон', cls: 'bg-amber-100 text-amber-700 border-amber-200', emoji: '∅' };
+      return { label: 'Алга', cls: 'bg-amber-100 text-amber-700 border-amber-200', emoji: '∅' };
     case 'missing_table':
-      return { label: 'Хүснэгт байхгүй', cls: 'bg-red-100 text-red-700 border-red-200', emoji: '⚠' };
+      return { label: 'Бэлэн биш', cls: 'bg-red-100 text-red-700 border-red-200', emoji: '⚠' };
   }
 }
 
@@ -406,24 +268,24 @@ function ReadinessPanel({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">🗂️</span>
-            <h2 className="font-bold text-base">AI өгөгдлийн бэлэн байдал</h2>
+            <h2 className="font-bold text-base">Энэ сарын мэдээллийн төлөв</h2>
             {snapshot && (
-              <span className="text-[10px] font-mono text-gray-400">{snapshot.month}</span>
+              <span className="text-[10px] text-gray-400">{snapshot.month}</span>
             )}
           </div>
           <p className="text-xs text-gray-500">
-            Энэхүү СӨХ-ийн AI action-уудад шаардлагатай хүснэгтүүдийн өнөөгийн төлөв.
+            Энэ сард ямар мэдээлэл бэлэн, ямар нь дутуу байгааг харуулна.
           </p>
         </div>
         <div className="flex items-center gap-2">
           {snapshot && (
             <div className="text-xs text-gray-500">
               <span className="text-green-700 font-bold">{readyCount}</span> бэлэн ·{' '}
-              <span className="text-amber-700 font-bold">{emptyCount}</span> хоосон
+              <span className="text-amber-700 font-bold">{emptyCount}</span> алга
               {missingCount > 0 && (
                 <>
                   {' '}
-                  · <span className="text-red-700 font-bold">{missingCount}</span> хүснэгт алга
+                  · <span className="text-red-700 font-bold">{missingCount}</span> бэлэн биш
                 </>
               )}
               {' '}/ {totalCount}
@@ -493,9 +355,7 @@ function ReadinessPanel({
 
       {snapshot && missingCount > 0 && (
         <div className="px-5 py-3 border-t border-gray-100 text-xs text-red-700 bg-red-50">
-          <strong>⚠ Зарим хүснэгт олдсонгүй.</strong> Холбогдох migration ажиллаагүй
-          байх магадлалтай. <code>supabase-finance-migration.sql</code>,{' '}
-          <code>supabase-missing-tables.sql</code>, <code>supabase-v2.sql</code>-ийг шалгана уу.
+          <strong>⚠ Зарим хэсэг бэлэн биш байна.</strong> Системийн хариуцагчтай холбогдоно уу.
         </div>
       )}
     </section>
@@ -506,38 +366,17 @@ function SourceBadge({ source }: { source: AdapterSource }) {
   const meta = (() => {
     switch (source) {
       case 'real':
-        return { label: 'Бодит өгөгдөл', emoji: '🗄️', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+        return { label: 'Жинхэнэ мэдээлэл', emoji: '✓', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
       case 'demo':
-        return { label: 'Demo өгөгдөл', emoji: '🧪', cls: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
+        return { label: 'Жишээ мэдээлэл', emoji: 'ⓘ', cls: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
       case 'empty':
-        return { label: 'Хүснэгт хоосон', emoji: '∅', cls: 'bg-gray-100 text-gray-600 border-gray-200' };
+        return { label: 'Мэдээлэл алга', emoji: '∅', cls: 'bg-gray-100 text-gray-600 border-gray-200' };
     }
   })();
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${meta.cls}`}>
       <span>{meta.emoji}</span>
       <span>{meta.label}</span>
-    </span>
-  );
-}
-
-function LayerBadge({ layer, provider }: { layer: OutputLayer; provider: ProviderName }) {
-  const meta = (() => {
-    switch (layer) {
-      case 'ai_enhanced':
-        return { label: 'AI ашиглан сайжруулсан', emoji: '🧠', cls: 'bg-purple-100 text-purple-700 border-purple-200' };
-      case 'template':
-        return { label: 'Template ашигласан draft', emoji: '📝', cls: 'bg-blue-100 text-blue-700 border-blue-200' };
-      case 'rule':
-        return { label: 'Дүрэмд суурилсан', emoji: '⚙️', cls: 'bg-gray-100 text-gray-700 border-gray-200' };
-    }
-  })();
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${meta.cls}`}>
-      <span>{meta.emoji}</span>
-      <span>{meta.label}</span>
-      <span className="opacity-50">·</span>
-      <span className="font-mono opacity-70">{provider}</span>
     </span>
   );
 }
@@ -706,42 +545,19 @@ export default function AdminAiPage() {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-2xl">🧠</span>
-            <h1 className="text-2xl font-bold">Khotol AI Command Center</h1>
-            <span className="ml-2 text-xs bg-purple-100 text-purple-700 font-semibold px-2 py-0.5 rounded-full">
-              BETA
-            </span>
+            <h1 className="text-2xl font-bold">AI туслах</h1>
           </div>
           <p className="text-sm text-gray-600">
-            СӨХ-ийн өдөр тутмын ажлыг автоматжуулах AI туслах. Бүх хариу нь зөвхөн{' '}
-            <strong>санал</strong> бөгөөд илгээхээс өмнө админ заавал шалгана.
+            СӨХ-ийн ажлыг хялбарчилна. Бүх хариу зөвхөн санал — илгээхээс өмнө та шалгана.
           </p>
         </div>
         <Link
           href="/admin/ai/settings"
           className="text-sm text-gray-500 hover:text-gray-900 transition px-3 py-2 rounded-lg hover:bg-gray-100"
         >
-          ⚙️ AI тохиргоо
+          ⚙️ Тохиргоо
         </Link>
       </header>
-
-      {/* Танилцуулгад ашиглах 3 минутын дараалал */}
-      <DemoWalkthrough lastSource={result?.source} />
-
-      {/* Layer explainer */}
-      <div className="mb-6 grid sm:grid-cols-3 gap-3">
-        <div className="border border-blue-200 bg-blue-50 rounded-xl p-3">
-          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">Layer 1 · Rule</p>
-          <p className="text-xs text-blue-900 mt-1">DB query, cron, deterministic. AI шаардахгүй.</p>
-        </div>
-        <div className="border border-cyan-200 bg-cyan-50 rounded-xl p-3">
-          <p className="text-xs font-bold text-cyan-700 uppercase tracking-wide">Layer 2 · Template</p>
-          <p className="text-xs text-cyan-900 mt-1">Placeholder template, tone. AI шаардахгүй.</p>
-        </div>
-        <div className="border border-purple-200 bg-purple-50 rounded-xl p-3">
-          <p className="text-xs font-bold text-purple-700 uppercase tracking-wide">Layer 3 · AI</p>
-          <p className="text-xs text-purple-900 mt-1">Сонголтоор. Идэвхгүй бол Layer 2 руу унана.</p>
-        </div>
-      </div>
 
       {/* Readiness panel — action card-уудын ӨМНӨ */}
       <ReadinessPanel
@@ -758,9 +574,9 @@ export default function AdminAiPage() {
           <div className="text-sm text-amber-900 leading-relaxed flex-1">
             <p className="font-semibold mb-1">Илгээхээс өмнө шалгана уу</p>
             <ul className="list-disc pl-5 space-y-0.5 text-amber-800">
-              <li>AI/template аль нь ч санал гаргадаг. Илгээх эсэхийг та хариуцна.</li>
-              <li>Санхүүгийн дугаарууд зөвхөн системийн баталгаажсан өгөгдлөөс гарна.</li>
-              <li>AI төлбөрийн бичлэг, мэдээллийг өөрөө өөрчилдөггүй.</li>
+              <li>Хариу зөвхөн санал. Илгээх эсэхийг та шийднэ.</li>
+              <li>Дугаар, дүн системийн мэдээллээс гарна.</li>
+              <li>Төлбөрийн бичлэгийг өөрчлөхгүй.</li>
             </ul>
           </div>
         </div>
@@ -773,11 +589,10 @@ export default function AdminAiPage() {
           />
           <div>
             <p className="text-sm font-semibold text-amber-900">
-              AI-аар сайжруулах (Layer 3)
+              Илүү ойлгомжтой найруулга
             </p>
             <p className="text-xs text-amber-800">
-              Идэвхтэй бол текстийг LLM-р дамжуулж дахин найруулна. AI тохиргоо
-              идэвхгүй, квот дууссан, эсвэл алдаа гарвал автоматаар template-руу унана.
+              Идэвхтэй бол текстийг илүү ойлгомжтой найруулна. Бэлэн биш бол энгийн хэлбэрээр үлдэнэ.
             </p>
           </div>
         </label>
@@ -787,7 +602,6 @@ export default function AdminAiPage() {
       <div className="grid sm:grid-cols-2 gap-3 mb-6">
         {CARDS.map((card) => {
           const isActive = activeKind === card.kind;
-          const willEnhance = enhanceWithAi && card.enhanceable;
           return (
             <button
               key={card.kind}
@@ -802,17 +616,9 @@ export default function AdminAiPage() {
                 <span className="text-2xl">{card.emoji}</span>
                 <h3 className="font-bold text-sm leading-tight">{card.title}</h3>
               </div>
-              <p className="text-xs text-gray-500 mb-3 leading-relaxed">{card.subtitle}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-400 truncate">Source: {card.inputSummary}</span>
-                <span className="text-xs flex items-center gap-1 shrink-0 ml-2">
-                  {willEnhance ? (
-                    <span className="text-purple-600 font-semibold">🧠 + AI</span>
-                  ) : (
-                    <span className="text-blue-600 font-semibold">📝 Template</span>
-                  )}
-                  <span className="text-gray-300">→</span>
-                </span>
+              <p className="text-xs text-gray-500 leading-relaxed">{card.subtitle}</p>
+              <div className="mt-3 flex items-center justify-end">
+                <span className="text-xs text-blue-600 font-semibold">Үүсгэх →</span>
               </div>
             </button>
           );
@@ -829,7 +635,6 @@ export default function AdminAiPage() {
             </div>
             {result && (
               <div className="flex items-center gap-3 flex-wrap">
-                <LayerBadge layer={result.layer} provider={result.provider} />
                 {result.source && <SourceBadge source={result.source} />}
                 <button
                   onClick={handleSaveDraft}
@@ -840,7 +645,7 @@ export default function AdminAiPage() {
                     ? 'Хадгалж байна...'
                     : saveStatus === 'saved'
                       ? '✓ Хадгалсан'
-                      : 'Draft хадгалах'}
+                      : 'Хадгалах'}
                 </button>
               </div>
             )}
@@ -854,11 +659,6 @@ export default function AdminAiPage() {
           )}
           {result && renderOutput(activeCard.kind, result.output)}
 
-          {result?.fallbackReason && (
-            <div className="mt-4 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
-              ℹ Layer 3 fallback: <strong>{result.fallbackReason}</strong>. Template-аас гарсан хариу буцсан.
-            </div>
-          )}
           {result?.warnings && result.warnings.length > 0 && (
             <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
               {result.warnings.map((w, i) => (
