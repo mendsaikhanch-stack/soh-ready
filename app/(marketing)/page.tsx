@@ -1,59 +1,73 @@
 'use client';
 
+import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-const features = [
-  { icon: '💰', title: 'Төлбөрийн удирдлага', desc: 'Онлайн төлбөр, өрийн бүртгэл, автомат мэдэгдэл. Өр цуглуулалтыг 40%-иар нэмэгдүүлнэ.' },
-  { icon: '📢', title: 'Зарлал мэдэгдэл', desc: 'Усны засвар, хурал, чухал мэдээллийг бүх оршин суугчдад шууд хүргэнэ.' },
-  { icon: '🔧', title: 'Засвар үйлчилгээ', desc: 'Оршин суугчид хүсэлт гаргаж, засварын явцыг бодит цаг дээр хянана.' },
-  { icon: '📋', title: 'Санхүүгийн тайлан', desc: 'Орлого зарлагын тайлан автомат үүснэ. Ил тод, найдвартай.' },
-  { icon: '🗳', title: 'Санал хураалт', desc: 'Хурал хийхгүйгээр оршин суугчдын саналыг цахимаар авна.' },
-  { icon: '👥', title: 'Оршин суугчдын бүртгэл', desc: 'Excel, CSV файлаас автомат импорт. Бүрэн мэдээллийн сан.' },
-];
-
-const steps = [
-  { num: '01', title: 'Бүртгүүлэх', desc: 'СӨХ-ийн удирдлага системд бүртгүүлнэ. 2 минут болно.' },
-  { num: '02', title: 'Өгөгдөл оруулах', desc: 'Оршин суугчдын жагсаалтыг Excel файлаар импортлоно.' },
-  { num: '03', title: 'Ашиглаж эхлэх', desc: 'Оршин суугчид апп-руу нэвтэрч төлбөр төлж, мэдээлэл авна.' },
-];
-
-const pricing = [
+const problems = [
   {
-    name: 'Эхлэх',
-    price: '1,000',
-    period: ' /айл/сар',
-    desc: '50–150 айлтай жижиг СӨХ-д. 3 сар үнэгүй.',
-    features: ['QPay онлайн төлбөр', 'Зарлал/мэдэгдэл', 'Засварын хүсэлт', 'Оршин суугчдын бүртгэл'],
-    missing: ['Push мэдэгдэл', 'Санхүүгийн тайлан', 'Аналитик', 'Тусгай дэмжлэг'],
-    cta: 'Үнэгүй эхлэх',
-    popular: false,
+    icon: '💸',
+    title: 'Төлбөрийн мэдээлэл будилах',
+    desc: 'Хэн юу төлсөн, хэдэн төгрөг үлдсэн нь тодорхойгүй. Гар бичмэл, Excel дамжсаар алдаатай болдог.',
   },
   {
-    name: 'Стандарт',
-    price: '800',
-    period: ' /айл/сар + 50,000₮ суурь',
-    desc: '150–300 айлтай дундаж СӨХ-д. QPay комисс 0.7%.',
-    features: ['Бүх үндсэн функц', 'Push мэдэгдэл', 'Санхүүгийн тайлан', 'Excel/CSV импорт', 'Санал хураалт', 'Имэйл дэмжлэг'],
-    missing: ['Нарийвчилсан аналитик', '24/7 тусгай дэмжлэг'],
-    cta: 'Эхлэх',
-    popular: true,
+    icon: '📵',
+    title: 'Зар, мэдэгдэл хүрэхгүй',
+    desc: 'Ус, дулааны мэдэгдэл хаалган дээр наасан цаас, Viber группээр дамждаг. Олон хүн харахгүй өнгөрдөг.',
   },
   {
-    name: 'Дэвшилтэт',
-    price: '500',
-    period: ' /айл/сар + 150,000₮ суурь',
-    desc: '300+ айлтай том СӨХ, хороололд. QPay комисс 0.5%.',
-    features: ['Бүх функц', 'Нарийвчилсан аналитик', '24/7 тусгай дэмжлэг', 'Custom branding', 'Хязгааргүй айл', 'Онцгой тохиргоо'],
-    missing: [],
-    cta: 'Холбогдох',
-    popular: false,
+    icon: '📝',
+    title: 'Хүсэлт, гомдол алга болох',
+    desc: 'Утсаар, амаар хэлсэн хүсэлтүүд бичигдэхгүй. Хариу хэзээ, хэн өгөх нь тодорхой бус.',
+  },
+  {
+    icon: '🔎',
+    title: 'Ил тод байдал сул',
+    desc: 'СӨХ-ийн орлого, зарлагыг оршин суугч шалгах боломжгүй. Үүнээс итгэлцэл алдагддаг.',
   },
 ];
 
-const testimonials = [
-  { name: 'Б. Батболд', role: 'Нарантуул СӨХ-ийн дарга', text: 'Өр цуглуулалт маш хүнд байсан. Одоо системээр дамжуулан оршин суугчид өрөө цаг тухайд нь төлдөг боллоо.' },
-  { name: 'Д. Сараа', role: 'Оршин суугч, Баянгол дүүрэг', text: 'Апп дээрээс СӨХ-ийн зарлал, төлбөрийн мэдээллээ шалгаж байгаа нь маш тохиромжтой.' },
-  { name: 'Г. Ганбаатар', role: 'Алтан гадас СӨХ', text: 'Тайлан автомат гардаг болсон. Өмнө нь Excel дээр гараар хийдэг байсан. Маш их цаг хэмнэнэ.' },
+const solutions = [
+  { icon: '🏢', title: 'СӨХ-өө олох', desc: 'Хот, дүүрэг, хороогоор өөрийн СӨХ-ийг хайж олно.' },
+  { icon: '👤', title: 'Оршин суугчийн бүртгэл', desc: 'Утсаа баталгаажуулж байр, тооттойгоо холбоно.' },
+  { icon: '📢', title: 'Зар, мэдэгдэл', desc: 'СӨХ-ийн мэдэгдлийг шуурхай, бүгдэд адил хүргэнэ.' },
+  { icon: '💳', title: 'Төлбөр, үлдэгдэл', desc: 'Хувийн нэхэмжлэл, үлдэгдлээ ил тод харна.' },
+  { icon: '🛠', title: 'Хүсэлт, гомдол', desc: 'Бичгээр илгээсэн хүсэлт төлөвтэйгөө хадгалагдана.' },
+  { icon: '📍', title: 'СӨХ жагсаалтад байхгүй бол', desc: 'Өөрөө мэдээллээ оруулж бүртгүүлээд СӨХ-д дохио өгнө.' },
+];
+
+const residentBenefits = [
+  'Өөрийн СӨХ-өө олно',
+  'Төлбөр, мэдэгдлээ нэг дороос харна',
+  'Хүсэлт, гомдол бичгээр илгээж, төлөвийг нь дагана',
+  'СӨХ жагсаалтад байхгүй бол өөрөө бүртгүүлж, СӨХ-д дохио үүсгэнэ',
+];
+
+const adminBenefits = [
+  'Оршин суугчдын бүрэн бүртгэл',
+  'Зар, мэдэгдлийг нэг л удаа нийтлээд бүгдэд хүргэх',
+  'Хүсэлт, гомдлыг төлөвтэй удирдах',
+  'Санхүү, үйл ажиллагааны ил тод байдлыг сайжруулах',
+  'СӨХ-д хэдэн оршин суугч сонирхож байгааг харах demand dashboard',
+];
+
+const faqs = [
+  {
+    q: 'СӨХ жагсаалтад байхгүй бол яах вэ?',
+    a: 'Та өөрөө СӨХ-ийнхээ нэр, байршил, тоотоо оруулж бүртгүүлж болно. Энэ нь СӨХ дээр Хотол ашиглах сонирхлын дохио үүсгэнэ.',
+  },
+  {
+    q: 'Апп татах шаардлагатай юу?',
+    a: 'Үгүй. Хотол нь вебээр ажилладаг бөгөөд гар утсандаа PWA болгож суулгах боломжтой. Цаашид Play Store / App Store-д гаргахаар бэлдэж байна.',
+  },
+  {
+    q: 'СӨХ админ яаж холбогдох вэ?',
+    a: 'Холбоо барих хуудаснаас СӨХ админд зориулсан утас, и-мэйлийг ашиглана уу. Бид таны СӨХ-д Хотол нэвтрүүлэхэд туслана.',
+  },
+  {
+    q: 'Мэдээлэл аюулгүй юу?',
+    a: 'Нууцлалын бодлогын дагуу таны мэдээллийг зөвхөн өөрийн СӨХ-ийн эрх бүхий хэрэглэгчид харж болно. Дэлгэрэнгүйг "Нууцлалын бодлого"-оос харна уу.',
+  },
 ];
 
 export default function LandingPage() {
@@ -67,167 +81,269 @@ export default function LandingPage() {
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3" />
 
-        <div className="relative max-w-6xl mx-auto px-4 py-20 md:py-32 text-center text-white">
-          <div className="inline-block bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm mb-6 border border-white/20">
-            Таны байрны бүх зүйл нэг дор
+        <div className="relative max-w-6xl mx-auto px-4 py-16 md:py-24 grid md:grid-cols-2 gap-10 items-center text-white">
+          <div className="text-center md:text-left">
+            <div className="inline-block bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 text-xs mb-6 border border-white/20">
+              СӨХ · Оршин суугч · Удирдлага — нэг дор
+            </div>
+            <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4">
+              Хотол — <span className="text-yellow-300">СӨХ-ийн өдөр тутмын ажлыг</span> хялбарчилна
+            </h1>
+            <p className="text-blue-100 text-base md:text-lg mb-8 leading-relaxed max-w-xl mx-auto md:mx-0">
+              Оршин суугч, СӨХ, удирдлагын мэдээлэл, төлбөр, хүсэлт, мэдэгдлийг нэг дор.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+              <button
+                onClick={() => router.push('/find-hoa')}
+                className="px-8 py-3.5 bg-white text-blue-700 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl active:scale-[0.98] transition-all"
+              >
+                СӨХ-өө хайх →
+              </button>
+              <Link
+                href="/contact"
+                className="px-8 py-3.5 bg-white/10 backdrop-blur border border-white/25 text-white rounded-xl font-semibold text-sm hover:bg-white/20 transition text-center"
+              >
+                СӨХ админ бол холбогдох
+              </Link>
+            </div>
           </div>
-          <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4 max-w-3xl mx-auto">
-            Байрны бүх төлбөр,<br />мэдээлэл <span className="text-yellow-300">нэг дор</span>
-          </h1>
-          <p className="text-blue-200 text-base md:text-lg max-w-xl mx-auto mb-8">
-            Төлбөр цуглуулах, тайлан гаргах, оршин суугчидтай харилцах — бүгдийг нэг системээр.
+
+          <div className="relative">
+            <div className="absolute -inset-4 bg-white/10 rounded-3xl blur-2xl" />
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/20">
+              <Image
+                src="/hero/landing-couch.png"
+                alt="Хотол апп ашиглаж буй гэр бүл — Улаанбаатарын орон сууцны үзэмж"
+                width={1376}
+                height={768}
+                priority
+                className="w-full h-auto"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Problem */}
+      <section className="py-16 md:py-20 bg-white">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold text-red-600 tracking-wide uppercase mb-2">Асуудал</p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">СӨХ-ийн өдөр тутамд тулгардаг бэрхшээл</h2>
+            <p className="text-gray-500 max-w-xl mx-auto">
+              Ихэнх СӨХ Excel, цаас, чатын бүлгэмээр ажилладаг. Үүнээс үүдэн дараах асуудлууд гардаг:
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {problems.map(p => (
+              <div key={p.title} className="bg-gray-50 border border-gray-100 rounded-2xl p-5 flex gap-4">
+                <span className="text-2xl shrink-0">{p.icon}</span>
+                <div>
+                  <h3 className="font-semibold mb-1">{p.title}</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">{p.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Solution */}
+      <section className="py-16 md:py-20 bg-gray-50">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold text-blue-600 tracking-wide uppercase mb-2">Шийдэл</p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">Хотол юу хийдэг вэ?</h2>
+            <p className="text-gray-500 max-w-xl mx-auto">
+              СӨХ ба оршин суугчийг холбож, мэдээлэл, төлбөр, хүсэлтийг нэг газар цэгцэлнэ.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {solutions.map(s => (
+              <div key={s.title} className="bg-white rounded-2xl p-5 border border-gray-100">
+                <span className="text-2xl block mb-2">{s.icon}</span>
+                <h3 className="font-semibold mb-1">{s.title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* For residents */}
+      <section className="py-16 md:py-20 bg-white">
+        <div className="max-w-5xl mx-auto px-4 grid md:grid-cols-2 gap-10 items-center">
+          <div>
+            <p className="text-xs font-semibold text-blue-600 tracking-wide uppercase mb-2">Оршин суугчдад</p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">Өөрийн СӨХ-ийн мэдээллийг гартаа</h2>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              Та төлбөрөө хаанаас харах, мэдэгдэл хэн нийтэлсэн, гомдол хэн авсныг тодорхой мэдэх эрхтэй.
+              Хотол үүнийг нэг газар, бичгээр, төлөвтэйгөөр харуулна.
+            </p>
+            <ul className="space-y-2 mb-6">
+              {residentBenefits.map(b => (
+                <li key={b} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => router.push('/find-hoa')}
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition"
+            >
+              СӨХ-өө хайх →
+            </button>
+          </div>
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-8 border border-blue-100">
+            <div className="bg-white rounded-2xl shadow-sm p-5 mb-3">
+              <p className="text-xs text-gray-400 mb-1">Шинэ мэдэгдэл</p>
+              <p className="text-sm font-medium">Маргааш 10:00–14:00 ус хаагдана</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm p-5 mb-3">
+              <p className="text-xs text-gray-400 mb-1">Үлдэгдэл</p>
+              <p className="text-sm font-medium">2025/04 — 84,500₮</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm p-5">
+              <p className="text-xs text-gray-400 mb-1">Миний хүсэлт</p>
+              <p className="text-sm font-medium">Лифт засвар — Хүлээгдэж буй</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* For SOH / admins */}
+      <section className="py-16 md:py-20 bg-gray-50">
+        <div className="max-w-5xl mx-auto px-4 grid md:grid-cols-2 gap-10 items-center">
+          <div className="order-2 md:order-1 bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl p-8 border border-amber-100">
+            <div className="bg-white rounded-2xl shadow-sm p-5 mb-3">
+              <p className="text-xs text-gray-400 mb-1">СӨХ-ийн нийт оршин суугч</p>
+              <p className="text-2xl font-bold">— айл</p>
+              <p className="text-xs text-gray-400 mt-1">Бодит тоо нь СӨХ дээр харагдана</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm p-5 mb-3">
+              <p className="text-xs text-gray-400 mb-1">Шинэ хүсэлт</p>
+              <p className="text-sm font-medium">Лифт · Хог · Орц</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm p-5">
+              <p className="text-xs text-gray-400 mb-1">Demand</p>
+              <p className="text-sm font-medium">Хотол ашиглахыг хүссэн оршин суугчид</p>
+            </div>
+          </div>
+          <div className="order-1 md:order-2">
+            <p className="text-xs font-semibold text-amber-700 tracking-wide uppercase mb-2">СӨХ / Админд</p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">Өдөр тутмын ажлыг цэгцэлнэ</h2>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              Excel, цаас, чатын бүлгэм оронд оршин суугчдын бүртгэл, мэдэгдэл, хүсэлт, төлбөр —
+              бүгд нэг систем дотор. Demand dashboard-аар хэдэн оршин суугч сонирхож байгааг шууд хараарай.
+            </p>
+            <ul className="space-y-2 mb-6">
+              {adminBenefits.map(b => (
+                <li key={b} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="text-amber-500 mt-0.5">✓</span>
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/contact"
+              className="inline-block px-6 py-3 bg-amber-600 text-white rounded-xl font-semibold text-sm hover:bg-amber-700 transition"
+            >
+              СӨХ админ бол холбогдох →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust / compliance */}
+      <section className="py-16 md:py-20 bg-white">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold text-slate-600 tracking-wide uppercase mb-2">Итгэлцэл</p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">Ил тод нөхцөл, хамгаалагдсан мэдээлэл</h2>
+            <p className="text-gray-500 max-w-xl mx-auto">
+              Хотол нь оршин суугч болон СӨХ-ийн нөхцөл, нууцлалын бодлогыг ил тод нийтэлдэг.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <Link
+              href="/privacy"
+              className="bg-gray-50 hover:bg-gray-100 transition border border-gray-200 rounded-2xl p-5 text-center"
+            >
+              <span className="text-2xl block mb-2">🔒</span>
+              <p className="font-semibold text-sm">Нууцлалын бодлого</p>
+            </Link>
+            <Link
+              href="/terms/resident"
+              className="bg-gray-50 hover:bg-gray-100 transition border border-gray-200 rounded-2xl p-5 text-center"
+            >
+              <span className="text-2xl block mb-2">📄</span>
+              <p className="font-semibold text-sm">Оршин суугчийн нөхцөл</p>
+            </Link>
+            <Link
+              href="/terms/admin"
+              className="bg-gray-50 hover:bg-gray-100 transition border border-gray-200 rounded-2xl p-5 text-center"
+            >
+              <span className="text-2xl block mb-2">📋</span>
+              <p className="font-semibold text-sm">Админ нөхцөл</p>
+            </Link>
+            <Link
+              href="/help"
+              className="bg-gray-50 hover:bg-gray-100 transition border border-gray-200 rounded-2xl p-5 text-center"
+            >
+              <span className="text-2xl block mb-2">❓</span>
+              <p className="font-semibold text-sm">Тусламж / FAQ</p>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ teaser */}
+      <section className="py-16 md:py-20 bg-gray-50">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">Түгээмэл асуулт</h2>
+            <p className="text-gray-500">Дэлгэрэнгүй хариултыг тусламж хэсгээс үзнэ үү.</p>
+          </div>
+          <div className="space-y-3">
+            {faqs.map(f => (
+              <details key={f.q} className="group bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-gray-900 list-none flex items-center justify-between">
+                  <span>{f.q}</span>
+                  <span className="text-gray-400 group-open:rotate-180 transition-transform">▾</span>
+                </summary>
+                <div className="px-5 pb-4 text-sm text-gray-600 leading-relaxed">{f.a}</div>
+              </details>
+            ))}
+          </div>
+          <div className="text-center mt-6">
+            <Link href="/help" className="text-sm text-blue-600 font-semibold hover:underline">
+              Бүх асуулт, заавартай танилцах →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-16 md:py-24 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-center">
+        <div className="max-w-2xl mx-auto px-4">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">Одоо СӨХ-өө хайж үзээрэй</h2>
+          <p className="text-blue-100 mb-8">
+            Хот, дүүрэг, хороогоо сонгоод СӨХ-ийнхээ нэрээр хайна. Жагсаалтад байхгүй бол өөрөө бүртгүүлж болно.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              onClick={() => router.push('/demo')}
-              className="px-8 py-3.5 bg-white text-blue-700 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl active:scale-[0.98] transition-all"
+              onClick={() => router.push('/find-hoa')}
+              className="px-8 py-3.5 bg-white text-blue-700 rounded-xl font-bold text-sm shadow-lg"
             >
-              Demo үзэх →
+              Одоо СӨХ-өө хайж үзэх →
             </button>
-            <button
-              onClick={() => router.push('/register')}
-              className="px-8 py-3.5 bg-white/10 backdrop-blur border border-white/25 text-white rounded-xl font-semibold text-sm hover:bg-white/20 transition"
+            <Link
+              href="/contact"
+              className="px-8 py-3.5 border border-white/30 text-white rounded-xl font-semibold text-sm hover:bg-white/10 transition"
             >
-              Үнэгүй эхлэх
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="bg-white border-b">
-        <div className="max-w-4xl mx-auto px-4 py-8 flex justify-center gap-12 md:gap-20">
-          {[
-            { val: '500+', label: 'Айл өрх' },
-            { val: '50+', label: 'СӨХ' },
-            { val: '3', label: 'Хот' },
-            { val: '99%', label: 'Хэрэглэгчийн сэтгэл ханамж' },
-          ].map(s => (
-            <div key={s.label} className="text-center">
-              <p className="text-2xl md:text-3xl font-bold text-gray-900">{s.val}</p>
-              <p className="text-xs md:text-sm text-gray-500 mt-1">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="features" className="py-16 md:py-24 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">Бүх боломж нэг дор</h2>
-            <p className="text-gray-500 max-w-lg mx-auto">СӨХ-ийн өдөр тутмын үйл ажиллагааг автоматжуулж, цаг хүч хэмнэнэ</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-4">
-            {features.map(f => (
-              <div key={f.title} className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                <span className="text-3xl block mb-3">{f.icon}</span>
-                <h3 className="font-bold mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section id="how" className="py-16 md:py-24 bg-white">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">Хэрхэн ажилладаг вэ?</h2>
-            <p className="text-gray-500">3 энгийн алхамаар эхлэх</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {steps.map((s, i) => (
-              <div key={s.num} className="text-center relative">
-                {i < 2 && <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-0.5 bg-blue-100" />}
-                <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4 relative z-10">
-                  <span className="text-blue-600 font-bold text-lg">{s.num}</span>
-                </div>
-                <h3 className="font-bold mb-2">{s.title}</h3>
-                <p className="text-sm text-gray-500">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="py-16 md:py-24 bg-gray-50">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">Энгийн, ил тод үнэ</h2>
-            <p className="text-gray-500">СӨХ-ийн хэмжээнд тохирсон 3 багц</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-4">
-            {pricing.map(p => (
-              <div key={p.name} className={`rounded-2xl p-6 ${p.popular ? 'bg-blue-600 text-white ring-4 ring-blue-200 scale-105' : 'bg-white border border-gray-200'}`}>
-                {p.popular && <div className="text-xs bg-yellow-400 text-yellow-900 font-bold rounded-full px-3 py-1 inline-block mb-3">Хамгийн их сонголт</div>}
-                <h3 className={`text-lg font-bold ${p.popular ? '' : 'text-gray-900'}`}>{p.name}</h3>
-                <p className={`text-sm mt-1 ${p.popular ? 'text-blue-200' : 'text-gray-500'}`}>{p.desc}</p>
-                <div className="my-4">
-                  <span className="text-3xl font-bold">{p.price}₮</span>
-                  <span className={`text-sm ${p.popular ? 'text-blue-200' : 'text-gray-400'}`}>{p.period}</span>
-                </div>
-                <button
-                  onClick={() => {
-                    if (p.cta === 'Холбогдох') window.location.href = 'tel:+97677001122';
-                    else router.push('/register');
-                  }}
-                  className={`w-full py-3 rounded-xl font-semibold text-sm mb-4 transition ${
-                    p.popular ? 'bg-white text-blue-600 hover:bg-gray-100' : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-                >
-                  {p.cta}
-                </button>
-                <ul className="space-y-2">
-                  {p.features.map(f => (
-                    <li key={f} className={`text-sm flex items-center gap-2 ${p.popular ? 'text-blue-100' : 'text-gray-600'}`}>
-                      <span className="text-green-400">✓</span> {f}
-                    </li>
-                  ))}
-                  {p.missing.map(f => (
-                    <li key={f} className={`text-sm flex items-center gap-2 ${p.popular ? 'text-blue-300/50' : 'text-gray-300'}`}>
-                      <span>✕</span> {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-16 md:py-24 bg-white">
-        <div className="max-w-5xl mx-auto px-4">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">Хэрэглэгчдийн сэтгэгдэл</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            {testimonials.map(t => (
-              <div key={t.name} className="bg-gray-50 rounded-2xl p-6 border">
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">"{t.text}"</p>
-                <div>
-                  <p className="font-semibold text-sm">{t.name}</p>
-                  <p className="text-xs text-gray-400">{t.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-16 md:py-24 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-center">
-        <div className="max-w-2xl mx-auto px-4">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">Таны байранд шинэ түвшний удирдлага</h2>
-          <p className="text-blue-200 mb-8">Өнөөдөр бүртгүүлж, 3 сар үнэгүй ашиглаарай. Банкны карт шаардахгүй.</p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => router.push('/register')} className="px-8 py-3.5 bg-white text-blue-700 rounded-xl font-bold text-sm shadow-lg">
-              Үнэгүй эхлэх →
-            </button>
-            <button onClick={() => router.push('/demo')} className="px-8 py-3.5 border border-white/30 text-white rounded-xl font-semibold text-sm hover:bg-white/10 transition">
-              Demo үзэх
-            </button>
+              Холбоо барих
+            </Link>
           </div>
         </div>
       </section>

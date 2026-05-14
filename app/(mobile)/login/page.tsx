@@ -190,6 +190,10 @@ function LoginInner() {
           <a href="/privacy" className="hover:text-gray-600">Нууцлал</a>
           <span className="mx-1.5">·</span>
           <a href="/terms/resident" className="hover:text-gray-600">Нөхцөл</a>
+          <span className="mx-1.5">·</span>
+          <a href="/contact" className="hover:text-gray-600">Холбоо барих</a>
+          <span className="mx-1.5">·</span>
+          <a href="/account/delete" className="hover:text-gray-600">Бүртгэл устгах</a>
         </p>
       </div>
     </div>

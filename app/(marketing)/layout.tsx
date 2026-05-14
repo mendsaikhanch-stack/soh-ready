@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import HotolLogo from '@/app/components/HotolLogo';
 import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
@@ -16,17 +17,16 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <HotolLogo size={108} />
           </button>
           <nav className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#features" className="text-gray-600 hover:text-gray-900 transition">Боломжууд</a>
-            <a href="#how" className="text-gray-600 hover:text-gray-900 transition">Хэрхэн ажилладаг</a>
-            <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition">Үнэ</a>
-            <button onClick={() => router.push('/demo')} className="text-blue-600 font-medium hover:text-blue-700">Demo</button>
+            <Link href="/find-hoa" className="text-gray-600 hover:text-gray-900 transition">СӨХ хайх</Link>
+            <Link href="/help" className="text-gray-600 hover:text-gray-900 transition">Тусламж</Link>
+            <Link href="/contact" className="text-gray-600 hover:text-gray-900 transition">Холбоо барих</Link>
           </nav>
           <div className="flex items-center gap-2">
             <button onClick={() => router.push('/login')} className="text-sm text-gray-600 hover:text-gray-900 px-3 py-2">
               Нэвтрэх
             </button>
-            <button onClick={() => router.push('/register')} className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-              Үнэгүй эхлэх
+            <button onClick={() => router.push('/find-hoa')} className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+              СӨХ-өө хайх
             </button>
           </div>
         </div>
@@ -45,11 +45,21 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               <p className="text-gray-400 text-sm">Таны байрны бүх зүйл нэг дор</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-3">Платформ</h4>
+              <h4 className="font-semibold mb-3">Хотол</h4>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#features" className="hover:text-white transition">Боломжууд</a></li>
-                <li><a href="#pricing" className="hover:text-white transition">Үнийн мэдээлэл</a></li>
-                <li><button onClick={() => router.push('/demo')} className="hover:text-white transition">Demo үзэх</button></li>
+                <li><Link href="/" className="hover:text-white transition">Нүүр</Link></li>
+                <li><Link href="/find-hoa" className="hover:text-white transition">СӨХ хайх</Link></li>
+                <li><Link href="/help" className="hover:text-white transition">Тусламж</Link></li>
+                <li><Link href="/contact" className="hover:text-white transition">Холбоо барих</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-3">Хууль ёсны мэдээлэл</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><Link href="/privacy" className="hover:text-white transition">Нууцлалын бодлого</Link></li>
+                <li><Link href="/terms/resident" className="hover:text-white transition">Оршин суугчийн нөхцөл</Link></li>
+                <li><Link href="/terms/admin" className="hover:text-white transition">Админ нөхцөл</Link></li>
+                <li><Link href="/account/delete" className="hover:text-white transition">Бүртгэл устгах хүсэлт</Link></li>
               </ul>
             </div>
             <div>
@@ -58,13 +68,6 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 <li>📞 7700-1122</li>
                 <li>📧 info@hotol.mn</li>
                 <li>📍 Улаанбаатар хот</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">Дагах</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-white transition">Facebook</a></li>
-                <li><a href="#" className="hover:text-white transition">Instagram</a></li>
               </ul>
             </div>
           </div>

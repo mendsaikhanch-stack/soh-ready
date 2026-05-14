@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import LegalPage from '@/app/components/legal/LegalPage';
 import LegalSection from '@/app/components/legal/LegalSection';
 import MetaBlock from '@/app/components/legal/MetaBlock';
@@ -174,6 +175,12 @@ export default function PrivacyPage() {
           <li>тодорхой мэдээлэл боловсруулахыг хязгаарлуулах талаар хүсэлт гаргах</li>
           <li>мэдээлэлтэй холбоотой тайлбар, гомдол гаргах</li>
           <li>зөвшөөрөлд суурилсан боловсруулалтын хувьд зөвшөөрлөө буцаах</li>
+          <li>
+            бүртгэлээ устгуулах хүсэлт гаргах —{' '}
+            <Link href="/account/delete" className="text-blue-600 underline">
+              /account/delete
+            </Link>
+          </li>
         </ul>
       </LegalSection>
 
@@ -223,12 +230,30 @@ export default function PrivacyPage() {
       <LegalSection number="15" title="Холбоо барих">
         <p>Нууцлал, мэдээлэл хамгаалалттай холбоотой асуулт, хүсэлт, гомдлыг дараах хаягаар ирүүлнэ:</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Байгууллагын нэр: [________]</li>
-          <li>И-мэйл: [________]</li>
-          <li>Утас: [________]</li>
-          <li>Хаяг: [________]</li>
+          <li>Байгууллагын нэр: Хотол / Төгс Орчин ХХК</li>
+          <li>И-мэйл: info@hotol.mn</li>
+          <li>Утас: 7700-1122</li>
+          <li>Хаяг: Улаанбаатар хот</li>
+          <li>
+            Холбоо барих хуудас:{' '}
+            <Link href="/contact" className="text-blue-600 underline">
+              /contact
+            </Link>
+          </li>
         </ul>
       </LegalSection>
+
+      <div className="mt-6 pt-4 border-t flex flex-wrap gap-3 text-xs">
+        <Link href="/account/delete" className="text-blue-600 hover:underline">
+          Бүртгэл устгах хүсэлт
+        </Link>
+        <Link href="/contact" className="text-blue-600 hover:underline">
+          Холбоо барих
+        </Link>
+        <Link href="/help" className="text-blue-600 hover:underline">
+          Тусламж
+        </Link>
+      </div>
     </LegalPage>
   );
 }

@@ -13,4 +13,4 @@ Allow: /
 User-agent: LinkedInBot
 Allow: /
 
-Sitemap: https://soh-ready.vercel.app/sitemap.xml
+Sitemap: https://khotol.vercel.app/sitemap.xml

@@ -255,10 +255,20 @@ export default function HelpPage() {
       <LegalSection number="5" title="Дэмжлэг, холбоо барих">
         <p>Асуудал гарвал дараах сувгаар холбоо барина:</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Утас: [________]</li>
-          <li>И-мэйл: [________]</li>
-          <li>Facebook хуудас: [________]</li>
-          <li>Апп доторх тусламж: [________]</li>
+          <li>Утас: 7700-1122</li>
+          <li>И-мэйл: info@hotol.mn</li>
+          <li>
+            Холбоо барих хуудас:{' '}
+            <Link href="/contact" className="text-blue-600 underline">
+              /contact
+            </Link>
+          </li>
+          <li>
+            Бүртгэл устгуулах:{' '}
+            <Link href="/account/delete" className="text-blue-600 underline">
+              /account/delete
+            </Link>
+          </li>
         </ul>
       </LegalSection>
 
@@ -271,6 +281,12 @@ export default function HelpPage() {
         </Link>
         <Link href="/privacy" className="text-blue-600 hover:underline">
           Нууцлалын бодлого
+        </Link>
+        <Link href="/contact" className="text-blue-600 hover:underline">
+          Холбоо барих
+        </Link>
+        <Link href="/account/delete" className="text-blue-600 hover:underline">
+          Бүртгэл устгах хүсэлт
         </Link>
       </div>
     </LegalPage>

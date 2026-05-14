@@ -512,7 +512,11 @@ function RegisterInner() {
                 <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
                   Нууцлалын бодлого
                 </a>
-                -той танилцаж, зөвшөөрч байна.
+                -той танилцаж, зөвшөөрч байна. Бүртгэлээ дараа нь устгуулах бол{' '}
+                <a href="/account/delete" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                  бүртгэл устгах хүсэлт
+                </a>
+                {' '}хуудаснаас үргэлжлүүлнэ үү.
               </span>
             </label>
 
@@ -532,6 +536,10 @@ function RegisterInner() {
               <a href="/privacy" className="hover:text-gray-600">Нууцлал</a>
               <span className="mx-1.5">·</span>
               <a href="/terms/resident" className="hover:text-gray-600">Нөхцөл</a>
+              <span className="mx-1.5">·</span>
+              <a href="/contact" className="hover:text-gray-600">Холбоо барих</a>
+              <span className="mx-1.5">·</span>
+              <a href="/account/delete" className="hover:text-gray-600">Бүртгэл устгах</a>
             </p>
           </div>
         )}
