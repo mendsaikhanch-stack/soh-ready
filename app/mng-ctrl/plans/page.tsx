@@ -55,7 +55,11 @@ export default function PlansPage() {
   };
 
   useEffect(() => {
-    Promise.all([fetchPlans(), fetchTiers()]).then(() => setLoading(false));
+    const loadData = async () => {
+      await Promise.all([fetchPlans(), fetchTiers()]);
+      setLoading(false);
+    };
+    loadData();
   }, []);
 
   const openCreate = () => {

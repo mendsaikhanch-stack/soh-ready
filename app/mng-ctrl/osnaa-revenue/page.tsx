@@ -149,7 +149,7 @@ export default function OsnaaRevenuePage() {
             {branches.map(b => {
               const branchTotal = b.waterBills + b.heatingBills;
               const branchPaid = b.waterPaid + b.heatingPaid;
-              const rate = branchTotal > 0 ? Math.round((branchPaid / branchTotal) * 100) : Math.floor(Math.random() * 20) + 70;
+              const rate = branchTotal > 0 ? Math.round((branchPaid / branchTotal) * 100) : 75;
               return (
                 <tr key={b.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
                   <td className="py-3">
@@ -157,10 +157,10 @@ export default function OsnaaRevenuePage() {
                     <p className="text-xs text-gray-500">{b.district} дүүрэг</p>
                   </td>
                   <td className="text-center text-sm">{b.sokhCount}</td>
-                  <td className="text-right text-sm text-blue-400">{b.waterBills > 0 ? b.waterBills.toLocaleString() : (Math.floor(Math.random() * 500) + 200).toLocaleString() + 'к'}₮</td>
-                  <td className="text-right text-sm text-red-400">{b.heatingBills > 0 ? b.heatingBills.toLocaleString() : (Math.floor(Math.random() * 800) + 400).toLocaleString() + 'к'}₮</td>
-                  <td className="text-right text-sm text-green-400">{branchPaid > 0 ? branchPaid.toLocaleString() : (Math.floor(Math.random() * 900) + 500).toLocaleString() + 'к'}₮</td>
-                  <td className="text-right text-sm text-amber-400">{(b.waterUnpaid + b.heatingUnpaid) > 0 ? (b.waterUnpaid + b.heatingUnpaid).toLocaleString() : (Math.floor(Math.random() * 300) + 50).toLocaleString() + 'к'}₮</td>
+                  <td className="text-right text-sm text-blue-400">{b.waterBills > 0 ? b.waterBills.toLocaleString() : '350к'}₮</td>
+                  <td className="text-right text-sm text-red-400">{b.heatingBills > 0 ? b.heatingBills.toLocaleString() : '600к'}₮</td>
+                  <td className="text-right text-sm text-green-400">{branchPaid > 0 ? branchPaid.toLocaleString() : '700к'}₮</td>
+                  <td className="text-right text-sm text-amber-400">{(b.waterUnpaid + b.heatingUnpaid) > 0 ? (b.waterUnpaid + b.heatingUnpaid).toLocaleString() : '150к'}₮</td>
                   <td className="text-center text-sm">
                     <span className="text-green-400">{b.maintenanceDone}</span>
                     <span className="text-gray-600">/{b.maintenanceCount}</span>

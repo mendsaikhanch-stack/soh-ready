@@ -50,6 +50,41 @@ const visitors = [
   { id: 2, code: '1932', name: 'Сантехникч', expires: '2026.04.09 18:00', active: false },
 ];
 
+const myDeliveries = [
+  {
+    id: 1,
+    sender: 'Шарга маркет',
+    senderEmoji: '🛒',
+    note: 'Хүнсний бүтээгдэхүүн',
+    arrivedAt: '04.08  14:32',
+    boxNo: 'A-12',
+    code: '8472',
+    hoursLeft: 18,
+  },
+  {
+    id: 2,
+    sender: 'BookHub',
+    senderEmoji: '📚',
+    note: 'Ном (1 ширхэг)',
+    arrivedAt: '04.08  11:15',
+    boxNo: 'B-04',
+    code: '2391',
+    hoursLeft: 15,
+  },
+];
+
+const deliveryHistory = [
+  { id: 11, sender: 'Унаа Худалдаа', emoji: '📦', date: '04.05', status: 'Авсан' },
+  { id: 12, sender: 'GoGo Mongolia', emoji: '🛍️', date: '04.02', status: 'Авсан' },
+  { id: 13, sender: 'Шарга маркет', emoji: '🛒', date: '03.28', status: 'Авсан' },
+];
+
+const easyBoxInfo = {
+  location: '1-р давхар, лифтний дэргэд',
+  hours: '06:00 - 24:00',
+  totalBoxes: 24,
+};
+
 const pages = [
   { id: 'home', label: 'Нүүр', icon: '🏠' },
   { id: 'payments', label: 'Төлбөр', icon: '💰' },
@@ -57,6 +92,7 @@ const pages = [
   { id: 'announcements', label: 'Зарлал', icon: '📢' },
   { id: 'maintenance', label: 'Засвар', icon: '🔧' },
   { id: 'visitors', label: 'Зочин', icon: '🚪' },
+  { id: 'parcels', label: 'Илгээмж', icon: '📦' },
   { id: 'profile', label: 'Профайл', icon: '👤' },
 ];
 
@@ -64,8 +100,18 @@ export default function DemoPage() {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(0);
+  const [revealedCodes, setRevealedCodes] = useState<Set<number>>(new Set());
 
   const totalDue = myBills.reduce((s, b) => s + b.amount, 0);
+
+  const toggleCode = (id: number) => {
+    setRevealedCodes(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // Track which page is in view as user scrolls
   useEffect(() => {
@@ -344,7 +390,125 @@ export default function DemoPage() {
           </div>
         </section>
 
-        {/* ====== PAGE 7: PROFILE ====== */}
+        {/* ====== PAGE 7: PARCELS (EasyBox) ====== */}
+        <section className="w-full flex-shrink-0 snap-start overflow-y-auto">
+          <div className="bg-gradient-to-br from-orange-500 to-amber-600 text-white px-4 py-4">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold">📦 Илгээмж</h1>
+              <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full font-semibold">EasyBox</span>
+            </div>
+            <p className="text-xs text-white/80 mt-0.5">{easyBoxInfo.location}</p>
+          </div>
+          <div className="px-4 py-4 pb-24">
+            {/* Hero */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-orange-200 rounded-2xl p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-orange-700 font-semibold">ХҮЛЭЭЖ БУЙ</p>
+                  <p className="text-3xl font-bold text-orange-900">{myDeliveries.length}</p>
+                  <p className="text-[11px] text-orange-700">илгээмж танай хайрцагт байна</p>
+                </div>
+                <span className="text-5xl">📬</span>
+              </div>
+            </div>
+
+            {/* Active deliveries */}
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">⏳ АВАХ ИЛГЭЭМЖ</h3>
+            <div className="space-y-2 mb-4">
+              {myDeliveries.map(d => {
+                const revealed = revealedCodes.has(d.id);
+                const urgent = d.hoursLeft < 24;
+                return (
+                  <div key={d.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div className="p-3">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0">{d.senderEmoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold">{d.sender}</p>
+                          <p className="text-[11px] text-gray-500">{d.note}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">📅 {d.arrivedAt} · Хайрцаг {d.boxNo}</p>
+                        </div>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${urgent ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {d.hoursLeft < 24 ? `${d.hoursLeft} цаг` : `${Math.floor(d.hoursLeft / 24)} өдөр`} үлдсэн
+                        </span>
+                      </div>
+
+                      {revealed ? (
+                        <div className="mt-3 pt-3 border-t border-dashed border-gray-200 flex items-center gap-3">
+                          <div className="w-16 h-16 bg-gray-900 rounded-lg flex items-center justify-center text-white text-2xl shrink-0">
+                            ⬛
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-[10px] text-gray-500 uppercase font-semibold">Хүлээн авах код</p>
+                            <p className="text-3xl font-bold font-mono tracking-widest text-gray-900">{d.code}</p>
+                            <p className="text-[10px] text-gray-400">Хайрцганд гарын тэмдэг тавьж нээнэ</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => toggleCode(d.id)}
+                          className="mt-3 w-full bg-gradient-to-br from-orange-500 to-amber-600 text-white text-sm font-semibold py-2.5 rounded-lg active:scale-[0.98] transition"
+                        >
+                          📱 Хүлээн авах код харах
+                        </button>
+                      )}
+
+                      {revealed && (
+                        <button
+                          type="button"
+                          onClick={() => toggleCode(d.id)}
+                          className="mt-2 w-full text-[10px] text-gray-400 underline"
+                        >
+                          Кодыг нуух
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed mb-4">
+              <p className="font-semibold mb-1">ℹ️ Хэрхэн ажиллах вэ</p>
+              <ol className="list-decimal pl-4 space-y-0.5 text-[10px]">
+                <li>Захиалга өгөхдөө хүргэлтийн хаягт энэ EasyBox-ын код өгнө</li>
+                <li>Хайрцагт орохдоо апп болон SMS-р мэдэгдэнэ</li>
+                <li>2 хоногийн дотор очиж авна — дараа нь буцаагдана</li>
+              </ol>
+            </div>
+
+            {/* History */}
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">📜 ӨМНӨХ ИЛГЭЭМЖ</h3>
+            <div className="bg-white rounded-xl shadow-sm divide-y">
+              {deliveryHistory.map(h => (
+                <div key={h.id} className="flex items-center gap-3 px-3 py-2.5">
+                  <span className="text-xl shrink-0">{h.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate">{h.sender}</p>
+                    <p className="text-[10px] text-gray-400">{h.date}</p>
+                  </div>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0">
+                    ✓ {h.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Location */}
+            <div className="mt-4 bg-white rounded-xl shadow-sm p-3 flex items-center gap-3">
+              <span className="text-2xl">📍</span>
+              <div className="flex-1">
+                <p className="text-xs text-gray-500">Хайрцагны байршил</p>
+                <p className="text-sm font-medium">{easyBoxInfo.location}</p>
+                <p className="text-[10px] text-gray-400">Цаг: {easyBoxInfo.hours} · {easyBoxInfo.totalBoxes} хайрцагтай</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====== PAGE 8: PROFILE ====== */}
         <section className="w-full flex-shrink-0 snap-start overflow-y-auto">
           <div className="bg-blue-600 text-white px-4 py-4">
             <h1 className="text-lg font-bold">👤 Профайл</h1>
