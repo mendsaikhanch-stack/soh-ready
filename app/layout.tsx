@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     description: "СӨХ-ийн төлбөр, мэдэгдэл, засвар, тайлан — бүгд нэг апп дээр. Утсандаа суулгаж ашиглаарай.",
     images: [
       {
-        url: "/og/og-photo-1200x630.png",
+        url: "/og/og-photo.png",
         width: 1200,
         height: 630,
         alt: "Хотол — СӨХ-ийн өдөр тутмын ажлыг хялбарчилна",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Хотол — Байрны бүх зүйл нэг дор",
     description: "СӨХ-ийн төлбөр, мэдэгдэл, засвар, тайлан — бүгд нэг апп дээр.",
-    images: ["/og/og-photo-1200x630.png"],
+    images: ["/og/og-photo.png"],
   },
 };
 
