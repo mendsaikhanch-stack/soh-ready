@@ -22,14 +22,17 @@ interface HoaSearchProps {
   onNotFound?: () => void;
   placeholder?: string;
   autoFocus?: boolean;
+  pageSize?: number;
 }
 
 // Бүртгэл хэсэгт ашиглах СӨХ хайлтын reusable component.
 // Нэр + (заавал биш) дүүрэг/хороогоор debounce search хийнэ.
-export default function HoaSearch({ district, khoroo, onSelect, onNotFound, placeholder, autoFocus }: HoaSearchProps) {
+export default function HoaSearch({ district, khoroo, onSelect, onNotFound, placeholder, autoFocus, pageSize = 50 }: HoaSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<HoaSearchResult[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searched, setSearched] = useState(false);
   const debounceRef = useRef<number | null>(null);
 
@@ -39,6 +42,7 @@ export default function HoaSearch({ district, khoroo, onSelect, onNotFound, plac
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     if (!query.trim() && !district && !khoroo) {
       setResults([]);
+      setTotal(0);
       setSearched(false);
       return;
     }
@@ -49,19 +53,38 @@ export default function HoaSearch({ district, khoroo, onSelect, onNotFound, plac
         if (query.trim()) params.set('q', query.trim());
         if (district) params.set('district', district);
         if (khoroo) params.set('khoroo', khoroo);
-        params.set('limit', '15');
+        params.set('limit', String(pageSize));
         const res = await fetch(`/api/signup/search-hoa?${params}`);
         const data = await res.json();
         setResults(data.results || []);
+        setTotal(data.total || 0);
         setSearched(true);
       } catch {
         setResults([]);
+        setTotal(0);
       } finally {
         setLoading(false);
       }
     }, 300);
     return () => { if (debounceRef.current) window.clearTimeout(debounceRef.current); };
-  }, [searchKey, query, district, khoroo]);
+  }, [searchKey, query, district, khoroo, pageSize]);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const params = new URLSearchParams();
+      if (query.trim()) params.set('q', query.trim());
+      if (district) params.set('district', district);
+      if (khoroo) params.set('khoroo', khoroo);
+      params.set('limit', String(pageSize));
+      params.set('offset', String(results.length));
+      const res = await fetch(`/api/signup/search-hoa?${params}`);
+      const data = await res.json();
+      setResults(prev => [...prev, ...(data.results || [])]);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   return (
     <div>
@@ -76,6 +99,13 @@ export default function HoaSearch({ district, khoroo, onSelect, onNotFound, plac
 
       <div className="mt-2 space-y-2">
         {loading && <p className="text-xs text-gray-400 text-center py-2">Хайж байна...</p>}
+
+        {!loading && results.length > 0 && (
+          <p className="text-xs text-gray-500 pb-1">
+            <span className="font-medium text-gray-700">{total}</span> СӨХ олдлоо
+            {total > results.length && <span className="text-gray-400"> · {results.length} харагдаж байна</span>}
+          </p>
+        )}
 
         {!loading && results.length > 0 && results.map((r) => (
           <button
@@ -99,7 +129,7 @@ export default function HoaSearch({ district, khoroo, onSelect, onNotFound, plac
               <div className="flex flex-col items-end gap-1 shrink-0">
                 {r.is_active_tenant ? (
                   <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] whitespace-nowrap">
-                    Khotol идэвхтэй
+                    Хотол идэвхтэй
                   </span>
                 ) : (
                   <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-[10px] whitespace-nowrap">
@@ -110,6 +140,16 @@ export default function HoaSearch({ district, khoroo, onSelect, onNotFound, plac
             </div>
           </button>
         ))}
+
+        {!loading && results.length > 0 && total > results.length && (
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="w-full mt-2 px-4 py-3 bg-white border border-blue-300 text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-50 active:bg-blue-100 disabled:opacity-50 transition"
+          >
+            {loadingMore ? 'Ачаалж байна...' : `Цааш үзэх (+${Math.min(pageSize, total - results.length)})`}
+          </button>
+        )}
 
         {!loading && searched && results.length === 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">

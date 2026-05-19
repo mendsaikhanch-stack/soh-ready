@@ -31,8 +31,21 @@ export default function FindHoaPage() {
   const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [loadingKhoroos, setLoadingKhoroos] = useState(false);
 
+  const [countsByDistrict, setCountsByDistrict] = useState<Record<string, number>>({});
+  const [countsByKhoroo, setCountsByKhoroo] = useState<Record<string, Record<string, number>>>({});
+
   const [mode, setMode] = useState<Mode>('search');
   const [selected, setSelected] = useState<HoaSearchResult | null>(null);
+
+  useEffect(() => {
+    fetch('/api/signup/soh-counts')
+      .then(r => r.json())
+      .then(data => {
+        setCountsByDistrict(data.byDistrict || {});
+        setCountsByKhoroo(data.byKhoroo || {});
+      })
+      .catch(() => { /* counts optional */ });
+  }, []);
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -169,15 +182,23 @@ export default function FindHoaPage() {
                 <p className="text-xs text-gray-400 py-2">Дүүрэг олдсонгүй</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
-                  {districts.map(d => (
-                    <button
-                      key={d.id}
-                      onClick={() => selectDistrict(d)}
-                      className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-left hover:bg-blue-50 hover:border-blue-300 active:bg-blue-100 transition"
-                    >
-                      {d.name}
-                    </button>
-                  ))}
+                  {districts.map(d => {
+                    const cnt = countsByDistrict[d.name] || 0;
+                    return (
+                      <button
+                        key={d.id}
+                        onClick={() => selectDistrict(d)}
+                        className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-left hover:bg-blue-50 hover:border-blue-300 active:bg-blue-100 transition flex items-center justify-between gap-2"
+                      >
+                        <span>{d.name}</span>
+                        {cnt > 0 && (
+                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-semibold">
+                            {cnt}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -203,21 +224,28 @@ export default function FindHoaPage() {
                         : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
                     }`}
                   >
-                    Бүх хороо
+                    Бүх хороо {countsByDistrict[district.name] ? `· ${countsByDistrict[district.name]}` : ''}
                   </button>
-                  {khoroos.map(k => (
-                    <button
-                      key={k.id}
-                      onClick={() => setKhoroo(khoroo?.id === k.id ? null : k)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
-                        khoroo?.id === k.id
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
-                      }`}
-                    >
-                      {k.name}
-                    </button>
-                  ))}
+                  {khoroos.map(k => {
+                    const cnt = countsByKhoroo[district.name]?.[k.name] || 0;
+                    if (cnt === 0) return null;
+                    return (
+                      <button
+                        key={k.id}
+                        onClick={() => setKhoroo(khoroo?.id === k.id ? null : k)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition inline-flex items-center gap-1.5 ${
+                          khoroo?.id === k.id
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                        }`}
+                      >
+                        <span>{k.name}</span>
+                        <span className={`text-[10px] font-semibold ${khoroo?.id === k.id ? 'text-white/80' : 'text-blue-600'}`}>
+                          {cnt}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

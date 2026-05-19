@@ -24,18 +24,19 @@ export async function GET(req: NextRequest) {
   const q = (url.searchParams.get('q') || '').slice(0, 200);
   const district = url.searchParams.get('district');
   const khoroo = url.searchParams.get('khoroo');
-  const limit = Math.min(parseInt(url.searchParams.get('limit') || '15', 10) || 15, 30);
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '20', 10) || 20, 200);
+  const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10) || 0, 0);
 
   if (!q && !district && !khoroo) {
-    return NextResponse.json({ results: [] });
+    return NextResponse.json({ results: [], total: 0 });
   }
 
   // sokh_organizations + khoroos→districts join-ээр fetch
   // inner-join (!inner) ашиглавал nested filter ажиллана
   let query = supabaseAdmin
     .from('sokh_organizations')
-    .select('id, name, phone, address, claim_status, khoroos!inner(name, districts!inner(name))')
-    .limit(Math.min(limit * 4, 500));
+    .select('id, name, phone, address, claim_status, khoroos!inner(name, districts!inner(name))', { count: 'exact' })
+    .range(offset, offset + Math.min(limit * 3, 600) - 1);
 
   if (q) {
     query = query.ilike('name', `%${q}%`);
@@ -47,10 +48,10 @@ export async function GET(req: NextRequest) {
     query = query.eq('khoroos.districts.name', district);
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) {
     console.error('[search-hoa] sokh_organizations error:', error.message);
-    return NextResponse.json({ results: [] });
+    return NextResponse.json({ results: [], total: 0 });
   }
 
   const rows = (data || []) as unknown as SokhOrgRow[];
@@ -86,5 +87,5 @@ export async function GET(req: NextRequest) {
 
   scored.sort((a, b) => b.score - a.score);
 
-  return NextResponse.json({ results: scored.slice(0, limit) });
+  return NextResponse.json({ results: scored.slice(0, limit), total: count ?? scored.length });
 }
