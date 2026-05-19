@@ -183,21 +183,37 @@ export default function FindHoaPage() {
             </div>
           )}
 
-          {/* Step 3: Khoroo */}
-          {city && district && !khoroo && (
+          {/* Step 3: Khoroo (заавал биш — шүүлт) */}
+          {city && district && (
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">Хороо сонгох</label>
+              <label className="block text-xs font-medium text-gray-600 mb-2">
+                Хороо <span className="text-gray-400 font-normal">(заавал биш — шүүлт)</span>
+              </label>
               {loadingKhoroos ? (
                 <p className="text-xs text-gray-400 py-2">Ачаалж байна...</p>
               ) : khoroos.length === 0 ? (
                 <p className="text-xs text-gray-400 py-2">Хороо олдсонгүй</p>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => setKhoroo(null)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                      !khoroo
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    Бүх хороо
+                  </button>
                   {khoroos.map(k => (
                     <button
                       key={k.id}
-                      onClick={() => setKhoroo(k)}
-                      className="bg-gray-50 border border-gray-200 rounded-xl px-2 py-2.5 text-xs font-medium text-center hover:bg-blue-50 hover:border-blue-300 active:bg-blue-100 transition"
+                      onClick={() => setKhoroo(khoroo?.id === k.id ? null : k)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                        khoroo?.id === k.id
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                      }`}
                     >
                       {k.name}
                     </button>
@@ -210,17 +226,23 @@ export default function FindHoaPage() {
 
         {mode === 'search' && (
           <>
-            {/* 2. СӨХ-ийн нэрээр хайх — байршлын талбаруудын доор */}
+            {/* 2. СӨХ-ийн жагсаалт / нэрээр хайх */}
             <section className="bg-white border rounded-2xl p-4 mb-3">
-              <h2 className="text-sm font-semibold text-gray-900 mb-1">2. СӨХ-ийн нэр</h2>
-              <p className="text-xs text-gray-500 mb-3">Байршлаа сонгосны дараа СӨХ-ийн нэрийг бичиж хайна уу.</p>
+              <h2 className="text-sm font-semibold text-gray-900 mb-1">
+                2. СӨХ {district ? `· ${district.name}${khoroo ? ' · ' + khoroo.name : ''}` : ''}
+              </h2>
+              <p className="text-xs text-gray-500 mb-3">
+                {district
+                  ? 'Доорх жагсаалтаас өөрийн СӨХ-ийг сонгох эсвэл нэрээр хайна уу.'
+                  : 'Дүүргээ сонгосны дараа СӨХ-ийн жагсаалт автоматаар гарна.'}
+              </p>
               <HoaSearch
-                autoFocus
+                autoFocus={!!district}
                 district={district?.name}
                 khoroo={khoroo?.name}
                 onSelect={onSelect}
                 onNotFound={() => setMode('manual')}
-                placeholder="СӨХ-ийн нэр"
+                placeholder="СӨХ-ийн нэрээр шүүх (заавал биш)"
               />
             </section>
 
