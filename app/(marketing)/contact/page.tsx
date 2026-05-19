@@ -9,7 +9,8 @@ export const metadata: Metadata = {
 const SUPPORT_EMAIL = 'tugsorchin@yahoo.com';
 const ADMIN_EMAIL = 'tugsorchin@yahoo.com';
 const PHONE = '9401-9927';
-const FACEBOOK = 'https://www.facebook.com/[хуудас]';
+const FACEBOOK = 'https://www.facebook.com/profile.php?id=61574235339013';
+const MESSENGER = 'https://m.me/61574235339013';
 const ADDRESS = 'Улаанбаатар хот';
 const COMPANY = 'Хотол / Төгс Орчин ХХК';
 
@@ -51,9 +52,12 @@ export default function ContactPage() {
               </div>
               <div>
                 <dt className="text-gray-400 text-xs uppercase tracking-wide mb-1">Facebook</dt>
-                <dd>
+                <dd className="flex flex-wrap gap-x-3 gap-y-1">
                   <a href={FACEBOOK} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
-                    Хотол · Facebook хуудас
+                    Хотол · Facebook
+                  </a>
+                  <a href={MESSENGER} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                    📩 Messenger
                   </a>
                 </dd>
               </div>
