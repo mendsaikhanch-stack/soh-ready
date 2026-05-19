@@ -83,8 +83,9 @@ export default function LandingPage() {
 
         <div className="relative max-w-6xl mx-auto px-4 py-16 md:py-24 grid md:grid-cols-2 gap-10 items-center text-white">
           <div className="text-center md:text-left">
-            <div className="inline-block bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 text-xs mb-6 border border-white/20">
-              СӨХ · Оршин суугч · Удирдлага — нэг дор
+            <div className="inline-flex items-center gap-2 bg-green-400/15 backdrop-blur-sm rounded-full px-4 py-1.5 text-xs mb-6 border border-green-300/40">
+              <span className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
+              <span className="text-green-50">Pilot үе шат · эхний 3-5 СӨХ үнэгүй туршина</span>
             </div>
             <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4">
               Хотол — <span className="text-yellow-300">СӨХ-ийн өдөр тутмын ажлыг</span> хялбарчилна
@@ -92,16 +93,22 @@ export default function LandingPage() {
             <p className="text-blue-100 text-base md:text-lg mb-8 leading-relaxed max-w-xl mx-auto md:mx-0">
               Оршин суугч, СӨХ, удирдлагын мэдээлэл, төлбөр, хүсэлт, мэдэгдлийг нэг дор.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center md:justify-start">
               <button
                 onClick={() => router.push('/find-hoa')}
-                className="px-8 py-3.5 bg-white text-blue-700 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl active:scale-[0.98] transition-all"
+                className="px-7 py-3.5 bg-white text-blue-700 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl active:scale-[0.98] transition-all"
               >
                 СӨХ-өө хайх →
               </button>
               <Link
+                href="/demo-admin"
+                className="px-7 py-3.5 bg-yellow-300 text-blue-900 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl active:scale-[0.98] transition-all text-center"
+              >
+                🎬 Demo харах
+              </Link>
+              <Link
                 href="/contact"
-                className="px-8 py-3.5 bg-white/10 backdrop-blur border border-white/25 text-white rounded-xl font-semibold text-sm hover:bg-white/20 transition text-center"
+                className="px-7 py-3.5 bg-white/10 backdrop-blur border border-white/25 text-white rounded-xl font-semibold text-sm hover:bg-white/20 transition text-center"
               >
                 СӨХ админ бол холбогдох
               </Link>
@@ -166,6 +173,141 @@ export default function LandingPage() {
                 <p className="text-sm text-gray-600 leading-relaxed">{s.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Mockup strip — UI preview */}
+      <section className="py-16 md:py-20 bg-white border-t border-gray-100">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold text-blue-600 tracking-wide uppercase mb-2">Дэлгэцийн харагдац</p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">Аппын дотор ийм харагдана</h2>
+            <p className="text-gray-500 max-w-xl mx-auto">
+              Оршин суугч төлбөр, мэдэгдэл, хүсэлтээ нэг газраас удирдана. Доорх жишээ дэлгэцүүд.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Mockup 1: Payment */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-4 border border-blue-100">
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="bg-blue-600 text-white px-4 py-3">
+                  <p className="text-xs opacity-80">Төлбөр</p>
+                  <p className="font-semibold text-sm">2026/05 сар</p>
+                </div>
+                <div className="p-4 space-y-2.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Үлдэгдэл</span>
+                    <span className="font-bold text-blue-700">84,500₮</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Цэвэр ус</span>
+                    <span>32,000₮</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Дулаан</span>
+                    <span>52,500₮</span>
+                  </div>
+                  <button className="w-full mt-2 bg-blue-600 text-white text-xs py-2 rounded-lg">QPay-ээр төлөх</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Mockup 2: Announcement */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl p-4 border border-amber-100">
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="bg-amber-500 text-white px-4 py-3">
+                  <p className="text-xs opacity-90">Мэдэгдэл</p>
+                  <p className="font-semibold text-sm">Шинэ зар (2)</p>
+                </div>
+                <div className="p-4 space-y-2.5">
+                  <div className="border-l-2 border-red-400 pl-2">
+                    <p className="text-xs font-semibold">🚨 Усны засвар</p>
+                    <p className="text-[11px] text-gray-500">Маргааш 10:00–14:00 ус хаагдана</p>
+                  </div>
+                  <div className="border-l-2 border-blue-400 pl-2">
+                    <p className="text-xs font-semibold">📅 Хурал</p>
+                    <p className="text-[11px] text-gray-500">5/22 19:00 — 1-р давхарт</p>
+                  </div>
+                  <div className="border-l-2 border-gray-300 pl-2">
+                    <p className="text-xs font-semibold">ℹ️ Зогсоолын дүрэм</p>
+                    <p className="text-[11px] text-gray-500">Машинтай айлуудад</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mockup 3: Maintenance request */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl p-4 border border-green-100">
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="bg-emerald-600 text-white px-4 py-3">
+                  <p className="text-xs opacity-90">Засварын хүсэлт</p>
+                  <p className="font-semibold text-sm">Миний хүсэлт</p>
+                </div>
+                <div className="p-4 space-y-2.5">
+                  <div className="flex items-start gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold">Лифт засвар</p>
+                      <p className="text-[11px] text-gray-500">Хүлээгдэж буй · 2 өдөр</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold">Орцны гэрэл</p>
+                      <p className="text-[11px] text-gray-500">Хийгдэж байна</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 mt-1.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold">Хогийн савны цэвэрлэгээ</p>
+                      <p className="text-[11px] text-gray-500">Шийдэгдсэн</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mockup 4: SOH dashboard */}
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-4 border border-purple-100">
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="bg-purple-600 text-white px-4 py-3">
+                  <p className="text-xs opacity-90">СӨХ хяналт</p>
+                  <p className="font-semibold text-sm">Нарантуул СӨХ</p>
+                </div>
+                <div className="p-4 space-y-2.5">
+                  <div>
+                    <p className="text-[11px] text-gray-500">Цуглуулалт</p>
+                    <p className="text-lg font-bold text-purple-700">72%</p>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full w-[72%] bg-purple-500" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-center">
+                    <div className="bg-gray-50 rounded-lg py-1.5">
+                      <p className="text-[10px] text-gray-500">Айл</p>
+                      <p className="text-xs font-bold">124</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg py-1.5">
+                      <p className="text-[10px] text-gray-500">Хүсэлт</p>
+                      <p className="text-xs font-bold">8</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mt-8">
+            <Link
+              href="/demo-admin"
+              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition"
+            >
+              🎬 Demo бүтнээр харах →
+            </Link>
           </div>
         </div>
       </section>
