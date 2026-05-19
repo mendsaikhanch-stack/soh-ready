@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   description: 'Хотолтой холбогдох утас, и-мэйл, хаяг. СӨХ админ, оршин суугч, апп дэлгүүрийн шалгагчдад зориулсан холбоо барих хуудас.',
 };
 
-const SUPPORT_EMAIL = 'info@hotol.mn';
-const ADMIN_EMAIL = 'admin@hotol.mn';
-const PHONE = '7700-1122';
+const SUPPORT_EMAIL = 'tugsorchin@yahoo.com';
+const ADMIN_EMAIL = 'tugsorchin@yahoo.com';
+const PHONE = '9401-9927';
 const FACEBOOK = 'https://www.facebook.com/[хуудас]';
 const ADDRESS = 'Улаанбаатар хот';
 const COMPANY = 'Хотол / Төгс Орчин ХХК';

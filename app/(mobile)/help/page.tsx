@@ -255,8 +255,8 @@ export default function HelpPage() {
       <LegalSection number="5" title="Дэмжлэг, холбоо барих">
         <p>Асуудал гарвал дараах сувгаар холбоо барина:</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Утас: 7700-1122</li>
-          <li>И-мэйл: info@hotol.mn</li>
+          <li>Утас: 9401-9927</li>
+          <li>И-мэйл: tugsorchin@yahoo.com</li>
           <li>
             Холбоо барих хуудас:{' '}
             <Link href="/contact" className="text-blue-600 underline">
