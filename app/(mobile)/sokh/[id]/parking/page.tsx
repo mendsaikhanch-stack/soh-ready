@@ -11,6 +11,8 @@ interface MyVehicle {
   plate_number: string;
   car_model: string;
   color: string;
+  parking_spot: string | null;
+  parking_type: 'garage' | 'outdoor' | null;
   created_at: string;
 }
 
@@ -39,7 +41,7 @@ export default function MobileParkingPage() {
   const [showForm, setShowForm] = useState(false);
   const [showBlockingForm, setShowBlockingForm] = useState(false);
   const [showSpotMap, setShowSpotMap] = useState(false);
-  const [form, setForm] = useState({ plateNumber: '', carModel: '', color: 'Цагаан' });
+  const [form, setForm] = useState({ plateNumber: '', carModel: '', color: 'Цагаан', parkingType: '' as '' | 'garage' | 'outdoor', parkingSpot: '' });
   const [selectedBlockedCar, setSelectedBlockedCar] = useState('');
   const [gateRequesting, setGateRequesting] = useState(false);
   const [qrVehicle, setQrVehicle] = useState<MyVehicle | null>(null);
@@ -97,13 +99,15 @@ export default function MobileParkingPage() {
       plate_number: form.plateNumber,
       car_model: form.carModel,
       color: form.color,
+      parking_type: form.parkingType || null,
+      parking_spot: form.parkingSpot || null,
       resident_name: profile.name,
       apartment: profile.apartment,
       status: 'active',
     }]);
 
     if (!error) {
-      setForm({ plateNumber: '', carModel: '', color: 'Цагаан' });
+      setForm({ plateNumber: '', carModel: '', color: 'Цагаан', parkingType: '', parkingSpot: '' });
       setShowForm(false);
       await fetchData();
     } else {
@@ -218,6 +222,40 @@ export default function MobileParkingPage() {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Зогсоолын төрөл</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { v: '', label: 'Сонгоогүй', icon: '—' },
+                      { v: 'garage', label: 'Гараж', icon: '🏚' },
+                      { v: 'outdoor', label: 'Задгай', icon: '🅿️' },
+                    ].map(opt => (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        onClick={() => setForm({ ...form, parkingType: opt.v as '' | 'garage' | 'outdoor' })}
+                        className={`py-2 rounded-lg border text-xs ${
+                          form.parkingType === opt.v
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'border-gray-200 text-gray-600'
+                        }`}
+                      >
+                        <span className="mr-1">{opt.icon}</span>{opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">
+                    Зогсоолын дугаар {form.parkingType === 'garage' && <span className="text-blue-500">(жнь: Г-15)</span>}
+                  </label>
+                  <input
+                    placeholder={form.parkingType === 'garage' ? 'жнь: Г-15' : form.parkingType === 'outdoor' ? 'жнь: 3' : 'Заавал биш'}
+                    value={form.parkingSpot}
+                    onChange={e => setForm({ ...form, parkingSpot: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
               </div>
               <div className="flex gap-2 mt-3">
                 <button
@@ -260,6 +298,15 @@ export default function MobileParkingPage() {
                     <p className="text-xs text-gray-500">
                       {v.car_model && `${v.car_model} • `}{v.color}
                     </p>
+                    {(v.parking_spot || v.parking_type) && (
+                      <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1">
+                        <span>{v.parking_type === 'garage' ? '🏚' : v.parking_type === 'outdoor' ? '🅿️' : '📍'}</span>
+                        <span>
+                          {v.parking_type === 'garage' ? 'Гараж' : v.parking_type === 'outdoor' ? 'Задгай' : 'Зогсоол'}
+                          {v.parking_spot ? ` · ${v.parking_spot}` : ''}
+                        </span>
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => setQrVehicle(v)}

@@ -12,6 +12,7 @@ interface Vehicle {
   car_model: string | null;
   color: string | null;
   parking_spot: string | null;
+  parking_type: 'garage' | 'outdoor' | null;
   status: string;
   created_at: string;
 }
@@ -61,7 +62,7 @@ export default function AdminParking() {
   const [activeTab, setActiveTab] = useState<'vehicles' | 'spots' | 'blocking' | 'guests' | 'gate'>('vehicles');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState({ plate_number: '', resident_name: '', apartment: '', car_model: '', color: 'Цагаан', parking_spot: '' });
+  const [form, setForm] = useState({ plate_number: '', resident_name: '', apartment: '', car_model: '', color: 'Цагаан', parking_spot: '', parking_type: '' as '' | 'garage' | 'outdoor' });
   const [blockingForm, setBlockingForm] = useState({ blocking_plate: '', blocked_plate: '' });
   const [gateForm, setGateForm] = useState({ ip_address: '192.168.1.100', port: '8080', auto_open: true, overcharge_per_hour: 5000 });
   const [guestForm, setGuestForm] = useState({ plate_number: '', host_name: '', host_apartment: '', allowed_minutes: 60 });
@@ -93,10 +94,11 @@ export default function AdminParking() {
   const saveVehicle = async () => {
     if (!form.plate_number || !form.resident_name) return;
     const sokhId = await getAdminSokhId();
+    const payload = { ...form, parking_type: form.parking_type || null };
     if (editId) {
-      await adminFrom('parking_vehicles').update(form).eq('id', editId);
+      await adminFrom('parking_vehicles').update(payload).eq('id', editId);
     } else {
-      await adminFrom('parking_vehicles').insert({ sokh_id: sokhId, status: 'active', ...form });
+      await adminFrom('parking_vehicles').insert({ sokh_id: sokhId, status: 'active', ...payload });
     }
     setShowForm(false);
     fetchAll();
@@ -110,7 +112,7 @@ export default function AdminParking() {
 
   const openAdd = () => {
     setEditId(null);
-    setForm({ plate_number: '', resident_name: '', apartment: '', car_model: '', color: 'Цагаан', parking_spot: '' });
+    setForm({ plate_number: '', resident_name: '', apartment: '', car_model: '', color: 'Цагаан', parking_spot: '', parking_type: '' });
     setShowForm(true);
   };
   const openEdit = (v: Vehicle) => {
@@ -122,6 +124,7 @@ export default function AdminParking() {
       car_model: v.car_model || '',
       color: v.color || 'Цагаан',
       parking_spot: v.parking_spot || '',
+      parking_type: v.parking_type || '',
     });
     setShowForm(true);
   };
@@ -247,7 +250,12 @@ export default function AdminParking() {
                 <input placeholder="Тоот" value={form.apartment} onChange={e => setForm({ ...form, apartment: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
                 <input placeholder="Машины загвар" value={form.car_model} onChange={e => setForm({ ...form, car_model: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
                 <select value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} className="border rounded-lg px-3 py-2 text-sm">{COLORS.map(c => <option key={c}>{c}</option>)}</select>
-                <input placeholder="Зогсоолын дугаар" value={form.parking_spot} onChange={e => setForm({ ...form, parking_spot: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
+                <select value={form.parking_type} onChange={e => setForm({ ...form, parking_type: e.target.value as '' | 'garage' | 'outdoor' })} className="border rounded-lg px-3 py-2 text-sm">
+                  <option value="">Төрөл сонгох</option>
+                  <option value="garage">🏚 Гараж</option>
+                  <option value="outdoor">🅿️ Задгай</option>
+                </select>
+                <input placeholder={form.parking_type === 'garage' ? 'жнь: Г-15' : 'Зогсоолын дугаар'} value={form.parking_spot} onChange={e => setForm({ ...form, parking_spot: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
               </div>
               <div className="flex gap-2 mt-3">
                 <button onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-lg text-sm">Цуцлах</button>
@@ -276,7 +284,13 @@ export default function AdminParking() {
                     <td className="px-4 py-3 text-sm text-gray-500">{v.apartment || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-500">{v.car_model || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-500">{v.color || '-'}</td>
-                    <td className="px-4 py-3 text-sm">{v.parking_spot || '-'}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <div className="flex items-center gap-1">
+                        {v.parking_type === 'garage' && <span title="Гараж">🏚</span>}
+                        {v.parking_type === 'outdoor' && <span title="Задгай">🅿️</span>}
+                        <span>{v.parking_spot || '-'}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <button onClick={() => openEdit(v)} className="text-blue-500 text-sm mr-2 hover:underline">Засах</button>
                       <button onClick={() => deleteVehicle(v.id)} className="text-red-400 text-sm hover:underline">Устгах</button>
