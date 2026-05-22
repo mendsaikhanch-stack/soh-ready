@@ -26,6 +26,10 @@ export default function MobileGatePage() {
   const [showQR, setShowQR] = useState(false);
   const [showGuestQR, setShowGuestQR] = useState(false);
   const [guestForm, setGuestForm] = useState({ name: '', minutes: 60 });
+  const [myToken, setMyToken] = useState<string>('');
+  const [myTokenExp, setMyTokenExp] = useState<number>(0);
+  const [guestToken, setGuestToken] = useState<string>('');
+  const [tokenError, setTokenError] = useState<string>('');
 
   const fetchData = async () => {
     const { data } = await supabase
@@ -39,6 +43,58 @@ export default function MobileGatePage() {
   };
 
   useEffect(() => { fetchData(); }, [sokhId]);
+
+  const authedFetch = async (url: string, body: Record<string, unknown>) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  };
+
+  // QR-ийг issue хийх — 60с тутамд rotate
+  const issueMyQr = async () => {
+    setTokenError('');
+    const res = await authedFetch('/api/gate/issue-qr', { sokhId: Number(sokhId), kind: 'self' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      setTokenError(err.error || 'QR авч чадсангүй');
+      return;
+    }
+    const { token, expiresInSec } = await res.json();
+    setMyToken(token);
+    setMyTokenExp(Date.now() + expiresInSec * 1000);
+  };
+
+  useEffect(() => {
+    if (!showQR) return;
+    issueMyQr();
+    const id = setInterval(() => issueMyQr(), 55 * 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showQR, sokhId]);
+
+  const issueGuestQr = async () => {
+    setTokenError('');
+    if (!guestForm.name) return;
+    const res = await authedFetch('/api/gate/issue-qr', {
+      sokhId: Number(sokhId),
+      kind: 'guest',
+      guestName: guestForm.name,
+      guestMinutes: guestForm.minutes,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      setTokenError(err.error || 'Зочны QR авч чадсангүй');
+      return;
+    }
+    const { token } = await res.json();
+    setGuestToken(token);
+  };
 
   const requestOpen = async () => {
     if (!profile) {
@@ -61,14 +117,6 @@ export default function MobileGatePage() {
       alert(`Алдаа: ${error.message}`);
     }
   };
-
-  const myToken = profile
-    ? `gate:${sokhId}:${profile.id}:${profile.apartment}`
-    : `gate:${sokhId}:guest`;
-
-  const guestToken = guestForm.name
-    ? `gate-guest:${sokhId}:${encodeURIComponent(guestForm.name)}:${guestForm.minutes}:${Date.now()}`
-    : '';
 
   if (loading) {
     return (
@@ -108,12 +156,23 @@ export default function MobileGatePage() {
           </button>
           {showQR && (
             <div className="px-4 pb-4 flex flex-col items-center gap-2">
-              <div className="bg-white p-3 rounded-xl border">
-                <QRCodeSVG value={myToken} size={180} />
-              </div>
-              <p className="text-[11px] text-gray-500 text-center">
-                Хаалганы скэннерт ойртуулна уу. Зөвхөн та өөрөө ашиглах боломжтой.
-              </p>
+              {tokenError ? (
+                <div className="text-red-600 text-xs text-center py-4">{tokenError}</div>
+              ) : myToken ? (
+                <>
+                  <div className="bg-white p-3 rounded-xl border">
+                    <QRCodeSVG value={myToken} size={180} />
+                  </div>
+                  <p className="text-[11px] text-gray-500 text-center">
+                    Хаалганы скэннерт ойртуулна уу. 60с тутамд автоматаар шинэчлэгдэнэ.
+                  </p>
+                  <p className="text-[10px] text-amber-600">
+                    ⏱ ~{Math.max(0, Math.ceil((myTokenExp - Date.now()) / 1000))}с үлдсэн
+                  </p>
+                </>
+              ) : (
+                <div className="text-gray-400 text-xs py-4">QR үүсгэж байна...</div>
+              )}
             </div>
           )}
         </div>
@@ -162,6 +221,13 @@ export default function MobileGatePage() {
                   </button>
                 ))}
               </div>
+              <button
+                onClick={issueGuestQr}
+                disabled={!guestForm.name}
+                className="w-full py-2 rounded-lg bg-blue-600 text-white text-sm font-medium disabled:opacity-50"
+              >
+                Зочны QR үүсгэх
+              </button>
               {guestToken && (
                 <div className="flex flex-col items-center gap-2 pt-2">
                   <div className="bg-white p-3 rounded-xl border">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { linkManualSignupToUser } from '@/app/lib/directory/link-manual-signup';
 import { enqueueRepair } from '@/app/lib/jobs/dispatch';
+import { claimSohLimiter } from '@/app/lib/rate-limit';
 
 const CLAIM_COOKIE = 'manual-hoa-claim';
 
@@ -23,6 +24,15 @@ interface ClaimBody {
 // - email-аар claim хийхгүй (Supabase автомат email <phone>@toot.app тул phone давтагдсан)
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const rl = claimSohLimiter.check(ip);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Хэт олон оролдлого. ${rl.retryAfterSec}с хүлээнэ үү` },
+        { status: 429 }
+      );
+    }
+
     const body = (await req.json()) as ClaimBody;
     const phoneRaw = (body.phone || '').trim();
     if (!/^\d{8}$/.test(phoneRaw)) {

@@ -30,6 +30,9 @@ export default function MobileElevatorPage() {
   const [showQR, setShowQR] = useState(false);
   const [selectedElevator, setSelectedElevator] = useState(ELEVATORS[0]);
   const [targetFloor, setTargetFloor] = useState<number>(1);
+  const [myToken, setMyToken] = useState<string>('');
+  const [myTokenExp, setMyTokenExp] = useState<number>(0);
+  const [tokenError, setTokenError] = useState<string>('');
 
   // Davhar-aas apartment гарга (A-301 → 3)
   const myFloor = (() => {
@@ -57,6 +60,35 @@ export default function MobileElevatorPage() {
     setTargetFloor(myFloor);
   }, [sokhId, myFloor]);
 
+  const issueMyQr = async () => {
+    setTokenError('');
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/elevator/issue-qr', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ sokhId: Number(sokhId), floor: myFloor }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      setTokenError(err.error || 'QR авч чадсангүй');
+      return;
+    }
+    const { token, expiresInSec } = await res.json();
+    setMyToken(token);
+    setMyTokenExp(Date.now() + expiresInSec * 1000);
+  };
+
+  useEffect(() => {
+    if (!showQR) return;
+    issueMyQr();
+    const id = setInterval(() => issueMyQr(), 55 * 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showQR, sokhId, myFloor]);
+
   const callElevator = async (toFloor: number) => {
     if (!profile) {
       alert('Нэвтэрнэ үү');
@@ -80,10 +112,6 @@ export default function MobileElevatorPage() {
       alert(`Алдаа: ${error.message}`);
     }
   };
-
-  const myToken = profile
-    ? `elevator:${sokhId}:${profile.id}:${profile.apartment}:${myFloor}`
-    : `elevator:${sokhId}:guest`;
 
   if (loading) {
     return (
@@ -123,12 +151,23 @@ export default function MobileElevatorPage() {
           </button>
           {showQR && (
             <div className="px-4 pb-4 flex flex-col items-center gap-2">
-              <div className="bg-white p-3 rounded-xl border">
-                <QRCodeSVG value={myToken} size={180} />
-              </div>
-              <p className="text-[11px] text-gray-500 text-center">
-                Лифтний скэннерт ойртуулахад автоматаар {myFloor}-р давхрыг сонгоно.
-              </p>
+              {tokenError ? (
+                <div className="text-red-600 text-xs text-center py-4">{tokenError}</div>
+              ) : myToken ? (
+                <>
+                  <div className="bg-white p-3 rounded-xl border">
+                    <QRCodeSVG value={myToken} size={180} />
+                  </div>
+                  <p className="text-[11px] text-gray-500 text-center">
+                    Лифтний скэннерт ойртуулахад {myFloor}-р давхрыг автоматаар сонгоно.
+                  </p>
+                  <p className="text-[10px] text-amber-600">
+                    ⏱ ~{Math.max(0, Math.ceil((myTokenExp - Date.now()) / 1000))}с үлдсэн
+                  </p>
+                </>
+              ) : (
+                <div className="text-gray-400 text-xs py-4">QR үүсгэж байна...</div>
+              )}
             </div>
           )}
         </div>

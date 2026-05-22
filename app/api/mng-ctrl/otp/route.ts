@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { otpSendLimiter, otpVerifyLimiter } from '@/app/lib/rate-limit';
 
 const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'mendsaikhanch@gmail.com';
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 минут
@@ -51,10 +52,18 @@ async function sendOTP(code: string): Promise<boolean> {
 
 // OTP илгээх
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
   const body = await req.json();
 
   // OTP илгээх
   if (body.action === 'send') {
+    const rl = otpSendLimiter.check(ip);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Хэт олон оролдлого. ${rl.retryAfterSec}с хүлээнэ үү` },
+        { status: 429 }
+      );
+    }
     const code = generateOTP();
     const key = 'superadmin';
 
@@ -71,6 +80,13 @@ export async function POST(req: NextRequest) {
 
   // OTP шалгах
   if (body.action === 'verify') {
+    const rl = otpVerifyLimiter.check(ip);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Хэт олон оролдлого. ${rl.retryAfterSec}с хүлээнэ үү` },
+        { status: 429 }
+      );
+    }
     const { code } = body;
     const key = 'superadmin';
     const stored = otpStore.get(key);
