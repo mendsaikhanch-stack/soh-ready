@@ -102,6 +102,8 @@ const pages = [
   { id: 'announcements', label: 'Зарлал', icon: '📢' },
   { id: 'maintenance', label: 'Засвар', icon: '🔧' },
   { id: 'parking', label: 'Зогсоол', icon: '🚗' },
+  { id: 'gate', label: 'Хаалга', icon: '🚧' },
+  { id: 'elevator', label: 'Лифт', icon: '🛗' },
   { id: 'visitors', label: 'Зочин', icon: '🚪' },
   { id: 'parcels', label: 'Илгээмж', icon: '📦' },
   { id: 'profile', label: 'Профайл', icon: '👤' },
@@ -449,7 +451,151 @@ export default function DemoPage() {
           </div>
         </section>
 
-        {/* ====== PAGE 7: VISITORS ====== */}
+        {/* ====== PAGE 7: GATE ====== */}
+        <section className="w-full flex-shrink-0 snap-start overflow-y-auto">
+          <div className="bg-slate-800 text-white px-4 py-4">
+            <h1 className="text-lg font-bold">🚧 Хотхоны хаалга</h1>
+            <p className="text-xs text-white/70">QR-аар нээх, зочинд QR илгээх</p>
+          </div>
+          <div className="px-4 py-4 pb-24 space-y-4">
+            {/* My QR */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="bg-gradient-to-r from-slate-700 to-slate-900 px-4 py-3 text-white">
+                <p className="text-xs opacity-80">Миний QR</p>
+                <p className="font-semibold text-sm">{me.name} · {me.apartment}</p>
+              </div>
+              <div className="px-4 py-4 flex flex-col items-center gap-2">
+                <div className="bg-white p-3 rounded-xl border-2 border-gray-200">
+                  <div className="w-32 h-32 bg-[repeating-linear-gradient(45deg,#000_0,#000_3px,#fff_3px,#fff_6px)] rounded" />
+                </div>
+                <p className="text-[10px] text-gray-500 text-center">Хаалганы скэннерт ойртуулна уу</p>
+              </div>
+            </div>
+
+            {/* Gate open button */}
+            <button className="w-full bg-green-600 text-white py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-sm">
+              <span>🚧</span><span>Хаалт нээх хүсэлт илгээх</span>
+            </button>
+
+            {/* Guest QR card */}
+            <div className="bg-white rounded-2xl shadow-sm p-3">
+              <p className="text-sm font-medium mb-2">🎫 Зочинд QR илгээх</p>
+              <input type="text" placeholder="Зочны нэр" defaultValue="Ц. Бат-Эрдэнэ" className="w-full border rounded-lg px-3 py-2 text-sm mb-2" />
+              <div className="flex gap-2 mb-2">
+                {[30, 60, 120, 240].map(m => (
+                  <div key={m} className={`flex-1 text-xs py-1.5 rounded-lg border text-center ${m === 60 ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600'}`}>
+                    {m} мин
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-500 text-center">Зочиндоо илгээгээд 60 мин дотор хүчинтэй</p>
+            </div>
+
+            {/* Recent events */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 mb-2">СҮҮЛИЙН ҮЙЛДЭЛ</h3>
+              <div className="bg-white rounded-xl shadow-sm divide-y">
+                {[
+                  { icon: '✅', text: 'Нээгдсэн', time: '14:32', src: 'QR' },
+                  { icon: '🕐', text: 'Хүсэлт илгээсэн · Зочин Б.Болд', time: '11:08', src: 'Зочин' },
+                  { icon: '✅', text: 'Нээгдсэн', time: 'Өчигдөр 18:45', src: 'QR' },
+                ].map((e, i) => (
+                  <div key={i} className="px-3 py-2.5 flex items-center gap-3">
+                    <span className="text-lg">{e.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">{e.text}</p>
+                      <p className="text-[10px] text-gray-400">{e.time} · {e.src}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====== PAGE 8: ELEVATOR ====== */}
+        <section className="w-full flex-shrink-0 snap-start overflow-y-auto">
+          <div className="bg-indigo-700 text-white px-4 py-4">
+            <h1 className="text-lg font-bold">🛗 Лифт</h1>
+            <p className="text-xs text-white/70">Дуудах, QR харуулах</p>
+          </div>
+          <div className="px-4 py-4 pb-24 space-y-4">
+            {/* My QR */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-4 py-3 text-white">
+                <p className="text-xs opacity-80">Миний QR</p>
+                <p className="font-semibold text-sm">{me.name} · {me.apartment} · 3-р давхар</p>
+              </div>
+              <div className="px-4 py-4 flex flex-col items-center gap-2">
+                <div className="bg-white p-3 rounded-xl border-2 border-gray-200">
+                  <div className="w-32 h-32 bg-[repeating-linear-gradient(-45deg,#000_0,#000_3px,#fff_3px,#fff_6px)] rounded" />
+                </div>
+                <p className="text-[10px] text-gray-500 text-center">Скэннерт ойртуулахад 3-р давхрыг автоматаар сонгоно</p>
+              </div>
+            </div>
+
+            {/* Quick call */}
+            <button className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-sm">
+              <span>🛗</span><span>3-р давхар руу дуудах</span>
+            </button>
+
+            {/* Elevator selector */}
+            <div className="bg-white rounded-xl p-3 shadow-sm">
+              <p className="text-xs font-semibold text-gray-500 mb-2">ЛИФТ СОНГОХ</p>
+              <div className="flex gap-2">
+                <div className="flex-1 py-2 rounded-lg bg-indigo-600 text-white text-center text-sm">Лифт #1</div>
+                <div className="flex-1 py-2 rounded-lg border border-gray-200 text-gray-600 text-center text-sm">Лифт #2</div>
+              </div>
+            </div>
+
+            {/* Floor picker */}
+            <div className="bg-white rounded-xl p-3 shadow-sm">
+              <p className="text-xs font-semibold text-gray-500 mb-2">ДАВХАР СОНГОХ</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {Array.from({ length: 16 }, (_, i) => i + 1).map(f => {
+                  const isMine = f === 3;
+                  const isSel = f === 7;
+                  return (
+                    <div key={f} className={`aspect-square rounded-lg border text-sm font-medium flex flex-col items-center justify-center ${
+                      isSel ? 'bg-indigo-600 text-white border-indigo-600' :
+                      isMine ? 'bg-blue-50 border-blue-300 text-blue-700' :
+                      'border-gray-200 text-gray-700'
+                    }`}>
+                      {f}
+                      {isMine && <span className="text-[7px] opacity-70">миний</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-3 w-full bg-green-600 text-white py-2.5 rounded-lg text-sm font-medium text-center">
+                7-р давхар руу дуудах
+              </div>
+            </div>
+
+            {/* Recent calls */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 mb-2">СҮҮЛИЙН ДУУДЛАГА</h3>
+              <div className="bg-white rounded-xl shadow-sm divide-y">
+                {[
+                  { icon: '✅', text: 'Лифт #1 · 1 → 3', time: '14:28', status: 'Ирсэн', color: 'bg-green-100 text-green-700' },
+                  { icon: '🕐', text: 'Лифт #2 · 1 → 7', time: '13:50', status: 'Хүлээгдэж буй', color: 'bg-yellow-100 text-yellow-700' },
+                  { icon: '✅', text: 'Лифт #1 · 1 → 3', time: 'Өчигдөр 20:14', status: 'Ирсэн', color: 'bg-green-100 text-green-700' },
+                ].map((c, i) => (
+                  <div key={i} className="px-3 py-2.5 flex items-center gap-3">
+                    <span className="text-lg">{c.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">{c.text}</p>
+                      <p className="text-[10px] text-gray-400">{c.time}</p>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.color}`}>{c.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====== PAGE 9: VISITORS ====== */}
         <section className="w-full flex-shrink-0 snap-start overflow-y-auto">
           <div className="bg-blue-600 text-white px-4 py-4">
             <h1 className="text-lg font-bold">🚪 Зочны бүртгэл</h1>
