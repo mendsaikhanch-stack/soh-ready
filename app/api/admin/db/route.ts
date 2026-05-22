@@ -11,6 +11,7 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     // Superadmin бүх хүснэгтэд хандах эрхтэй
     'sokh_organizations', 'residents', 'payments', 'announcements',
     'maintenance_requests', 'complaints', 'parking_vehicles', 'parking_events',
+    'blocking_reports', 'guest_vehicles', 'gate_settings',
     'utility_usage', 'chat_messages', 'polls', 'poll_votes', 'packages',
     'staff', 'emergency_alerts', 'bookings', 'bookable_spaces', 'shops',
     'vending_machines', 'elevator_maintenance', 'cctv_cameras', 'cctv_ai_alerts',
@@ -25,6 +26,7 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     // Admin өөрийн СӨХ-д холбогдох хүснэгтүүд
     'sokh_organizations', 'residents', 'payments', 'announcements',
     'maintenance_requests', 'complaints', 'parking_vehicles', 'parking_events',
+    'blocking_reports', 'guest_vehicles', 'gate_settings',
     'utility_usage', 'chat_messages', 'polls', 'poll_votes', 'packages',
     'staff', 'emergency_alerts', 'bookings', 'bookable_spaces', 'shops',
     'vending_machines', 'elevator_maintenance', 'cctv_cameras', 'cctv_ai_alerts',

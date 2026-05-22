@@ -33,6 +33,7 @@ const solutions = [
   { icon: '📢', title: 'Зар, мэдэгдэл', desc: 'СӨХ-ийн мэдэгдлийг шуурхай, бүгдэд адил хүргэнэ.' },
   { icon: '💳', title: 'Төлбөр, үлдэгдэл', desc: 'Хувийн нэхэмжлэл, үлдэгдлээ ил тод харна.' },
   { icon: '🛠', title: 'Хүсэлт, гомдол', desc: 'Бичгээр илгээсэн хүсэлт төлөвтэйгөө хадгалагдана.' },
+  { icon: '🚗', title: 'Зогсоол удирдлага', desc: 'Машин бүртгэл, хаалт нээх QR, хаагдсан машин мэдэгдэх, зочны машин.' },
   { icon: '📍', title: 'СӨХ жагсаалтад байхгүй бол', desc: 'Өөрөө мэдээллээ оруулж бүртгүүлээд СӨХ-д дохио өгнө.' },
 ];
 
@@ -40,6 +41,7 @@ const residentBenefits = [
   'Өөрийн СӨХ-өө олно',
   'Төлбөр, мэдэгдлээ нэг дороос харна',
   'Хүсэлт, гомдол бичгээр илгээж, төлөвийг нь дагана',
+  'Машинаа бүртгэж, хаалт нээх QR, "хаагдсан" мэдэгдлийг гартаа хадгална',
   'СӨХ жагсаалтад байхгүй бол өөрөө бүртгүүлж, СӨХ-д дохио үүсгэнэ',
 ];
 
@@ -47,6 +49,7 @@ const adminBenefits = [
   'Оршин суугчдын бүрэн бүртгэл',
   'Зар, мэдэгдлийг нэг л удаа нийтлээд бүгдэд хүргэх',
   'Хүсэлт, гомдлыг төлөвтэй удирдах',
+  'Зогсоол: машин, зогсоолын дугаар, зочин, хаалганы тохиргоо нэг дороос',
   'Санхүү, үйл ажиллагааны ил тод байдлыг сайжруулах',
   'СӨХ-д хэдэн оршин суугч сонирхож байгааг харах demand dashboard',
 ];
@@ -188,7 +191,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {/* Mockup 1: Payment */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-4 border border-blue-100">
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -295,6 +298,36 @@ export default function LandingPage() {
                       <p className="text-[10px] text-gray-500">Хүсэлт</p>
                       <p className="text-xs font-bold">8</p>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mockup 5: Parking */}
+            <div className="bg-gradient-to-br from-indigo-50 to-sky-50 rounded-3xl p-4 border border-indigo-100">
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="bg-indigo-600 text-white px-4 py-3">
+                  <p className="text-xs opacity-90">Зогсоол</p>
+                  <p className="font-semibold text-sm">Миний машинууд</p>
+                </div>
+                <div className="p-4 space-y-2.5">
+                  <div className="flex items-center gap-2 bg-blue-50 rounded-lg p-2">
+                    <span className="text-xl">🚗</span>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-blue-700">0123 УБА</p>
+                      <p className="text-[10px] text-gray-500">Toyota Prius · Цагаан</p>
+                    </div>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">QR</span>
+                  </div>
+                  <button className="w-full bg-green-600 text-white text-xs font-semibold py-2 rounded-lg">
+                    🚧 Хаалт нээх хүсэлт
+                  </button>
+                  <div className="grid grid-cols-5 gap-1">
+                    {[1,2,3,4,5,6,7,8,9,10].map(i => (
+                      <div key={i} className={`text-[8px] text-center rounded py-0.5 ${i % 3 === 0 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                        P{i}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

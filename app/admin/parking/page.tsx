@@ -1,26 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Vehicle {
   id: number;
   plate_number: string;
-  owner_name: string;
-  car_model: string;
-  color: string;
-  parking_spot: string;
+  resident_name: string | null;
+  apartment: string | null;
+  car_model: string | null;
+  color: string | null;
+  parking_spot: string | null;
+  status: string;
   created_at: string;
 }
 
-interface BlockingIncident {
+interface BlockingReport {
   id: number;
-  blocking_plate: string;
+  blocking_plate: string | null;
   blocked_plate: string;
-  resolved: boolean;
-  notification_sent: boolean;
+  reporter_name: string | null;
+  reporter_apartment: string | null;
+  status: 'pending' | 'notified' | 'resolved';
+  admin_note: string | null;
   created_at: string;
 }
 
@@ -49,7 +52,7 @@ const COLORS = ['Цагаан', 'Хар', 'Мөнгөлөг', 'Саарал', '�
 
 export default function AdminParking() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [incidents, setIncidents] = useState<BlockingIncident[]>([]);
+  const [reports, setReports] = useState<BlockingReport[]>([]);
   const [gateSetting, setGateSetting] = useState<GateSettings>({
     ip_address: '192.168.1.100', port: '8080', connected: false, auto_open: true, overcharge_per_hour: 5000,
   });
@@ -58,7 +61,7 @@ export default function AdminParking() {
   const [activeTab, setActiveTab] = useState<'vehicles' | 'spots' | 'blocking' | 'guests' | 'gate'>('vehicles');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState({ plate_number: '', owner_name: '', car_model: '', color: 'Цагаан', parking_spot: '' });
+  const [form, setForm] = useState({ plate_number: '', resident_name: '', apartment: '', car_model: '', color: 'Цагаан', parking_spot: '' });
   const [blockingForm, setBlockingForm] = useState({ blocking_plate: '', blocked_plate: '' });
   const [gateForm, setGateForm] = useState({ ip_address: '192.168.1.100', port: '8080', auto_open: true, overcharge_per_hour: 5000 });
   const [guestForm, setGuestForm] = useState({ plate_number: '', host_name: '', host_apartment: '', allowed_minutes: 60 });
@@ -69,55 +72,73 @@ export default function AdminParking() {
 
   const fetchAll = async () => {
     const sokhId = await getAdminSokhId();
-    const [{ data: v }, { data: inc }, { data: g }, { data: gs }] = await Promise.all([
-      supabase.from('vehicles').select('*').eq('sokh_id', sokhId).order('created_at'),
-      supabase.from('blocking_incidents').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false }),
-      supabase.from('guest_vehicles').select('*').eq('sokh_id', sokhId).order('entered_at', { ascending: false }),
-      supabase.from('gate_settings').select('*').eq('sokh_id', sokhId).single(),
+    const [{ data: v }, { data: rep }, { data: g }, { data: gs }] = await Promise.all([
+      adminFrom('parking_vehicles').select('*').eq('sokh_id', sokhId).eq('status', 'active').order('created_at'),
+      adminFrom('blocking_reports').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false }),
+      adminFrom('guest_vehicles').select('*').eq('sokh_id', sokhId).order('entered_at', { ascending: false }),
+      adminFrom('gate_settings').select('*').eq('sokh_id', sokhId).single(),
     ]);
-    setVehicles(v || []);
-    setIncidents(inc || []);
-    setGuests(g || []);
+    setVehicles((v as unknown as Vehicle[]) || []);
+    setReports((rep as unknown as BlockingReport[]) || []);
+    setGuests((g as unknown as GuestVehicle[]) || []);
     if (gs) {
-      setGateSetting(gs);
-      setGateForm({ ip_address: gs.ip_address, port: gs.port, auto_open: gs.auto_open, overcharge_per_hour: gs.overcharge_per_hour });
+      const gsTyped = gs as unknown as GateSettings;
+      setGateSetting(gsTyped);
+      setGateForm({ ip_address: gsTyped.ip_address, port: gsTyped.port, auto_open: gsTyped.auto_open, overcharge_per_hour: gsTyped.overcharge_per_hour });
     }
     setLoading(false);
   };
 
   // Vehicle CRUD
   const saveVehicle = async () => {
-    if (!form.plate_number || !form.owner_name) return;
+    if (!form.plate_number || !form.resident_name) return;
     const sokhId = await getAdminSokhId();
     if (editId) {
-      await adminFrom('vehicles').update(form).eq('id', editId);
+      await adminFrom('parking_vehicles').update(form).eq('id', editId);
     } else {
-      await adminFrom('vehicles').insert({ sokh_id: sokhId, ...form });
+      await adminFrom('parking_vehicles').insert({ sokh_id: sokhId, status: 'active', ...form });
     }
     setShowForm(false);
     fetchAll();
   };
 
   const deleteVehicle = async (id: number) => {
-    if (!confirm('Устгах уу?')) return;
-    await adminFrom('vehicles').delete().eq('id', id);
+    if (!confirm('Машин устгах уу?')) return;
+    await adminFrom('parking_vehicles').update({ status: 'removed' }).eq('id', id);
     fetchAll();
   };
 
-  const openAdd = () => { setEditId(null); setForm({ plate_number: '', owner_name: '', car_model: '', color: 'Цагаан', parking_spot: '' }); setShowForm(true); };
-  const openEdit = (v: Vehicle) => { setEditId(v.id); setForm({ plate_number: v.plate_number, owner_name: v.owner_name, car_model: v.car_model, color: v.color, parking_spot: v.parking_spot }); setShowForm(true); };
+  const openAdd = () => {
+    setEditId(null);
+    setForm({ plate_number: '', resident_name: '', apartment: '', car_model: '', color: 'Цагаан', parking_spot: '' });
+    setShowForm(true);
+  };
+  const openEdit = (v: Vehicle) => {
+    setEditId(v.id);
+    setForm({
+      plate_number: v.plate_number,
+      resident_name: v.resident_name || '',
+      apartment: v.apartment || '',
+      car_model: v.car_model || '',
+      color: v.color || 'Цагаан',
+      parking_spot: v.parking_spot || '',
+    });
+    setShowForm(true);
+  };
 
-  // Blocking
+  // Blocking reports
   const addBlocking = async () => {
-    if (!blockingForm.blocking_plate || !blockingForm.blocked_plate) return;
+    if (!blockingForm.blocked_plate) return;
     const sokhId = await getAdminSokhId();
-    await adminFrom('blocking_incidents').insert({ sokh_id: sokhId, ...blockingForm });
+    await adminFrom('blocking_reports').insert({ sokh_id: sokhId, status: 'pending', ...blockingForm });
     setBlockingForm({ blocking_plate: '', blocked_plate: '' });
     fetchAll();
   };
 
-  const resolveIncident = async (id: number) => {
-    await adminFrom('blocking_incidents').update({ resolved: true }).eq('id', id);
+  const updateReportStatus = async (id: number, status: BlockingReport['status']) => {
+    const patch: Record<string, unknown> = { status };
+    if (status === 'resolved') patch.resolved_at = new Date().toISOString();
+    await adminFrom('blocking_reports').update(patch).eq('id', id);
     fetchAll();
   };
 
@@ -176,14 +197,18 @@ export default function AdminParking() {
     return `${Math.floor(remaining / 60)} цаг ${remaining % 60} мин үлдсэн`;
   };
 
-  const filtered = vehicles.filter(v => v.plate_number.toLowerCase().includes(search.toLowerCase()) || v.owner_name.toLowerCase().includes(search.toLowerCase()));
-  const occupiedSpots = vehicles.map(v => v.parking_spot).filter(Boolean);
+  const filtered = vehicles.filter(v => {
+    const q = search.toLowerCase();
+    return v.plate_number.toLowerCase().includes(q) || (v.resident_name || '').toLowerCase().includes(q);
+  });
+  const occupiedSpots = vehicles.map(v => v.parking_spot).filter(Boolean) as string[];
   const activeGuests = guests.filter(g => !g.exited_at);
+  const pendingReports = reports.filter(r => r.status !== 'resolved');
 
   const tabs = [
     { key: 'vehicles' as const, label: 'Машин', icon: '🚗' },
     { key: 'spots' as const, label: 'Зогсоол', icon: '🅿️' },
-    { key: 'blocking' as const, label: 'Хориглол', icon: '🚫' },
+    { key: 'blocking' as const, label: `Хориглол${pendingReports.length ? ` (${pendingReports.length})` : ''}`, icon: '🚫' },
     { key: 'guests' as const, label: `Зочин${activeGuests.length ? ` (${activeGuests.length})` : ''}`, icon: '🎫' },
     { key: 'gate' as const, label: 'Хаалга', icon: '🚧' },
   ];
@@ -218,7 +243,8 @@ export default function AdminParking() {
               <h3 className="font-semibold mb-3">{editId ? 'Засах' : 'Шинэ машин'}</h3>
               <div className="grid grid-cols-3 gap-3">
                 <input placeholder="Дугаар (0000 УБА)" value={form.plate_number} onChange={e => setForm({ ...form, plate_number: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
-                <input placeholder="Эзэмшигч" value={form.owner_name} onChange={e => setForm({ ...form, owner_name: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
+                <input placeholder="Эзэмшигч" value={form.resident_name} onChange={e => setForm({ ...form, resident_name: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
+                <input placeholder="Тоот" value={form.apartment} onChange={e => setForm({ ...form, apartment: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
                 <input placeholder="Машины загвар" value={form.car_model} onChange={e => setForm({ ...form, car_model: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
                 <select value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} className="border rounded-lg px-3 py-2 text-sm">{COLORS.map(c => <option key={c}>{c}</option>)}</select>
                 <input placeholder="Зогсоолын дугаар" value={form.parking_spot} onChange={e => setForm({ ...form, parking_spot: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
@@ -233,16 +259,23 @@ export default function AdminParking() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr className="text-left text-sm text-gray-500">
-                  <th className="px-4 py-3">Дугаар</th><th className="px-4 py-3">Эзэмшигч</th><th className="px-4 py-3">Загвар</th><th className="px-4 py-3">Өнгө</th><th className="px-4 py-3">Зогсоол</th><th className="px-4 py-3 text-right">Үйлдэл</th>
+                  <th className="px-4 py-3">Дугаар</th>
+                  <th className="px-4 py-3">Эзэмшигч</th>
+                  <th className="px-4 py-3">Тоот</th>
+                  <th className="px-4 py-3">Загвар</th>
+                  <th className="px-4 py-3">Өнгө</th>
+                  <th className="px-4 py-3">Зогсоол</th>
+                  <th className="px-4 py-3 text-right">Үйлдэл</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(v => (
                   <tr key={v.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-bold">{v.plate_number}</td>
-                    <td className="px-4 py-3 text-sm">{v.owner_name}</td>
+                    <td className="px-4 py-3 text-sm">{v.resident_name || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{v.apartment || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-500">{v.car_model || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{v.color}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{v.color || '-'}</td>
                     <td className="px-4 py-3 text-sm">{v.parking_spot || '-'}</td>
                     <td className="px-4 py-3 text-right">
                       <button onClick={() => openEdit(v)} className="text-blue-500 text-sm mr-2 hover:underline">Засах</button>
@@ -274,7 +307,7 @@ export default function AdminParking() {
                   {vehicle ? (
                     <div>
                       <p className="text-xs font-bold mt-1">{vehicle.plate_number}</p>
-                      <p className="text-[10px] text-gray-500">{vehicle.owner_name}</p>
+                      <p className="text-[10px] text-gray-500">{vehicle.resident_name || '-'}</p>
                     </div>
                   ) : (
                     <p className="text-xs text-green-600 mt-1">Сул</p>
@@ -298,20 +331,41 @@ export default function AdminParking() {
             <button onClick={addBlocking} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm mt-3 hover:bg-red-700">Бүртгэх</button>
           </div>
           <div className="space-y-2">
-            {incidents.map(inc => (
-              <div key={inc.id} className={`bg-white rounded-xl p-4 border flex items-center justify-between ${!inc.resolved ? 'border-red-300' : ''}`}>
-                <div>
-                  <p className="text-sm"><span className="font-bold text-red-600">{inc.blocking_plate}</span> → <span className="font-bold">{inc.blocked_plate}</span></p>
-                  <p className="text-xs text-gray-400">{new Date(inc.created_at).toLocaleString('mn-MN')}</p>
+            {reports.map(rep => (
+              <div key={rep.id} className={`bg-white rounded-xl p-4 border ${rep.status !== 'resolved' ? 'border-red-300' : ''}`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm">
+                      <span className="font-bold text-red-600">{rep.blocking_plate || '—'}</span>
+                      {' → '}
+                      <span className="font-bold">{rep.blocked_plate}</span>
+                    </p>
+                    {rep.reporter_name && (
+                      <p className="text-xs text-gray-500 mt-1">Мэдэгдсэн: {rep.reporter_name}{rep.reporter_apartment ? ` (${rep.reporter_apartment})` : ''}</p>
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">{new Date(rep.created_at).toLocaleString('mn-MN')}</p>
+                  </div>
+                  <div className="flex flex-col gap-2 items-end">
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                      rep.status === 'resolved' ? 'bg-green-100 text-green-700' :
+                      rep.status === 'notified' ? 'bg-blue-100 text-blue-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {rep.status === 'resolved' ? '✅ Шийдсэн' : rep.status === 'notified' ? '📢 Мэдэгдсэн' : '🕐 Хүлээгдэж буй'}
+                    </span>
+                    {rep.status !== 'resolved' && (
+                      <div className="flex gap-1">
+                        {rep.status === 'pending' && (
+                          <button onClick={() => updateReportStatus(rep.id, 'notified')} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">Мэдэгдсэн</button>
+                        )}
+                        <button onClick={() => updateReportStatus(rep.id, 'resolved')} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">Шийдсэн</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {!inc.resolved ? (
-                  <button onClick={() => resolveIncident(inc.id)} className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-medium">Шийдсэн</button>
-                ) : (
-                  <span className="text-xs text-green-600 font-medium">✅ Шийдсэн</span>
-                )}
               </div>
             ))}
-            {incidents.length === 0 && <div className="bg-white rounded-xl p-8 text-center border"><p className="text-gray-400">Хориглол бүртгэгдээгүй</p></div>}
+            {reports.length === 0 && <div className="bg-white rounded-xl p-8 text-center border"><p className="text-gray-400">Хориглол бүртгэгдээгүй</p></div>}
           </div>
         </div>
       )}

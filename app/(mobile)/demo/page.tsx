@@ -85,12 +85,23 @@ const easyBoxInfo = {
   totalBoxes: 24,
 };
 
+const myParking = [
+  { id: 1, plate: '0123 УБА', model: 'Toyota Prius', color: 'Цагаан', spot: 'P7' },
+];
+
+const myBlockingReports = [
+  { id: 1, plate: '0123 УБА', status: 'resolved', date: '04.03', label: 'Шийдвэрлэсэн' },
+];
+
+const occupiedSpots = new Set(['P1','P2','P4','P7','P9','P12','P15','P17','P20','P22','P25','P27']);
+
 const pages = [
   { id: 'home', label: 'Нүүр', icon: '🏠' },
   { id: 'payments', label: 'Төлбөр', icon: '💰' },
   { id: 'utilities', label: 'Тоолуур', icon: '📊' },
   { id: 'announcements', label: 'Зарлал', icon: '📢' },
   { id: 'maintenance', label: 'Засвар', icon: '🔧' },
+  { id: 'parking', label: 'Зогсоол', icon: '🚗' },
   { id: 'visitors', label: 'Зочин', icon: '🚪' },
   { id: 'parcels', label: 'Илгээмж', icon: '📦' },
   { id: 'profile', label: 'Профайл', icon: '👤' },
@@ -358,7 +369,87 @@ export default function DemoPage() {
           </div>
         </section>
 
-        {/* ====== PAGE 6: VISITORS ====== */}
+        {/* ====== PAGE 6: PARKING ====== */}
+        <section className="w-full flex-shrink-0 snap-start overflow-y-auto">
+          <div className="bg-indigo-600 text-white px-4 py-4">
+            <h1 className="text-lg font-bold">🚗 Зогсоол</h1>
+            <p className="text-xs text-white/70">Машин, хаалт, зогсоолын схем</p>
+          </div>
+          <div className="px-4 py-4 pb-24">
+            {/* My vehicles */}
+            <h3 className="text-sm font-semibold text-gray-500 mb-2">МИНИЙ МАШИН</h3>
+            <div className="space-y-2 mb-4">
+              {myParking.map(v => (
+                <div key={v.id} className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">🚗</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-blue-700">{v.plate}</p>
+                    <p className="text-xs text-gray-500">{v.model} · {v.color} · {v.spot}</p>
+                  </div>
+                  <span className="text-blue-500 text-xs font-medium px-2 py-1 bg-blue-50 rounded-lg">QR</span>
+                </div>
+              ))}
+              <button className="w-full text-xs text-blue-600 font-medium py-2">+ Машин нэмэх</button>
+            </div>
+
+            {/* Gate open button */}
+            <button className="w-full bg-green-600 text-white py-3.5 rounded-xl font-medium mb-3 flex items-center justify-center gap-2 shadow-sm">
+              <span>🚧</span><span>Хаалт нээх хүсэлт</span>
+            </button>
+
+            {/* Blocking report */}
+            <button className="w-full bg-red-50 border border-red-200 text-red-700 py-3.5 rounded-xl font-medium mb-4 flex items-center justify-center gap-2">
+              <span>🚫</span><span>Машин хаагдсан мэдэгдэл</span>
+            </button>
+
+            {/* Past blocking reports */}
+            {myBlockingReports.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-xs font-semibold text-gray-500 mb-2">ӨМНӨХ МЭДЭГДЛҮҮД</h3>
+                <div className="space-y-2">
+                  {myBlockingReports.map(r => (
+                    <div key={r.id} className="bg-white rounded-xl p-3 shadow-sm flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{r.plate}</p>
+                        <p className="text-xs text-gray-400">{r.date}</p>
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">{r.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Spot map */}
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">🅿️ ЗОГСООЛЫН СХЕМ</h3>
+            <div className="bg-white rounded-xl p-3 shadow-sm">
+              <div className="flex items-center gap-3 mb-2 text-[10px]">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-green-100 border border-green-300 rounded"></span> Сул ({30 - occupiedSpots.size})</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-red-100 border border-red-300 rounded"></span> Эзэлсэн ({occupiedSpots.size})</span>
+              </div>
+              <div className="grid grid-cols-6 gap-1">
+                {Array.from({ length: 30 }, (_, i) => {
+                  const spot = `P${i + 1}`;
+                  const isOcc = occupiedSpots.has(spot);
+                  const isMine = myParking[0]?.spot === spot;
+                  return (
+                    <div key={spot} className={`text-[10px] text-center rounded py-1.5 border ${
+                      isMine ? 'bg-blue-100 border-blue-400 text-blue-800 font-bold' :
+                      isOcc ? 'bg-red-50 border-red-200 text-red-600' :
+                      'bg-green-50 border-green-200 text-green-700'
+                    }`}>
+                      {spot}{isMine && ' ★'}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====== PAGE 7: VISITORS ====== */}
         <section className="w-full flex-shrink-0 snap-start overflow-y-auto">
           <div className="bg-blue-600 text-white px-4 py-4">
             <h1 className="text-lg font-bold">🚪 Зочны бүртгэл</h1>

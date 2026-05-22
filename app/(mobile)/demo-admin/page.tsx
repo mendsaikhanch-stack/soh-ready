@@ -62,12 +62,30 @@ const expenseData = [
   { label: 'Удирдлагын зардал', amount: 800000, percent: 15 },
 ];
 
+const parkingVehicles = [
+  { id: 1, plate: '0123 УБА', owner: 'Б. Батболд', apt: 'A-101', model: 'Toyota Prius', color: 'Цагаан', spot: 'P7' },
+  { id: 2, plate: '4582 УБВ', owner: 'Д. Сараа', apt: 'A-203', model: 'Hyundai Sonata', color: 'Хар', spot: 'P12' },
+  { id: 3, plate: '7711 УБА', owner: 'Г. Ганбаатар', apt: 'B-105', model: 'Lexus RX', color: 'Мөнгөлөг', spot: 'P15' },
+  { id: 4, plate: '9920 УБМ', owner: 'О. Оюунаа', apt: 'B-301', model: 'Toyota Land Cruiser', color: 'Цагаан', spot: 'P22' },
+];
+
+const blockingReports = [
+  { id: 1, blocked: '0123 УБА', blocking: '?', reporter: 'Б.Батболд (A-101)', status: 'pending', date: '04.08 09:12' },
+  { id: 2, blocked: '4582 УБВ', blocking: '8888 УБА', reporter: 'Д.Сараа (A-203)', status: 'resolved', date: '04.05 18:34' },
+];
+
+const guestVehicles = [
+  { id: 1, plate: '5566 УБА', host: 'Г.Ганбаатар', apt: 'B-105', entered: '14:20', allowed: 60, overdue: false },
+  { id: 2, plate: '3399 УБВ', host: 'Н.Нарантуяа', apt: 'C-402', entered: '11:05', allowed: 120, overdue: true },
+];
+
 const pages = [
   { id: 'dashboard', label: 'Хяналт', icon: '📊' },
   { id: 'residents', label: 'Айлууд', icon: '👥' },
   { id: 'payments', label: 'Төлбөр', icon: '💰' },
   { id: 'announcements', label: 'Зарлал', icon: '📢' },
   { id: 'maintenance', label: 'Засвар', icon: '🔧' },
+  { id: 'parking', label: 'Зогсоол', icon: '🚗' },
   { id: 'reports', label: 'Тайлан', icon: '📈' },
   { id: 'ai', label: 'AI туслах', icon: '🧠' },
   { id: 'easybox', label: 'EasyBox', icon: '📦' },
@@ -611,7 +629,106 @@ export default function DemoAdminPage() {
           </div>
         </section>
 
-        {/* ====== PAGE 6: REPORTS ====== */}
+        {/* ====== PAGE 6: PARKING ====== */}
+        <section className="w-full flex-shrink-0 snap-start overflow-y-auto">
+          <div className="bg-indigo-700 text-white px-4 py-4">
+            <h1 className="text-lg font-bold">🚗 Зогсоол удирдлага</h1>
+            <p className="text-xs text-white/70">{parkingVehicles.length} машин · 12/30 зогсоол эзэлсэн</p>
+          </div>
+          <div className="px-4 py-4 pb-24 space-y-4">
+            {/* KPI strip */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-white rounded-xl p-3 text-center shadow-sm">
+                <p className="text-2xl font-bold text-indigo-700">{parkingVehicles.length}</p>
+                <p className="text-[10px] text-gray-500">Бүртгэлтэй</p>
+              </div>
+              <div className="bg-white rounded-xl p-3 text-center shadow-sm">
+                <p className="text-2xl font-bold text-amber-600">{guestVehicles.filter(g => g.overdue).length}</p>
+                <p className="text-[10px] text-gray-500">Зочин хэтэрсэн</p>
+              </div>
+              <div className="bg-white rounded-xl p-3 text-center shadow-sm">
+                <p className="text-2xl font-bold text-red-600">{blockingReports.filter(r => r.status === 'pending').length}</p>
+                <p className="text-[10px] text-gray-500">Хүлээгдэж буй</p>
+              </div>
+            </div>
+
+            {/* Vehicle list */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 mb-2">🚙 МАШИНУУД</h3>
+              <div className="bg-white rounded-xl shadow-sm divide-y">
+                {parkingVehicles.map(v => (
+                  <div key={v.id} className="px-3 py-2.5 flex items-center gap-2">
+                    <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-lg">🚗</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-indigo-700">{v.plate}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{v.owner} ({v.apt}) · {v.model}</p>
+                    </div>
+                    <span className="text-[10px] bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded font-medium">{v.spot}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Blocking */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 mb-2">🚫 ХОРИГЛОЛ</h3>
+              <div className="space-y-2">
+                {blockingReports.map(r => (
+                  <div key={r.id} className={`rounded-xl p-3 border ${r.status === 'pending' ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200 shadow-sm'}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs">
+                          <span className="font-bold text-red-600">{r.blocking}</span>
+                          <span className="text-gray-400 mx-1">→</span>
+                          <span className="font-bold">{r.blocked}</span>
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">{r.reporter} · {r.date}</p>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                        r.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {r.status === 'resolved' ? '✅ Шийдсэн' : '🕐 Хүлээгдэж буй'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Guest vehicles */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 mb-2">🎫 ЗОЧНЫ МАШИН</h3>
+              <div className="bg-white rounded-xl shadow-sm divide-y">
+                {guestVehicles.map(g => (
+                  <div key={g.id} className="px-3 py-2.5 flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold">{g.plate}</p>
+                      <p className="text-[10px] text-gray-500">→ {g.host} ({g.apt}) · {g.entered}-аас, {g.allowed} мин</p>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${g.overdue ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                      {g.overdue ? 'Хэтэрсэн' : 'Идэвхтэй'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Gate config */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 mb-2">🚧 ХААЛГА</h3>
+              <div className="bg-white rounded-xl p-3 shadow-sm">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex justify-between"><span className="text-gray-500">IP</span><span className="font-mono">192.168.1.100</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Порт</span><span className="font-mono">8080</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Холболт</span><span className="text-green-600 font-medium">● Холбогдсон</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Автомат</span><span className="text-blue-600 font-medium">Идэвхтэй</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====== PAGE 7: REPORTS ====== */}
         <section className="w-full flex-shrink-0 snap-start overflow-y-auto bg-gray-50">
           <div className="bg-gray-900 text-white px-4 py-4">
             <h1 className="text-lg font-bold">📈 Санхүүгийн тайлан</h1>

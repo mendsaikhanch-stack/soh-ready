@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { useAuth } from '@/app/lib/auth-context';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface MyVehicle {
@@ -16,7 +17,7 @@ interface MyVehicle {
 interface BlockingReport {
   id: number;
   blocked_plate: string;
-  blocking_plate: string;
+  blocking_plate: string | null;
   status: 'pending' | 'notified' | 'resolved';
   created_at: string;
 }
@@ -30,6 +31,7 @@ const COLORS = [
 export default function MobileParkingPage() {
   const params = useParams();
   const router = useRouter();
+  const { profile } = useAuth();
   const [myVehicles, setMyVehicles] = useState<MyVehicle[]>([]);
   const [allVehicles, setAllVehicles] = useState<{ plate_number: string; parking_spot: string }[]>([]);
   const [blockingReports, setBlockingReports] = useState<BlockingReport[]>([]);
@@ -45,14 +47,20 @@ export default function MobileParkingPage() {
   const sokhId = params.id as string;
 
   const fetchData = async () => {
-    const [{ data: vehicles }, { data: allV }, { data: reports }] = await Promise.all([
-      supabase
-        .from('parking_vehicles')
-        .select('*')
-        .eq('sokh_id', sokhId)
-        .eq('status', 'active')
-        .eq('resident_name', localStorage.getItem(`parking-user-${sokhId}`) || '')
-        .order('created_at', { ascending: false }),
+    const ownerName = profile?.name || '';
+
+    const myQuery = ownerName
+      ? supabase
+          .from('parking_vehicles')
+          .select('*')
+          .eq('sokh_id', sokhId)
+          .eq('status', 'active')
+          .eq('resident_name', ownerName)
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] });
+
+    const [myRes, allRes, reportsRes] = await Promise.all([
+      myQuery,
       supabase
         .from('parking_vehicles')
         .select('plate_number, parking_spot')
@@ -67,32 +75,39 @@ export default function MobileParkingPage() {
         .limit(20),
     ]);
 
-    setMyVehicles(vehicles || []);
-    setAllVehicles(allV || []);
-    setBlockingReports(reports || []);
+    setMyVehicles((myRes.data as MyVehicle[]) || []);
+    setAllVehicles((allRes.data as { plate_number: string; parking_spot: string }[]) || []);
+    setBlockingReports((reportsRes.data as BlockingReport[]) || []);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
-  }, [sokhId]);
+  }, [sokhId, profile?.name]);
 
   const registerVehicle = async () => {
     if (!form.plateNumber) return;
-    const userName = localStorage.getItem(`parking-user-${sokhId}`) || 'Оршин суугч';
+    if (!profile?.name) {
+      alert('Машин бүртгүүлэхийн тулд нэвтэрнэ үү.');
+      return;
+    }
 
     const { error } = await supabase.from('parking_vehicles').insert([{
       sokh_id: Number(sokhId),
       plate_number: form.plateNumber,
       car_model: form.carModel,
       color: form.color,
-      resident_name: userName,
+      resident_name: profile.name,
+      apartment: profile.apartment,
+      status: 'active',
     }]);
 
     if (!error) {
       setForm({ plateNumber: '', carModel: '', color: 'Цагаан' });
       setShowForm(false);
       await fetchData();
+    } else {
+      alert(`Алдаа: ${error.message}`);
     }
   };
 
@@ -108,8 +123,9 @@ export default function MobileParkingPage() {
     const { error } = await supabase.from('blocking_reports').insert([{
       sokh_id: Number(sokhId),
       blocked_plate: selectedBlockedCar,
-      blocking_plate: '',
-      reporter_name: localStorage.getItem(`parking-user-${sokhId}`) || '',
+      blocking_plate: null,
+      reporter_name: profile?.name || '',
+      reporter_apartment: profile?.apartment || '',
       status: 'pending',
     }]);
 
@@ -118,6 +134,8 @@ export default function MobileParkingPage() {
       setShowBlockingForm(false);
       alert('Мэдэгдэл амжилттай илгээгдлээ! СӨХ удирдлагад хүргэгдэх болно.');
       await fetchData();
+    } else {
+      alert(`Алдаа: ${error.message}`);
     }
   };
 
