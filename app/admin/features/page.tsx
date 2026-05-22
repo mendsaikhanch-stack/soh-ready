@@ -25,6 +25,8 @@ const allFeatures: FeatureItem[] = [
   { href: 'complaints', icon: '📝', label: 'Гомдол / Санал', desc: 'Гомдол, санал илгээх', tab: 'СӨХ' },
   { href: 'maintenance', icon: '🔧', label: 'Засвар', desc: 'Засвар үйлчилгээ', tab: 'СӨХ' },
   { href: 'parking', icon: '🚗', label: 'Зогсоол', desc: 'Машин бүртгэл, зогсоол', tab: 'СӨХ' },
+  { href: 'gate', icon: '🚧', label: 'Хотхоны хаалга', desc: 'QR-аар нээх, зочинд QR илгээх', tab: 'СӨХ' },
+  { href: 'elevator', icon: '🛗', label: 'Лифт', desc: 'QR-аар дуудах, давхар сонгох', tab: 'СӨХ' },
   { href: 'cctv-request', icon: '🎬', label: 'Камер бичлэг', desc: 'Бичлэг шүүх хүсэлт', tab: 'СӨХ' },
   { href: 'booking', icon: '🏢', label: 'Зай захиалга', desc: 'Хурлын өрөө, спорт заал', tab: 'СӨХ' },
   { href: 'packages', icon: '📦', label: 'Илгээмж', desc: 'Ачаа хүлээн авах', tab: 'СӨХ' },

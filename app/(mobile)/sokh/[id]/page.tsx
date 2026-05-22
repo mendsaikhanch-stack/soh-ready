@@ -57,8 +57,8 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
         { icon: '🎬', label: 'Камер бичлэг', desc: 'Бичлэг шүүх хүсэлт илгээх', href: 'cctv-request', color: 'bg-gray-50 border-gray-300' },
         { icon: '🏢', label: 'Зай захиалга', desc: 'Хурлын өрөө, спорт заал', href: 'booking', color: 'bg-indigo-50 border-indigo-200' },
         { icon: '📦', label: 'Илгээмж', desc: 'Ачаа, бандероль хүлээн авах', href: 'packages', color: 'bg-orange-50 border-orange-200' },
-        { icon: '🚧', label: 'Хотхоны хаалга', desc: 'Авто хаалга удирдлага (удахгүй)', href: 'gate', color: 'bg-slate-50 border-slate-200', comingSoon: true },
-        { icon: '🛗', label: 'Лифт', desc: 'Автомат лифтний холболт (удахгүй)', href: 'elevator', color: 'bg-slate-50 border-slate-200', comingSoon: true },
+        { icon: '🚧', label: 'Хотхоны хаалга', desc: 'QR-аар нээх, зочинд QR илгээх', href: 'gate', color: 'bg-slate-50 border-slate-200' },
+        { icon: '🛗', label: 'Лифт', desc: 'QR-аар дуудах, давхар сонгох', href: 'elevator', color: 'bg-slate-50 border-slate-200' },
       ],
     },
     {
