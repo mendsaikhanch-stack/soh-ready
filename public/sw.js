@@ -46,7 +46,7 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
-var CACHE_NAME = 'hotol-cache-v3';
+var CACHE_NAME = 'hotol-cache-v4';
 var OFFLINE_URL = '/offline';
 var CACHED_URLS = [
   '/',
