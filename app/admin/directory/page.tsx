@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { CURRENT_APP_OPTIONS } from '@/app/lib/directory/current-app';
 
 interface DirectoryRow {
   id: number;
@@ -13,6 +14,7 @@ interface DirectoryRow {
   phone: string | null;
   status: 'ACTIVE' | 'PENDING' | 'HIDDEN';
   linked_tenant_id: number | null;
+  current_app: string | null;
   is_active_tenant?: boolean;
 }
 
@@ -61,6 +63,25 @@ export default function AdminDirectoryPage() {
       .then((d) => setTenants((d.data || []) as SokhTenant[]))
       .catch(() => {});
   }, []);
+
+  const [savingAppId, setSavingAppId] = useState<number | null>(null);
+
+  const saveCurrentApp = async (directoryId: number, currentApp: string) => {
+    setSavingAppId(directoryId);
+    // Optimistic update
+    setRows((prev) => prev.map((r) => (r.id === directoryId ? { ...r, current_app: currentApp } : r)));
+    const res = await fetch('/api/admin/directory/current-app', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ directoryId, currentApp }),
+    });
+    setSavingAppId(null);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Хадгалж чадсангүй');
+      load(); // буцааж сэргээх
+    }
+  };
 
   const linkTenant = async (directoryId: number, tenantId: number | null) => {
     const res = await fetch('/api/admin/directory/link', {
@@ -126,15 +147,16 @@ export default function AdminDirectoryPage() {
               <th className="px-3 py-2">Дүүрэг / Хороо</th>
               <th className="px-3 py-2">Хаяг</th>
               <th className="px-3 py-2">Утас</th>
+              <th className="px-3 py-2">Ашиглаж байгаа апп</th>
               <th className="px-3 py-2">Төлөв</th>
               <th className="px-3 py-2">Khotol tenant</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-400">Ачаалж байна...</td></tr>
+              <tr><td colSpan={8} className="px-3 py-8 text-center text-gray-400">Ачаалж байна...</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-400">Бичлэг олдсонгүй</td></tr>
+              <tr><td colSpan={8} className="px-3 py-8 text-center text-gray-400">Бичлэг олдсонгүй</td></tr>
             ) : rows.map((r, i) => (
               <tr key={r.id} className="border-t hover:bg-gray-50">
                 <td className="px-3 py-2 text-gray-400 text-xs">{i + 1}</td>
@@ -150,6 +172,18 @@ export default function AdminDirectoryPage() {
                 </td>
                 <td className="px-3 py-2 text-xs text-gray-500">{r.address || '—'}</td>
                 <td className="px-3 py-2 text-xs text-gray-500">{r.phone || '—'}</td>
+                <td className="px-3 py-2">
+                  <select
+                    value={r.current_app ?? 'UNKNOWN'}
+                    disabled={savingAppId === r.id}
+                    onChange={(e) => saveCurrentApp(r.id, e.target.value)}
+                    className="border rounded-lg text-xs px-2 py-1 bg-white disabled:opacity-50"
+                  >
+                    {CURRENT_APP_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </td>
                 <td className="px-3 py-2">
                   <StatusBadge status={r.status} />
                 </td>

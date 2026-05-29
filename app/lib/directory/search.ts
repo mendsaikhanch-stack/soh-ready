@@ -13,6 +13,7 @@ export interface DirectoryRow {
   soh_code: string | null;
   status: 'ACTIVE' | 'PENDING' | 'HIDDEN';
   linked_tenant_id: number | null;
+  current_app: string | null;
 }
 
 export interface DirectorySearchResult extends DirectoryRow {
@@ -48,7 +49,7 @@ export async function searchHoaDirectory(opts: SearchOptions): Promise<Directory
 
   let q = supabaseAdmin
     .from('hoa_directory')
-    .select('id, official_name, normalized_name, display_name, district, khoroo, address, phone, soh_code, status, linked_tenant_id')
+    .select('id, official_name, normalized_name, display_name, district, khoroo, address, phone, soh_code, status, linked_tenant_id, current_app')
     .limit(Math.min(limit * 4, 200));
 
   if (!includeHidden) q = q.neq('status', 'HIDDEN');
