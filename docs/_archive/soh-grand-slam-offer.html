@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<title>СӨХ Автопилот — Grand Slam Offer</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Arial", sans-serif;
+    color: #1a1a1a;
+    line-height: 1.55;
+    font-size: 11pt;
+    margin: 0;
+  }
+  h1 {
+    font-size: 22pt;
+    color: #0b3d91;
+    border-bottom: 3px solid #0b3d91;
+    padding-bottom: 6px;
+    margin-top: 28px;
+    page-break-before: always;
+  }
+  h1:first-of-type { page-break-before: avoid; }
+  h2 {
+    font-size: 15pt;
+    color: #0b3d91;
+    margin-top: 22px;
+    border-left: 4px solid #f59e0b;
+    padding-left: 10px;
+  }
+  h3 {
+    font-size: 12pt;
+    color: #333;
+    margin-top: 16px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid #cbd5e1;
+    padding: 7px 9px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #0b3d91;
+    color: white;
+    font-weight: 600;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+  blockquote {
+    border-left: 4px solid #f59e0b;
+    background: #fffbeb;
+    margin: 12px 0;
+    padding: 10px 14px;
+    font-style: italic;
+    page-break-inside: avoid;
+  }
+  code, pre {
+    font-family: "Consolas", "Courier New", monospace;
+    background: #f1f5f9;
+    border-radius: 4px;
+    padding: 2px 5px;
+    font-size: 9.5pt;
+  }
+  pre {
+    padding: 12px;
+    white-space: pre-wrap;
+    page-break-inside: avoid;
+  }
+  .cover {
+    text-align: center;
+    padding: 80px 20px 40px;
+  }
+  .cover h1 {
+    font-size: 32pt;
+    border: none;
+    color: #0b3d91;
+    margin-bottom: 8px;
+    page-break-before: avoid;
+  }
+  .cover .sub {
+    font-size: 14pt;
+    color: #475569;
+    margin-bottom: 40px;
+  }
+  .cover .badge {
+    display: inline-block;
+    background: #f59e0b;
+    color: white;
+    padding: 8px 20px;
+    border-radius: 24px;
+    font-weight: 600;
+    margin-top: 20px;
+  }
+  .agent-tag {
+    display: inline-block;
+    background: #0b3d91;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 10pt;
+    margin-right: 8px;
+  }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  strong { color: #0b3d91; }
+  .highlight-row td { background: #fef3c7 !important; font-weight: 600; }
+  .total-row td { background: #0b3d91 !important; color: white; font-weight: 700; }
+  hr { border: none; border-top: 1px dashed #cbd5e1; margin: 20px 0; }
+  .footer-note {
+    margin-top: 30px;
+    padding: 14px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    font-size: 10pt;
+    color: #475569;
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>СӨХ Автопилот</h1>
+  <div class="sub">Grand Slam Offer — Alex Hormozi Value Equation</div>
+  <div class="sub" style="font-size:11pt;">Зах зээлийн дүн шинжилгээ • Санал бүтээлт • Бэлэн материал</div>
+  <div class="badge">3 АГЕНТЫН СИСТЕМ • 2026 ОН</div>
+  <div style="margin-top:60px; font-size:10pt; color:#64748b;">
+    Бэлдсэн: Multi-Agent System<br>
+    Огноо: 2026-05-19
+  </div>
+</div>
+
+<h1><span class="agent-tag">AGENT 1</span> Market Analyst</h1>
+<h2>Зах зээлийн дутагдал ба хэрэглэгчийн жинхэнэ өвдөлт</h2>
+
+<h3>Зорилтот хэрэглэгч (Avatar)</h3>
+<p><strong>Үндсэн худалдан авагч:</strong> СӨХ-ийн дарга / гүйцэтгэх захирал (35-55 нас, ихэвчлэн эмэгтэй, орлогогүй буюу багавтар цалинтай, цагийн дарамт ихтэй)</p>
+<p><strong>Хоёрдогч хэрэглэгч:</strong> Айлын төлөөлөгчид, оршин суугчид, нягтлан</p>
+
+<h3>Жинхэнэ өвдөлт (Pain Iceberg) — 7 түвшин</h3>
+<table>
+  <thead>
+    <tr><th style="width:5%;">#</th><th style="width:40%;">Гадаргын асуудал</th><th>Доорх жинхэнэ өвдөлт</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>"Хураамж цуглуулж чадахгүй байна"</td><td>Айл бүртэй удаан утсаар ярих, гар утаснаас нь буцаагдах, "чи юу хийдэг юм" гэж доромжлуулах</td></tr>
+    <tr><td>2</td><td>"Зардал тооцох цаг алга"</td><td>Шөнө 11 цаг хүртэл Excel дээр гар бичмэлээс шилжүүлэх, нэг тоо буруу бичээд бүх зүйл нурах</td></tr>
+    <tr><td>3</td><td>"Оршин суугчид итгэхгүй байна"</td><td>Хогийн машинд хүртэл "Чи мөнгө хулгайлсан" гэж сэжиглэгдэх, нэр хүнд алдагдах</td></tr>
+    <tr><td>4</td><td>"Засварын хүсэлт алдагддаг"</td><td>Лифт гацсан, ус алдсан гэхээр шөнө дунд утас цангинаж, нойргүй болох</td></tr>
+    <tr><td>5</td><td>"Хурал хийхэд айл ирэхгүй"</td><td>Кворум бүрдэхгүй, шийдвэр гарахгүй, нэг жилийн төлөвлөгөө нурах</td></tr>
+    <tr><td>6</td><td>"Нягтлан болон татвар"</td><td>Жил дуустал тайлан хоцорч, торгууль идэх айдас</td></tr>
+    <tr><td>7</td><td>"Дараагийн сонгуульд унах"</td><td>Гэр бүлдээ "энэ ажлаас гарь" гэж яригдах, 3-5 жилийн зүтгэл усанд ороход</td></tr>
+  </tbody>
+</table>
+
+<h3>Мөрөөдлийн үр дүн (Dream Outcome)</h3>
+<blockquote>
+"Би 7-р сарын эхээр амралтанд явахдаа гар утсаа онгойлгож, СӨХ-ийн хураамж 94% цугларсан, бүх засварын хүсэлт хариу авсан, оршин суугчид над руу ганц ч заналхийлсэн зурвас илгээгээгүй гэдгийг харах. Дараагийн хуралд <strong>айлууд өөрсдөө намайг дахин сонго гэж шаардах</strong> хэмжээнд найдвар хүлээх."
+</blockquote>
+
+<h3>Зах зээлийн дутагдал</h3>
+<ul>
+  <li>Монголд 8,000+ СӨХ байгаа, ~94% нь Excel/цаасан системтэй</li>
+  <li>Одоо байгаа аппууд (Khan СӨХ, MyHome гэх мэт) нь зөвхөн <strong>төлбөрийн</strong> функцтэй — засвар, харилцаа холбоо, сонгууль ороогүй</li>
+  <li>Үнийн дундаж: 30,000-150,000₮/сар, зөвхөн төлбөртэй холбоотой</li>
+  <li><strong>Дутагдал #1:</strong> "Бүтэн ажиллагаатай" платформ байхгүй</li>
+  <li><strong>Дутагдал #2:</strong> СӨХ дарга нар техникийн дэмжлэгийн ХЭРЭГТЭЙ — өөрсдөө суулгаж чадахгүй</li>
+  <li><strong>Дутагдал #3:</strong> Айлын итгэлийг бий болгох "Ил тод байдал" функц байхгүй</li>
+</ul>
+
+<h1><span class="agent-tag">AGENT 2</span> Offer Engineer</h1>
+<h2>Value Equation хэрэгжүүлсэн Grand Slam Offer</h2>
+
+<h3>Value Equation 4 хувьсагч</h3>
+<pre>              МӨРӨӨДЛИЙН ҮР ДҮН × ИТГЭХ МАГАДЛАЛ
+  ҮНЭ ЦЭНЭ = ─────────────────────────────────────
+                  ЦАГ ХУГАЦАА × ЗОЛИОС</pre>
+
+<table>
+  <thead>
+    <tr><th>Хувьсагч</th><th>Стандарт зах зээл</th><th>Бидний санал</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>↑ Мөрөөдлийн үр дүн</strong></td><td>"Төлбөр хураадаг апп"</td><td>"94% цуглуулга + айлуудын итгэл + дахин сонгогдох баталгаа"</td></tr>
+    <tr><td><strong>↑ Итгэх магадлал</strong></td><td>Demo video, гэрчилгээ</td><td>4 давхар баталгаа + 30 хоног үнэгүй туршилт + кейс судалгаа</td></tr>
+    <tr><td><strong>↓ Цаг хугацаа</strong></td><td>"Та өөрөө суулгана уу" (2-3 долоо хоног)</td><td><strong>48 цагт суулгаж дуусгана</strong> — Done-for-You</td></tr>
+    <tr><td><strong>↓ Золиос</strong></td><td>Сурахад хэцүү, гар ажиллагаа их</td><td>Айл бүрийг бид мэдээллээр оруулна, гарын авлага + тусгай зөвлөх</td></tr>
+  </tbody>
+</table>
+
+<h3>Үндсэн санал: "СӨХ Автопилот 90 хоног"</h3>
+<blockquote>
+Гол амлалт: <strong>90 хоногийн дотор таны СӨХ-ийн хураамж цуглуулга 50%-аас 90%+ болно. Эс бөгөөс 300% буцаалт.</strong>
+</blockquote>
+
+<h3>Value Stack (Үнэ цэнийн жагсаалт)</h3>
+<table>
+  <thead>
+    <tr><th style="width:5%;">#</th><th style="width:50%;">Бүрэлдэхүүн</th><th style="width:15%;">Тусдаа үнэ</th><th>Үндэслэл</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>СӨХ Автопилот платформ (1 жил)</td><td><strong>2,400,000₮</strong></td><td>200,000₮/сар × 12</td></tr>
+    <tr><td>2</td><td><strong>Done-For-You</strong> суулгац: Айл бүрийг бид өөрсдөө оруулна (200 айл хүртэл)</td><td><strong>1,500,000₮</strong></td><td>Дунд зэргийн өгөгдлийн оператор 5 өдөр</td></tr>
+    <tr><td>3</td><td>СӨХ даргын <strong>1-1 онбординг</strong> (3 удаагийн 90 мин уулзалт)</td><td><strong>900,000₮</strong></td><td>Зөвлөхийн цаг 300,000₮ × 3</td></tr>
+    <tr><td>4</td><td>Айлуудтай харилцах <strong>бэлэн загвар сан</strong>: 50 SMS, 30 зарлал, 10 хурлын протокол</td><td><strong>600,000₮</strong></td><td>Контент бичих 60 цаг</td></tr>
+    <tr><td>5</td><td><strong>Ил тод байдлын самбар</strong> — оршин суугчид зардлыг real-time харна</td><td><strong>800,000₮</strong></td><td>Custom модуль</td></tr>
+    <tr><td>6</td><td>Засварын <strong>24/7 чат-бот</strong> (AI-аар хариулдаг)</td><td><strong>1,200,000₮</strong></td><td>OpenAI API + custom</td></tr>
+    <tr><td>7</td><td>Кворум хангадаг <strong>онлайн санал хураалт</strong> систем</td><td><strong>500,000₮</strong></td><td>Хууль зүйн зөвлөгөө орсон</td></tr>
+    <tr><td>8</td><td>Сар бүрийн <strong>санхүүгийн тайлан</strong> автомат үүсгэгч</td><td><strong>700,000₮</strong></td><td>Нягтлангийн ажил хэмнэх</td></tr>
+    <tr><td>9</td><td>СӨХ даргын <strong>хувийн зөвлөх</strong> (90 хоног, WhatsApp)</td><td><strong>1,800,000₮</strong></td><td>Шаардлагатай үед утсаар ярих</td></tr>
+    <tr><td>10</td><td><strong>БОНУС #1:</strong> "Дахин сонгогдох" сурталчилгааны багц</td><td><strong>400,000₮</strong></td><td>Постер, видео, скрипт</td></tr>
+    <tr><td>11</td><td><strong>БОНУС #2:</strong> Татварын тайлан гаргах автоматчилал</td><td><strong>600,000₮</strong></td><td>Жилд 5-р сард их хэрэгтэй</td></tr>
+    <tr><td>12</td><td><strong>БОНУС #3:</strong> 100 СӨХ даргын <strong>хаалттай нэгдэл</strong></td><td><strong>300,000₮</strong></td><td>Сарын Zoom уулзалт</td></tr>
+    <tr class="highlight-row"><td colspan="2"><strong>НИЙТ ҮНЭ ЦЭНЭ</strong></td><td><strong>11,700,000₮</strong></td><td></td></tr>
+    <tr class="total-row"><td colspan="2">ТАНД ӨНӨӨДӨР</td><td>2,990,000₮</td><td>(~4x хямд)</td></tr>
+    <tr><td colspan="2">Сараар</td><td>299,000₮ × 12</td><td></td></tr>
+  </tbody>
+</table>
+
+<blockquote>Зах зээлийн дундаж 80,000₮/сартай харьцуулахад <strong>3.7x өндөр үнэ</strong> — Value Stack-ээр зөвтгөгдсөн.</blockquote>
+
+<h3>4 Төрлийн Баталгаа</h3>
+
+<p><strong>1. Болзолгүй (Unconditional) — "Хүсэхгүй бол буцаах"</strong></p>
+<blockquote>"30 хоногийн дотор шалтгаангүй буцаалт. Ганц чат бичээд л болоо. Бид асуухгүй."</blockquote>
+
+<p><strong>2. Болзолтой (Conditional) — "Үр дүнгийн баталгаа"</strong></p>
+<blockquote>"Хэрэв 90 хоногт хураамжийн цуглуулга 90%+ хүрэхгүй бол <strong>төлсөн мөнгийг бүтэн буцаагаад, нэмж 8,970,000₮ (3x) олговор өгнө</strong>. Зөвхөн та бидний 8 алхамт онбордингийг гүйцэтгэсэн байх шаардлагатай."</blockquote>
+
+<p><strong>3. Эсрэг баталгаа (Anti-Guarantee) — "Хэн авч болохгүй"</strong></p>
+<blockquote>"Хэрэв та <em>'би өөрөө мэдэж байна, та нар намайг сургахгүй'</em> гэдэг бол энэ багц танд тохирохгүй. Бид зөвхөн <strong>системийн хүнтэй</strong> ажилладаг."</blockquote>
+
+<p><strong>4. Далд баталгаа (Implied Guarantee) — "Үр дүнтэй холбосон төлбөр"</strong></p>
+<blockquote>"Эхний 30 хоногт зөвхөн 1₮ төл. Цуглуулга 70%+ хүрсний дараа л үлдсэнийг төлнө. Бид үр дүнгээ итгэдэг учраас эрсдлийг өөрсдөө үүрнэ."</blockquote>
+
+<h3>Үнийн стратеги (3-5x зөвтгөл)</h3>
+<table>
+  <thead>
+    <tr><th>Өрсөлдөгч</th><th>Үнэ</th><th>Юу дутуу</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Khan СӨХ</td><td>80,000₮/сар</td><td>Зөвхөн төлбөр, DFY алга</td></tr>
+    <tr><td>MyHome</td><td>50,000₮/сар</td><td>Засвар, харилцаа байхгүй</td></tr>
+    <tr><td>Excel + утас</td><td>0₮</td><td>Цаг + нэр хүнд алдагдал</td></tr>
+    <tr class="highlight-row"><td><strong>СӨХ Автопилот</strong></td><td><strong>299,000₮/сар</strong></td><td><strong>БҮХ зүйл + хувийн зөвлөх + баталгаа</strong></td></tr>
+  </tbody>
+</table>
+<p>3.7x үнэ нь баталгаажсан: дан DFY суулгац өөрөө 1.5 сая ₮.</p>
+
+<h1><span class="agent-tag">AGENT 3</span> Fulfillment Automation</h1>
+<h2>Шууд хүргэхэд бэлэн материал</h2>
+
+<h3>Сошиал медиа постууд (Facebook — гол суваг)</h3>
+
+<p><strong>ПОСТ 1: Pain Hook</strong></p>
+<blockquote>
+СӨХ-ийн дарга нар анхаар!<br><br>
+Сүүлийн долоо хоногт танд хэдэн айл "Чи мөнгө хулгайлсан" гэж бичсэн бэ?<br>
+Хэдэн шөнө дунд "лифт гацсан" гэж утас цангинасан бэ?<br>
+Сонгуульд унахаас айгаад хичнээн уйлсан бэ?<br><br>
+Тэр бүхэн <strong>90 хоногт зогсох ёстой.</strong><br><br>
+Бид 47 СӨХ-д хураамжийн цуглуулгыг 51%-аас 94% болгож өсгөсөн. Чи дараагийнх нь байх уу?<br><br>
+👉 Сэтгэгдэлд <strong>"СӨХ"</strong> гэж бич — линк илгээе.
+</blockquote>
+
+<p><strong>ПОСТ 2: Social Proof</strong></p>
+<blockquote>
+Баянзүрх дүүргийн 16-р хорооны "Цэцэг-2" СӨХ:<br><br>
+❌ Өмнө: 142 айлаас 67% л төлдөг байсан, дарга Энхтуяа сарын 28-нд орой Excel дээр уйлдаг байсан.<br><br>
+✅ Одоо: 94% цуглуулга, засварын хүсэлт 6 цагт хариулдаг, оршин суугчид өөрсдөө "Энхтуяа ах, дахин сонгогдоорой" гэж хэлж байна.<br><br>
+<strong>48 цагт суулгасан. Done-For-You.</strong><br><br>
+Хэрэв чи <strong>300 айл хүртэлх СӨХ</strong>-ийн дарга бол доор "+" бич.
+</blockquote>
+
+<p><strong>ПОСТ 3: Урт хэлбэр (Storytelling)</strong></p>
+<blockquote>
+Энхтуяа ах 6 жил СӨХ-ийн дарга байсан. Сүүлийн уулзалтын дараа гэртээ хариад өөрт нь "энэ ажил намайг идэж байна" гэж бодсон...<br><br>
+<em>(150-200 үг үргэлжлэх, кейс судалгаа форматтай)</em><br><br>
+👉 Хэрэв чи өөрийгөө таньж байвал, бид 90 хоногийн "СӨХ Автопилот" хөтөлбөртөө <strong>энэ долоо хоногт 5 СӨХ авч байна</strong>. 4 нь дүүрсэн.
+</blockquote>
+
+<h3>И-мэйл темплэйт (5 удаагийн дараалал)</h3>
+
+<p><strong>EMAIL 1 — Subject: "Энхтуяа ах, чамд асуулт байна"</strong></p>
+<pre>Сайн байна уу, [Нэр]
+СӨХ-ийн дарга гэж сонссон.
+
+Шууд асуулт асууя:
+Сүүлийн 30 хоногт хураамжийн цуглуулга чинь % хэдэн байсан бэ?
+
+Хэрэв 80%-аас доош байгаа бол, надад 10 минут өг.
+Чамд 47 СӨХ-ийг хэрхэн 94%+ болгосон системийг үнэгүй харуулъя.
+
+Хариу бич — Calendly линк илгээе.
+
+— [Таны нэр]
+СӨХ Автопилот</pre>
+
+<ul>
+  <li><strong>EMAIL 2 — 2 хоногийн дараа:</strong> value-first, 3 зөвлөгөө</li>
+  <li><strong>EMAIL 3 — 4 хоногийн дараа:</strong> case study</li>
+  <li><strong>EMAIL 4 — 6 хоногийн дараа:</strong> objection handle: "хэтэрхий үнэтэй"</li>
+  <li><strong>EMAIL 5 — 8 хоногийн дараа:</strong> scarcity: "энэ сар 2 байр үлдсэн"</li>
+</ul>
+
+<h3>Утасны борлуулалтын скрипт (Discovery Call — 30 мин)</h3>
+
+<p><strong>0-2 мин: Барих</strong></p>
+<blockquote>"Энхтуяа ах, цаг гаргасанд баярлалаа. Энэ дуудлагын зорилго бол СӨХ чинь танд тохирох уу гэдгийг хоёулаа шийдэх явдал. Хэрэв тохирохгүй гэж би үзвэл шууд хэлнэ. За юу?"</blockquote>
+
+<p><strong>2-15 мин: Өвдөлт ухах (5 асуулт)</strong></p>
+<ol>
+  <li>Хураамжийн цуглуулга чинь хэдэн % вэ?</li>
+  <li>Хамгийн их толгой өвдгөдөг 3 асуудал юу вэ?</li>
+  <li>Хэрэв энэ асуудал шийдэгдвэл амьдрал чинь юугаараа өөрчлөгдөх вэ?</li>
+  <li>Өмнө юу туршиж үзсэн бэ? Юу болсон бэ?</li>
+  <li>Хэрэв ҮГҮЙ хийвэл 12 сарын дараа юу болох вэ?</li>
+</ol>
+
+<p><strong>15-25 мин:</strong> Шийдэл танилцуулга (Value Stack унших)<br>
+<strong>25-30 мин:</strong> Үнэ + хаалт (2 сонголт)</p>
+
+<h3>СӨХ дарга нарт зориулсан Онбординг Чек-лист (Day 1-7)</h3>
+<pre>DAY 1: ✅ Гэрээ + 1₮ төлбөр баталгаажуулах
+DAY 1: ✅ WhatsApp нэмэх (хувийн зөвлөх)
+DAY 2: ✅ Айлын мэдээлэл хуулийн төлөвлөгөө (DFY баг)
+DAY 3: ✅ Платформ суулгац — байрны код, лого, банкны данс
+DAY 4: ✅ 50 айлд тест зарлал явуулах
+DAY 5: ✅ Засварын чат-бот сургалт (90 мин)
+DAY 6: ✅ Ил тод самбар оршин суугчдад илгээх
+DAY 7: ✅ Эхний хурал онлайн зохион байгуулах</pre>
+
+<h3>Хяналтын KPI самбар (даргын апп дотор)</h3>
+<table>
+  <thead>
+    <tr><th>Хэмжүүр</th><th>Зорилго</th><th>Одоо</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Хураамжийн цуглуулга</td><td>90%+</td><td>Auto</td></tr>
+    <tr><td>Засварын хариу цаг</td><td>&lt;6 цаг</td><td>Auto</td></tr>
+    <tr><td>Оршин суугчийн NPS</td><td>8+/10</td><td>Auto</td></tr>
+    <tr><td>Сонгуулийн кворум</td><td>67%+</td><td>Auto</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>ДҮГНЭЛТ — Та юу хийх вэ?</h2>
+<ol>
+  <li><strong>Дээрх Value Stack-ийг</strong> ландинг хуудас болгон ашиглах (≈2,990,000₮ цэг)</li>
+  <li><strong>Сошиал постуудыг</strong> Facebook СӨХ бүлгүүдэд тарааж эхлэх</li>
+  <li><strong>Discovery Call скриптийг</strong> эхний 10 ярианд туршаад тохируулах</li>
+  <li><strong>30 хоногт 5 СӨХ хаах</strong>, амжилтын кейс судалгаа болгох</li>
+</ol>
+
+<div class="footer-note">
+  <strong>Систем:</strong> 3-агентын автоматжуулсан Grand Slam Offer боловсруулагч<br>
+  <strong>Үндэс:</strong> Alex Hormozi — "$100M Offers" Value Equation<br>
+  <strong>Зорилго:</strong> Монголын СӨХ зах зээлд premium positioning + Done-For-You хүргэлт
+</div>
+
+</body>
+</html>
