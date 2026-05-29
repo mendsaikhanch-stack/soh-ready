@@ -91,10 +91,10 @@ export default function LandingPage() {
               <span className="text-green-50">Pilot үе шат · эхний 3-5 СӨХ үнэгүй туршина</span>
             </div>
             <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4">
-              Хотол — <span className="text-yellow-300">СӨХ-ийн өдөр тутмын ажлыг</span> хялбарчилна
+              Хотол — СӨХ-ийн <span className="text-yellow-300">зар, төлбөр, хүсэлт, тайлан</span> нэг дор
             </h1>
             <p className="text-blue-100 text-base md:text-lg mb-8 leading-relaxed max-w-xl mx-auto md:mx-0">
-              Оршин суугч, СӨХ, удирдлагын мэдээлэл, төлбөр, хүсэлт, мэдэгдлийг нэг дор.
+              СӨХ, хотхон, оршин суугчдын өдөр тутмын мэдээлэл, харилцааг цэгцлэх систем.
             </p>
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center md:justify-start">
               <button

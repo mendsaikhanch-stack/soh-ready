@@ -13,8 +13,8 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.khotol.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Хотол — СӨХ удирдлагын систем",
-  description: "Байрны төлбөр, зарлал, засвар, тайлан — бүгд нэг апп дээр. Утсандаа суулгаж ашиглаарай.",
+  title: "Хотол — СӨХ-ийн зар, төлбөр, хүсэлт, тайлан нэг дор",
+  description: "Хотол нь СӨХ, хотхон, оршин суугчдын өдөр тутмын мэдээлэл, харилцааг цэгцлэх систем.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
