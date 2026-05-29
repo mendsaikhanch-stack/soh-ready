@@ -25,10 +25,11 @@ const { createClient } = require('@supabase/supabase-js');
 
 const ROOT = path.resolve(__dirname, '..');
 const ENV_FILE = path.join(ROOT, '.env.local');
-const CLEAN_CSV = path.join(ROOT, 'sokh-clean.csv');
-const DIRECTORY_CSV = path.join(ROOT, 'sokh-directory.csv');
-const CODES_OUT = path.join(ROOT, 'sokh-codes.csv');
-const SKIP_OUT = path.join(ROOT, 'sokh-import-skipped.csv');
+const DATA_DIR = path.join(ROOT, 'data');
+const CLEAN_CSV = path.join(DATA_DIR, 'sokh-clean.csv');
+const DIRECTORY_CSV = path.join(DATA_DIR, 'sokh-directory.csv');
+const CODES_OUT = path.join(DATA_DIR, 'sokh-codes.csv');
+const SKIP_OUT = path.join(DATA_DIR, 'sokh-import-skipped.csv');
 
 const COMMIT = process.argv.includes('--commit');
 const REFRESH_CODES = process.argv.includes('--refresh-codes'); // re-issue codes for existing pending SOKHs

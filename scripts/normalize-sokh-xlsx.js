@@ -14,7 +14,9 @@ const fs = require('fs');
 const XLSX = require('xlsx');
 
 const FILE = process.argv[2] || 'C:/Users/MNG/Downloads/СӨХолбоодын судалдаа2026.xlsx';
-const OUT_DIR = path.dirname(process.argv[3] || 'C:/Users/MNG/Desktop/projects/soh-ready/sokh-clean.csv');
+const ROOT = path.resolve(__dirname, '..');
+const DEFAULT_OUT = path.join(ROOT, 'data', 'sokh-clean.csv');
+const OUT_DIR = path.dirname(process.argv[3] || DEFAULT_OUT);
 const OUT_CLEAN = path.join(OUT_DIR, 'sokh-clean.csv');
 const OUT_DIRECTORY = path.join(OUT_DIR, 'sokh-directory.csv');
 const OUT_SKIP = path.join(OUT_DIR, 'sokh-skipped.csv');

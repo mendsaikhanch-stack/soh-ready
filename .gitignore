@@ -48,3 +48,10 @@ next-env.d.ts
 # sensitive setup scripts
 setup-db.js
 setup-locations.js
+
+# PII data files (СӨХ chairman phone numbers, activation codes)
+/data/
+sokh-codes.csv
+sokh-skipped.csv
+sokh-import-skipped.csv
+bzd-target-50.csv
