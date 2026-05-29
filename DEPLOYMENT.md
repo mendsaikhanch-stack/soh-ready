@@ -3,12 +3,12 @@
 ## 1. Хүнд үзүүлэх / Демо харуулах
 
 ### Live URL
-- **Апп:** https://soh-ready.vercel.app/app
-- **Админ:** https://soh-ready.vercel.app/admin (нууц үгийг .env.local-с харна)
-- **Super Admin:** https://soh-ready.vercel.app/superadmin (нууц үгийг .env.local-с харна)
+- **Апп:** https://khotol.com/app
+- **Админ:** https://khotol.com/admin (нууц үгийг .env.local-с харна)
+- **Super Admin:** https://khotol.com/superadmin (нууц үгийг .env.local-с харна)
 
 ### Утсаар үзүүлэх
-1. Утасны browser-ээр https://soh-ready.vercel.app/app руу орно
+1. Утасны browser-ээр https://khotol.com/app руу орно
 2. Бүртгүүлэх → Нэвтрэх → СӨХ dashboard харагдана
 3. Бүх feature-ууд ажиллана (төлбөр, зарлал, чат, засвар гэх мэт)
 
@@ -40,14 +40,14 @@
 npm install -g @nicolo-ribaudo/bubblewrap
 
 # TWA project үүсгэх
-bubblewrap init --manifest https://soh-ready.vercel.app/manifest.json
+bubblewrap init --manifest https://khotol.com/manifest.json
 
 # Асуултуудад хариулна:
 #   - Package name: mn.hotol.app
 #   - App name: Хотол
 #   - Launcher name: Хотол
 #   - Display mode: standalone
-#   - Host: soh-ready.vercel.app
+#   - Host: khotol.com
 #   - Start URL: /app
 #   - Theme color: #2563eb
 #   - Splash screen color: #ffffff
@@ -89,7 +89,7 @@ npx vercel --prod --yes
 ### Алтернатив: PWABuilder ашиглах
 Илүү хялбар арга:
 1. https://pwabuilder.com руу орох
-2. `https://soh-ready.vercel.app` оруулах
+2. `https://khotol.com` оруулах
 3. "Package for stores" → Android → Download
 4. Автоматаар APK үүсгэнэ
 
@@ -331,7 +331,7 @@ echo "утга" | npx vercel env add VARIABLE_NAME production --force
 | QPay | Sandbox credentials | QPay-с бодит merchant key авах |
 | Нууц үг | .env.local-д | ✅ Солигдсон |
 | Session secret | .env.local-д | ✅ Солигдсон |
-| Domain | soh-ready.vercel.app | hotol.mn (custom domain) |
+| Domain | soh-ready.vercel.app | khotol.com (custom domain) |
 | RLS | SELECT нээлттэй | sokh_id-р хязгаарлах |
 | Supabase | Free tier | Pro plan ($25/сар) - backup, 8GB |
 | Vercel | Free tier | Pro plan ($20/сар) - bandwidth |
