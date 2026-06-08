@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { username, password, type } = await request.json();
+    const { username, password, type, remember } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Нэр, нууц үг оруулна уу' }, { status: 400 });
@@ -82,7 +82,8 @@ export async function POST(request: Request) {
     const sokhId = adminUser.sokh_id || 0;
     const token = createSessionToken({ userId: adminUser.id, sokhId });
     const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : 'admin-session';
-    const maxAge = type === 'superadmin' ? 43200 : 86400;
+    // "Намайг сана" → 30 хоног, эс бол стандарт (superadmin 12ц, бусад 24ц)
+    const maxAge = remember ? 60 * 60 * 24 * 30 : type === 'superadmin' ? 43200 : 86400;
 
     const response = NextResponse.json({
       success: true, role: adminUser.role, sokhId, displayName: adminUser.display_name,

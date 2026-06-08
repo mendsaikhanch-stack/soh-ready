@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { checkAuth, type AuthRole } from '@/app/lib/session-token';
 import { authCheckLimiter } from '@/app/lib/rate-limit';
 
@@ -23,9 +24,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ authenticated: false });
   }
 
+  // Superadmin-ийн 2-р шат (OTP эсвэл passkey) баталгаажсан эсэхийг
+  // httpOnly cookie-оос сервер талд уншиж буцаана (refresh-д тогтвортой).
+  const otpVerified = (await cookies()).get('sa-otp-verified')?.value === 'true';
+
   return NextResponse.json({
     authenticated: true,
     sokhId: parseInt(result.sokhId || '0'),
     userId: parseInt(result.userId || '0'),
+    otpVerified,
   });
 }
