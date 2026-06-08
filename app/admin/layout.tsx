@@ -12,6 +12,7 @@ const navItems = [
   { icon: '🧠', label: 'AI туслах', href: '/admin/ai' },
   { icon: '⚙️', label: 'Автомат дүрэм', href: '/admin/workflows' },
   { icon: '📥', label: 'Review queue', href: '/admin/workflows/runs' },
+  { icon: '📣', label: 'Маркетинг', href: '/admin/marketing' },
   { icon: '👥', label: 'Оршин суугчид', href: '/admin/residents' },
   { icon: '💰', label: 'Төлбөр', href: '/admin/payments' },
   { icon: '📢', label: 'Зарлал', href: '/admin/announcements' },
