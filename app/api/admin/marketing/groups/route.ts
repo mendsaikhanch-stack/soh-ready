@@ -10,7 +10,7 @@ const STATUSES: GroupStatus[] = ['active', 'paused', 'banned'];
 const URL_RE = /(https?:\/\/[^\s|,]+)/i;
 
 async function auth() {
-  return checkAnyAuth('admin', 'superadmin');
+  return checkAnyAuth('superadmin');
 }
 
 // GET /api/admin/marketing/groups — бүх группүүд

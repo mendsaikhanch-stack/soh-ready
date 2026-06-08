@@ -8,7 +8,7 @@ import { COOLDOWN_DAYS } from '@/app/lib/marketing/constants';
 import type { FbGroup } from '@/app/lib/marketing/constants';
 
 async function auth() {
-  return checkAnyAuth('admin', 'superadmin');
+  return checkAnyAuth('superadmin');
 }
 
 // Asia/Ulaanbaatar бүсийн өнөөдрийн огноо (YYYY-MM-DD)

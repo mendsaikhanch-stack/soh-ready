@@ -6,7 +6,7 @@ import type { LeadStatus } from '@/app/lib/marketing/constants';
 const LEAD_STATUSES: LeadStatus[] = ['new', 'contacted', 'converted', 'lost'];
 
 async function auth() {
-  return checkAnyAuth('admin', 'superadmin');
+  return checkAnyAuth('superadmin');
 }
 
 // GET /api/admin/marketing/leads

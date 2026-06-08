@@ -3,7 +3,7 @@ import { checkAnyAuth } from '@/app/lib/session-token';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 
 async function auth() {
-  return checkAnyAuth('admin', 'superadmin');
+  return checkAnyAuth('superadmin');
 }
 
 // GET /api/admin/marketing/campaigns
