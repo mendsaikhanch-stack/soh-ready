@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 
 const navItems = [
   { icon: '📊', label: 'Хянах самбар', href: '/mng-ctrl' },
@@ -33,6 +34,9 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [pkBusy, setPkBusy] = useState(false);
+  const [pkMsg, setPkMsg] = useState('');
 
   // OTP state
   const [step, setStep] = useState<'login' | 'otp'>('login');
@@ -50,8 +54,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       const data = await res.json();
       if (data.authenticated) {
         setAuthed(true);
-        // OTP cookie шалгах
-        setOtpVerified(document.cookie.includes('sa-otp-verified'));
+        // 2-р шат (OTP/passkey) баталгаажсан эсэхийг сервер талаас
+        setOtpVerified(!!data.otpVerified);
       }
     } catch {
       setAuthed(false);
@@ -68,7 +72,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, type: 'superadmin' }),
+        body: JSON.stringify({ username, password, type: 'superadmin', remember }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -84,6 +88,68 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       setError('Сервертэй холбогдож чадсангүй');
     }
     setLoading(false);
+  };
+
+  // Passkey-ээр нэвтрэх (хурууны хээ / Face ID)
+  const loginWithPasskey = async () => {
+    setError('');
+    setPkBusy(true);
+    try {
+      const optRes = await fetch('/api/auth/passkey/authenticate/options', { method: 'POST' });
+      const options = await optRes.json();
+      if (!optRes.ok) {
+        setError(options.error || 'Passkey бэлэн биш');
+        setPkBusy(false);
+        return;
+      }
+      const asseResp = await startAuthentication({ optionsJSON: options });
+      const verRes = await fetch('/api/auth/passkey/authenticate/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ response: asseResp, remember }),
+      });
+      const data = await verRes.json();
+      if (verRes.ok && data.verified) {
+        setAuthed(true);
+        setOtpVerified(true); // passkey = бүрэн нэвтрэлт
+      } else {
+        setError(data.error || 'Passkey нэвтрэлт амжилтгүй');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Passkey цуцлагдсан');
+    }
+    setPkBusy(false);
+  };
+
+  // Энэ төхөөрөмжийг passkey-ээр бүртгэх (нэвтэрсэн байх шаардлагатай)
+  const registerPasskey = async () => {
+    setPkMsg('');
+    setPkBusy(true);
+    try {
+      const deviceName = (typeof window !== 'undefined'
+        ? window.prompt('Энэ төхөөрөмжийн нэр (ж: Утас, Зөөврийн компьютер):', 'Төхөөрөмж')
+        : 'Төхөөрөмж') || 'Төхөөрөмж';
+      const optRes = await fetch('/api/auth/passkey/register/options', { method: 'POST' });
+      const options = await optRes.json();
+      if (!optRes.ok) {
+        setPkMsg(options.error || 'Алдаа гарлаа');
+        setPkBusy(false);
+        return;
+      }
+      const attResp = await startRegistration({ optionsJSON: options });
+      const verRes = await fetch('/api/auth/passkey/register/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ response: attResp, deviceName }),
+      });
+      const data = await verRes.json();
+      setPkMsg(verRes.ok && data.verified
+        ? '✓ Төхөөрөмж бүртгэгдлээ! Дараа нь хурууны хээ / Face ID-ээр нэвтэрнэ.'
+        : (data.error || 'Бүртгэл амжилтгүй'));
+    } catch (err) {
+      setPkMsg(err instanceof Error ? err.message : 'Цуцлагдсан');
+    }
+    setPkBusy(false);
   };
 
   const sendOtp = async () => {
@@ -257,6 +323,16 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
               </div>
             )}
 
+            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={e => setRemember(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-600 bg-gray-800"
+              />
+              Энэ төхөөрөмжийг сана (30 хоног)
+            </label>
+
             <button
               type="submit"
               disabled={loading}
@@ -265,6 +341,23 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
               {loading ? 'Нэвтэрч байна...' : 'Нэвтрэх'}
             </button>
           </form>
+
+          <div className="flex items-center gap-3 my-4">
+            <div className="flex-1 h-px bg-gray-800" />
+            <span className="text-xs text-gray-600">эсвэл</span>
+            <div className="flex-1 h-px bg-gray-800" />
+          </div>
+
+          <button
+            type="button"
+            onClick={loginWithPasskey}
+            disabled={pkBusy}
+            className="w-full flex items-center justify-center gap-2 bg-gray-800 border border-gray-700 text-white py-3 rounded-xl font-semibold hover:bg-gray-700 transition disabled:opacity-50"
+          >
+            <span>🔑</span>
+            <span>{pkBusy ? 'Хүлээж байна...' : 'Passkey-ээр нэвтрэх'}</span>
+          </button>
+          <p className="text-xs text-gray-600 text-center mt-2">Хурууны хээ / Face ID (бүртгэсэн төхөөрөмж дээр)</p>
 
           <div className="mt-4 p-3 bg-gray-800/50 rounded-xl">
             <p className="text-xs text-gray-500 text-center">
@@ -305,7 +398,17 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             );
           })}
         </nav>
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-gray-800 space-y-1">
+          <button
+            onClick={registerPasskey}
+            disabled={pkBusy}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-800 hover:text-white transition disabled:opacity-50"
+            title="Энэ төхөөрөмж дээр хурууны хээ / Face ID-ээр нэвтрэх боломж нэмнэ"
+          >
+            <span>🔑</span>
+            <span>{pkBusy ? 'Хүлээж байна...' : 'Энэ төхөөрөмжийг бүртгэх'}</span>
+          </button>
+          {pkMsg && <p className="px-3 text-xs text-gray-400">{pkMsg}</p>}
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-800 hover:text-white transition"
