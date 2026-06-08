@@ -15,7 +15,7 @@ function todayStr(): string {
 
 // GET /api/admin/marketing/dashboard
 export async function GET() {
-  const a = await checkAnyAuth('admin', 'superadmin');
+  const a = await checkAnyAuth('superadmin');
   if (!a.valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const date = todayStr();

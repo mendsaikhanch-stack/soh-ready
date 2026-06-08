@@ -5,7 +5,7 @@ import { getProviderByName } from '@/app/lib/ai/core';
 import { buildFollowUpPrompt, templateFollowUp } from '@/app/lib/marketing/captions';
 
 async function auth() {
-  return checkAnyAuth('admin', 'superadmin');
+  return checkAnyAuth('superadmin');
 }
 
 // POST /api/admin/marketing/ai
