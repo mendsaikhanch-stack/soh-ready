@@ -58,3 +58,6 @@ bzd-target-50.csv
 
 # Marketing screenshots (89 MB) — disk дээр архив, git-д хэт хүнд
 /docs/_archive/marketing/screenshots/
+
+.vercel
+.env*
