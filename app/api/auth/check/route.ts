@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { checkAuth, type AuthRole } from '@/app/lib/session-token';
 import { authCheckLimiter } from '@/app/lib/rate-limit';
+import { OTP_DISABLED } from '@/app/lib/auth-flags';
 
 export async function GET(request: Request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
@@ -26,7 +27,10 @@ export async function GET(request: Request) {
 
   // Superadmin-ийн 2-р шат (OTP эсвэл passkey) баталгаажсан эсэхийг
   // httpOnly cookie-оос сервер талд уншиж буцаана (refresh-д тогтвортой).
-  const otpVerified = (await cookies()).get('sa-otp-verified')?.value === 'true';
+  // Мэйл код ТҮР хаалттай үед суперадминыг шууд баталгаажсан гэж үзнэ.
+  const otpVerified =
+    (type === 'superadmin' && OTP_DISABLED) ||
+    (await cookies()).get('sa-otp-verified')?.value === 'true';
 
   return NextResponse.json({
     authenticated: true,
