@@ -39,7 +39,9 @@ export default function MarketingPage() {
   const [tab, setTab] = useState<Tab>('dashboard');
 
   return (
-    <div className="p-6">
+    // Маркетинг модуль цайвар загвартай (цагаан карт) — /mng-ctrl-ийн хар
+    // дэвсгэр/text-white-ийг дарж, бие даасан цайвар хэсэг болгоно.
+    <div className="p-6 min-h-screen bg-gray-50 text-gray-900">
       <h1 className="text-2xl font-bold mb-1">📣 Маркетинг / Outreach</h1>
       <p className="text-sm text-gray-500 mb-5">
         Facebook группүүдэд гар аргаар пост түгээх (хагас автомат) удирдлага — групп, ротаци, caption, лид.
