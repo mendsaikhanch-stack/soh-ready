@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
 import { createSessionToken } from '@/app/lib/session-token';
+import { OTP_DISABLED } from '@/app/lib/auth-flags';
 
 // Rate limiting
 const attempts = new Map<string, { count: number; lockUntil: number }>();
@@ -85,13 +86,24 @@ export async function POST(request: Request) {
     // "Намайг сана" → 30 хоног, эс бол стандарт (superadmin 12ц, бусад 24ц)
     const maxAge = remember ? 60 * 60 * 24 * 30 : type === 'superadmin' ? 43200 : 86400;
 
+    // Суперадмин дээр мэйл код (OTP) ТҮР хаалттай бол 2-р шатыг шууд баталгаажуулна
+    const skipOtp = type === 'superadmin' && OTP_DISABLED;
+
     const response = NextResponse.json({
       success: true, role: adminUser.role, sokhId, displayName: adminUser.display_name,
+      otpSkipped: skipOtp,
     });
     response.cookies.set(cookieName, token, {
       httpOnly: true, secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict', maxAge, path: '/',
     });
+
+    if (skipOtp) {
+      response.cookies.set('sa-otp-verified', 'true', {
+        httpOnly: true, secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict', maxAge, path: '/',
+      });
+    }
 
     return response;
   } catch {

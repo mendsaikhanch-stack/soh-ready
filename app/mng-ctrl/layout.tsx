@@ -79,8 +79,13 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         setAuthed(true);
         setUsername('');
         setPassword('');
-        // OTP илгээх
-        sendOtp();
+        if (data.otpSkipped) {
+          // Мэйл код түр хаалттай — зөвхөн нууц үгээр шууд нэвтрэв
+          setOtpVerified(true);
+        } else {
+          // OTP илгээх
+          sendOtp();
+        }
       } else {
         setError(data.error || 'Нэвтрэх нэр эсвэл нууц үг буруу');
       }
