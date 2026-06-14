@@ -44,7 +44,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const [otpEmail, setOtpEmail] = useState('');
   const [otpSending, setOtpSending] = useState(false);
 
-  // Суперадмин таб: гарчиг, favicon (хар лого), PWA manifest-г солих
+  // Суперадмин таб: гарчиг, PWA manifest-г солих.
+  // (Favicon-г app/mng-ctrl/icon.png файл-конвенц найдвартай хариуцна.)
   useEffect(() => {
     const prevTitle = document.title;
     document.title = 'Хотол Удирдлага — Super Admin';
@@ -55,29 +56,10 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     const appleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
     if (appleMeta) appleMeta.setAttribute('content', 'Хотол Удирдлага');
 
-    // Хөтчийн табны favicon-г хар лого руу солих
-    let icon = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
-    const createdIcon = !icon;
-    if (!icon) {
-      icon = document.createElement('link');
-      icon.rel = 'icon';
-      document.head.appendChild(icon);
-    }
-    const prevHref = icon.getAttribute('href');
-    const prevType = icon.getAttribute('type');
-    icon.setAttribute('type', 'image/png');
-    icon.setAttribute('href', '/icons/icon-admin-192.png');
-
     return () => {
       document.title = prevTitle;
       if (manifestLink) manifestLink.setAttribute('href', '/manifest.json');
       if (appleMeta) appleMeta.setAttribute('content', 'Хотол');
-      if (createdIcon) {
-        icon?.remove();
-      } else {
-        if (prevHref) icon?.setAttribute('href', prevHref);
-        if (prevType) icon?.setAttribute('type', prevType);
-      }
     };
   }, []);
 
