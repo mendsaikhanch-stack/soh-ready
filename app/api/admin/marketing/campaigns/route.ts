@@ -35,10 +35,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const title = String(body.title || '').trim();
   const main_text = String(body.main_text || '').trim();
-  if (!title || !main_text) {
-    return NextResponse.json({ error: 'Гарчиг болон үндсэн текст шаардлагатай' }, { status: 400 });
+  if (!main_text) {
+    return NextResponse.json({ error: 'Үндсэн текст шаардлагатай' }, { status: 400 });
+  }
+  // Гарчиг заавал биш — хоосон бол үндсэн текстийн эхний мөрөөс дотоод нэр гаргана
+  let title = String(body.title || '').trim();
+  if (!title) {
+    title = main_text.split('\n')[0].trim().slice(0, 40) || 'Шинэ кампанит ажил';
   }
 
   const record = {

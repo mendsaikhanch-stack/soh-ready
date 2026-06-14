@@ -32,11 +32,11 @@ export default function CampaignsTab() {
   };
 
   const save = async () => {
-    if (!title || !mainText) return;
+    if (!mainText) return;
     setSaving(true); setErr('');
     const res = editId
-      ? await mkt.campaigns.update(editId, { title, main_text: mainText, link_url: linkUrl || null })
-      : await mkt.campaigns.create({ title, main_text: mainText, link_url: linkUrl || undefined });
+      ? await mkt.campaigns.update(editId, { title: title || undefined, main_text: mainText, link_url: linkUrl || null })
+      : await mkt.campaigns.create({ title: title || undefined, main_text: mainText, link_url: linkUrl || undefined });
     setSaving(false);
     if (res.error) { setErr(res.error); return; }
     reset();
@@ -72,7 +72,7 @@ export default function CampaignsTab() {
         <div className="bg-white border rounded-xl p-4 mb-4">
           <h3 className="font-semibold text-sm mb-3">{editId ? 'Кампанит ажил засах' : 'Шинэ кампанит ажил'}</h3>
           <div className="space-y-3">
-            <input placeholder="Гарчиг (дотоод нэр)" value={title} onChange={(e) => setTitle(e.target.value)}
+            <input placeholder="Гарчиг (заавал биш — хоосон бол текстээс үүснэ)" value={title} onChange={(e) => setTitle(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm" />
             <textarea placeholder="Үндсэн пост текст — энэ текстээс групп бүрт арай өөр caption үүснэ"
               value={mainText} onChange={(e) => setMainText(e.target.value)} rows={6}
@@ -82,7 +82,7 @@ export default function CampaignsTab() {
           </div>
           <div className="flex gap-2 mt-3">
             <button onClick={reset} className="px-4 py-2 rounded-lg border text-sm">Цуцлах</button>
-            <button onClick={save} disabled={saving || !title || !mainText}
+            <button onClick={save} disabled={saving || !mainText}
               className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm disabled:opacity-50">
               {saving ? '...' : editId ? 'Хадгалах' : 'Үүсгэх'}
             </button>

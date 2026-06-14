@@ -33,7 +33,7 @@ export const mkt = {
   },
   campaigns: {
     list: () => api<Campaign[]>('campaigns'),
-    create: (body: { title: string; main_text: string; link_url?: string }) =>
+    create: (body: { title?: string; main_text: string; link_url?: string }) =>
       api<Campaign>('campaigns', { method: 'POST', body }),
     update: (id: number, patch: Partial<Campaign>) => api<Campaign>('campaigns', { method: 'PATCH', body: { id, ...patch } }),
     remove: (id: number) => api(`campaigns?id=${id}`, { method: 'DELETE' }),
