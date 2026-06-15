@@ -69,3 +69,4 @@ export const leadClaimLimiter = rateLimit({ name: 'lead-claim', windowMs: 24 * 6
 export const otpSendLimiter = rateLimit({ name: 'otp-send', windowMs: 60 * 60 * 1000, maxRequests: 5 });
 export const otpVerifyLimiter = rateLimit({ name: 'otp-verify', windowMs: 5 * 60 * 1000, maxRequests: 10 });
 export const claimSohLimiter = rateLimit({ name: 'claim-soh', windowMs: 60 * 60 * 1000, maxRequests: 10 });
+export const demoRequestLimiter = rateLimit({ name: 'demo-request', windowMs: 60 * 60 * 1000, maxRequests: 8 });

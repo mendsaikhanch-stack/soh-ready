@@ -17,6 +17,7 @@ const navItems = [
   { icon: '📈', label: 'Аналитик', href: '/mng-ctrl/analytics' },
   { icon: '🔑', label: 'Админ эрх', href: '/mng-ctrl/admins' },
   { icon: '📞', label: 'Холбоо хүсэлтүүд', href: '/mng-ctrl/leads' },
+  { icon: '🖥', label: 'Demo хүсэлтүүд', href: '/mng-ctrl/demo-requests' },
   { icon: '📣', label: 'Маркетинг', href: '/mng-ctrl/marketing' },
   { icon: '🩺', label: 'Системийн эрүүл мэнд', href: '/mng-ctrl/system-health' },
   { icon: '🛠', label: 'Дэмжлэг', href: '/mng-ctrl/support' },
