@@ -61,6 +61,14 @@ export interface DemoRequestNote {
   created_by: string | null;
 }
 
+// Олон нийтийн demo хүсэлтийн формын зам.
+export const DEMO_REQUEST_PATH = '/demo-request';
+
+// Facebook кампанит ажилд (маркетинг модуль) тавих холбоос — UTM тагтай тул
+// энэ сувгаар ирсэн лид CRM-д utm_source=facebook гэж ялгарч харагдана.
+export const DEMO_REQUEST_FB_LINK =
+  'https://www.khotol.com/demo-request?utm_source=facebook&utm_medium=group';
+
 // ── Олон нийтийн формын сонголтууд ──
 
 export const ROLE_OPTIONS = [

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { mkt } from '@/app/lib/marketing-client';
 import type { Campaign } from '@/app/lib/marketing/constants';
+import { DEMO_REQUEST_FB_LINK } from '@/app/lib/demo-requests/constants';
 
 export default function CampaignsTab() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -77,8 +78,14 @@ export default function CampaignsTab() {
             <textarea placeholder="Үндсэн пост текст — энэ текстээс групп бүрт арай өөр caption үүснэ"
               value={mainText} onChange={(e) => setMainText(e.target.value)} rows={6}
               className="w-full border rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="Линк (заавал биш) — жнь: https://khotol.com" value={linkUrl}
-              onChange={(e) => setLinkUrl(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            <div>
+              <input placeholder="Линк (заавал биш) — жнь: https://khotol.com" value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" />
+              <button type="button" onClick={() => setLinkUrl(DEMO_REQUEST_FB_LINK)}
+                className="mt-1.5 text-xs text-blue-600 hover:underline">
+                🔗 Demo хүсэлтийн холбоосыг тавих (utm_source=facebook)
+              </button>
+            </div>
           </div>
           <div className="flex gap-2 mt-3">
             <button onClick={reset} className="px-4 py-2 rounded-lg border text-sm">Цуцлах</button>
