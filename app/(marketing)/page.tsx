@@ -334,12 +334,18 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="text-center mt-8">
+          <div className="text-center mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              href="/demo-admin"
+              href="/demo-pc"
               className="inline-block px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition"
             >
-              🎬 Demo бүтнээр харах →
+              💻 ПС дээрх демо (бүх модуль) →
+            </Link>
+            <Link
+              href="/demo-admin"
+              className="inline-block px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-50 transition"
+            >
+              📱 Утсан дээрх демо →
             </Link>
           </div>
         </div>
