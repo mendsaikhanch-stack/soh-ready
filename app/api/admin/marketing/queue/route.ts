@@ -3,7 +3,7 @@ import { checkAnyAuth } from '@/app/lib/session-token';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { getProviderByName } from '@/app/lib/ai/core';
 import { selectQueueGroups } from '@/app/lib/marketing/selection';
-import { varyCaption, buildRewritePrompt } from '@/app/lib/marketing/captions';
+import { varyCaption, buildRewritePrompt, campaignUtmSlug, tagCampaignLink } from '@/app/lib/marketing/captions';
 import { COOLDOWN_DAYS } from '@/app/lib/marketing/constants';
 import type { FbGroup } from '@/app/lib/marketing/constants';
 
@@ -110,9 +110,12 @@ async function generateQueue(body: Record<string, unknown>): Promise<NextRespons
 
   const toAdd = selection.selected.filter((g) => !already.has(g.id));
 
-  // Caption үүсгэх (Layer 2 deterministic)
+  // Caption үүсгэх (Layer 2 deterministic).
+  // Кампанит ажил бүрийн линкэнд ялгаатай utm_campaign автоматаар залгана —
+  // ингэснээр энэ кампанит ажлаас ирсэн лид CRM-д тусдаа тэмдэглэгдэнэ.
+  const taggedLink = tagCampaignLink(campaign.link_url, campaignUtmSlug(campaign.title, campaign.id));
   const captions = toAdd.map((g, i) =>
-    varyCaption(campaign.main_text, g.group_type, i, campaign.link_url),
+    varyCaption(campaign.main_text, g.group_type, i, taggedLink),
   );
 
   // Layer 3 — AI rewrite (сонголтоор)

@@ -41,6 +41,48 @@ const CLOSERS = [
   'Үнэгүй танилцуулга авах бол бичээрэй.',
 ];
 
+// Монгол кирилл → латин (UTM slug-д ашиглах энгийн транслитераци)
+const CYR_TO_LAT: Record<string, string> = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'j', з: 'z',
+  и: 'i', й: 'i', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', ө: 'o', п: 'p',
+  р: 'r', с: 's', т: 't', у: 'u', ү: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch',
+  ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+};
+
+/**
+ * Кампанит ажлын гарчгаас ялгаатай, тогтвортой utm_campaign slug үүсгэнэ.
+ * Жнь: "Баянгол 3-р сар" (id=12) → "bayangol-3-r-sar-12".
+ * Гарчиг хоосон бол "camp-<id>".
+ */
+export function campaignUtmSlug(title: string | null | undefined, id: number): string {
+  const base = (title || '')
+    .toLowerCase()
+    .split('')
+    .map((ch) => (ch in CYR_TO_LAT ? CYR_TO_LAT[ch] : ch))
+    .join('')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+    .replace(/-+$/, '');
+  return base ? `${base}-${id}` : `camp-${id}`;
+}
+
+/**
+ * Кампанит ажлын линкэнд utm_campaign-г (хэрэв байхгүй бол) залгана.
+ * utm_campaign аль хэдийн гараар тавьсан бол хэвээр үлдээнэ.
+ * Абсолют URL биш / хоосон бол өөрчлөхгүй буцаана.
+ */
+export function tagCampaignLink(linkUrl: string | null | undefined, slug: string): string | null {
+  if (!linkUrl || !linkUrl.trim()) return linkUrl ?? null;
+  try {
+    const u = new URL(linkUrl.trim());
+    if (!u.searchParams.has('utm_campaign')) u.searchParams.set('utm_campaign', slug);
+    return u.toString();
+  } catch {
+    return linkUrl;
+  }
+}
+
 /**
  * Deterministic caption — групп бүрт давтагдашгүй жижиг ялгаа гаргана.
  * index-ийг ашиглан hook/closer-ийг ротаци хийнэ.

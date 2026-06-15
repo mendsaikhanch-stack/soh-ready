@@ -85,6 +85,9 @@ export default function CampaignsTab() {
                 className="mt-1.5 text-xs text-blue-600 hover:underline">
                 🔗 Demo хүсэлтийн холбоосыг тавих (utm_source=facebook)
               </button>
+              <p className="text-xs text-gray-400 mt-1">
+                utm_campaign-г кампанит ажлын нэрээр автоматаар нэмнэ (постын дараалал үүсгэх үед).
+              </p>
             </div>
           </div>
           <div className="flex gap-2 mt-3">
