@@ -252,3 +252,167 @@ export const aiActions: AiAction[] = [
 Гарын үсэг: ______________`,
   },
 ];
+
+// ── Гомдол / Санал ──
+export const complaints = [
+  { id: 1, title: 'Орцны хог цаг тухайд гарахгүй байна', resident: 'О.Оюунаа (B-301)', type: 'Гомдол', status: 'new', date: '04.08' },
+  { id: 2, title: 'Хүүхдийн тоглоомын талбай засуулах санал', resident: 'Д.Сараа (A-203)', type: 'Санал', status: 'review', date: '04.06' },
+  { id: 3, title: 'Цахилгааны тоолуур заалт буруу', resident: 'Г.Ганбаатар (B-105)', type: 'Гомдол', status: 'resolved', date: '04.03' },
+];
+
+// ── Ашиглалт (тоолуур) ──
+export const utilities = [
+  { id: 1, label: 'Цэвэр ус', icon: '💧', total: '1,240 м³', change: '+4%', cls: 'text-blue-600' },
+  { id: 2, label: 'Дулаан', icon: '🔥', total: '38,500 кВт·ц', change: '-2%', cls: 'text-red-500' },
+  { id: 3, label: 'Цахилгаан (нийтийн)', icon: '⚡', total: '6,800 кВт·ц', change: '+1%', cls: 'text-amber-600' },
+];
+export const utilityReadings = [
+  { apt: 'A-101', water: '12.5 м³', elec: '215 кВт·ц', submitted: true },
+  { apt: 'A-203', water: '9.0 м³', elec: '180 кВт·ц', submitted: true },
+  { apt: 'B-105', water: '14.2 м³', elec: '240 кВт·ц', submitted: false },
+  { apt: 'B-301', water: '11.0 м³', elec: '205 кВт·ц', submitted: true },
+];
+
+// ── Ажилчид ──
+export const staff = [
+  { id: 1, name: 'Б. Болормаа', role: 'Нярав', phone: '9911-0011', status: 'Идэвхтэй' },
+  { id: 2, name: 'Д. Дорж', role: 'Сантехникч', phone: '9911-0022', status: 'Идэвхтэй' },
+  { id: 3, name: 'Ц. Цогт', role: 'Харуул', phone: '9911-0033', status: 'Идэвхтэй' },
+  { id: 4, name: 'Г. Гэрэл', role: 'Цэвэрлэгч', phone: '9911-0044', status: 'Чөлөөтэй' },
+];
+
+// ── Яаралтай ──
+export const emergencyContacts = [
+  { label: 'Онцгой байдал', number: '105', icon: '🚒' },
+  { label: 'Цагдаа', number: '102', icon: '🚓' },
+  { label: 'Түргэн тусламж', number: '103', icon: '🚑' },
+  { label: 'СӨХ жижүүр', number: '9911-2233', icon: '🛠' },
+];
+export const emergencyAlerts = [
+  { id: 1, title: 'Гал түймрийн дохиолол шалгалт', date: '04.02', status: 'Дууссан' },
+  { id: 2, title: 'Цэвэр ус түр хаагдана (засвар)', date: '04.08', status: 'Идэвхтэй' },
+];
+
+// ── Санал хураалт ──
+export const polls = [
+  {
+    id: 1, title: 'Зогсоолын хаалга автоматжуулах уу?', status: 'active', total: 86,
+    options: [{ label: 'Тийм', votes: 61 }, { label: 'Үгүй', votes: 17 }, { label: 'Мэдэхгүй', votes: 8 }],
+  },
+  {
+    id: 2, title: 'Цэцэрлэгжүүлэлтэд сар бүр 2000₮ нэмэх үү?', status: 'closed', total: 102,
+    options: [{ label: 'Дэмжье', votes: 74 }, { label: 'Эсрэг', votes: 28 }],
+  },
+];
+
+// ── Мессеж ──
+export const messageThreads = [
+  { id: 1, name: 'Б. Батболд (A-101)', last: 'Төлбөрөө хэзээ хийх вэ гэж...', time: '14:30', unread: 2 },
+  { id: 2, name: 'Д. Сараа (A-203)', last: 'Баярлалаа, ойлголоо', time: '12:05', unread: 0 },
+  { id: 3, name: 'Г. Ганбаатар (B-105)', last: 'Лифт хэзээ засагдах вэ?', time: 'Өчигдөр', unread: 1 },
+];
+
+// ── Хөрш маркет ──
+export const marketplaceItems = [
+  { id: 1, title: 'Хүүхдийн тэрэг (бараг шинэ)', seller: 'A-203', price: '150,000₮', emoji: '🚼' },
+  { id: 2, title: 'Угаалгын машин Samsung', seller: 'B-105', price: '350,000₮', emoji: '🌀' },
+  { id: 3, title: 'Номын тавиур', seller: 'C-402', price: '80,000₮', emoji: '📚' },
+  { id: 4, title: 'Унадаг дугуй 26"', seller: 'A-505', price: '220,000₮', emoji: '🚲' },
+];
+
+// ── Зай захиалга ──
+export const bookableSpaces = [
+  { id: 1, name: 'Хурлын танхим', emoji: '🪑', today: 2, status: 'Чөлөөтэй' },
+  { id: 2, name: 'Биеийн тамирын өрөө', emoji: '🏋', today: 5, status: 'Завгүй' },
+  { id: 3, name: 'Дээврийн талбай', emoji: '🌇', today: 0, status: 'Чөлөөтэй' },
+];
+export const bookings = [
+  { id: 1, space: 'Хурлын танхим', who: 'Д.Сараа (A-203)', when: 'Өнөөдөр 18:00–20:00' },
+  { id: 2, space: 'Биеийн тамирын өрөө', who: 'Т.Тамир (B-404)', when: 'Маргааш 07:00–08:00' },
+];
+
+// ── Санхүү (төсөв / нөөц сан) ──
+export const financeSummary = {
+  budget: 6500000, spent: 5400000, reserveFund: 12400000, reserveTarget: 20000000,
+};
+export const financeLedger = [
+  { id: 1, label: 'Сарын хураамж (орлого)', amount: 6200000, type: 'in', date: '04.30' },
+  { id: 2, label: 'Лифт засвар (А блок)', amount: 800000, type: 'out', date: '04.22' },
+  { id: 3, label: 'Цэвэрлэгээний цалин', amount: 900000, type: 'out', date: '04.15' },
+  { id: 4, label: 'Зогсоолын хураамж', amount: 1100000, type: 'in', date: '04.10' },
+];
+
+// ── Илгээмж ──
+export const packages = [
+  { id: 1, apt: 'A-101', from: 'Шуудан', arrived: '04.08 13:20', status: 'waiting' },
+  { id: 2, apt: 'C-402', from: 'GoGo', arrived: '04.08 10:05', status: 'waiting' },
+  { id: 3, apt: 'B-301', from: 'Шарга маркет', arrived: '04.07 16:40', status: 'picked' },
+];
+
+// ── Дэлгүүр & Автомат машин ──
+export const shops = [
+  { id: 1, name: 'Орцны дэлгүүр', type: 'Дэлгүүр', floor: '1 давхар', status: 'Идэвхтэй' },
+  { id: 2, name: 'Кофе автомат', type: 'Vending', floor: 'Орц A', status: 'Идэвхтэй' },
+  { id: 3, name: 'Ус борлуулагч', type: 'Vending', floor: 'Орц B', status: 'Засвартай' },
+];
+
+// ── Камер (CCTV) ──
+export const cameras = [
+  { id: 1, name: 'Орц A — гадна', status: 'online' },
+  { id: 2, name: 'Орц B — гадна', status: 'online' },
+  { id: 3, name: 'Зогсоол — баруун', status: 'online' },
+  { id: 4, name: 'Лифт A', status: 'offline' },
+  { id: 5, name: 'Хогийн цэг', status: 'online' },
+  { id: 6, name: 'Тоглоомын талбай', status: 'online' },
+];
+
+// ── Файл импорт ──
+export const importHistory = [
+  { id: 1, file: 'residents_2026_04.xlsx', rows: 124, status: 'done', date: '04.01' },
+  { id: 2, file: 'payments_qpay_0408.csv', rows: 58, status: 'done', date: '04.08' },
+  { id: 3, file: 'meters_april.xlsx', rows: 0, status: 'error', date: '04.05' },
+];
+
+// ── СӨХ Directory ──
+export const directoryStats = { total: 1198, claimed: 43, thisKhoroo: 12 };
+export const directorySample = [
+  { id: 1, name: 'Нарантуул СӨХ', district: 'Баянгол', khoroo: '1-р хороо', claimed: true },
+  { id: 2, name: 'Эрин СӨХ', district: 'Баянгол', khoroo: '1-р хороо', claimed: false },
+  { id: 3, name: 'Цэцэг хороолол СӨХ', district: 'Сүхбаатар', khoroo: '6-р хороо', claimed: false },
+];
+
+// ── Эрэлт ──
+export const demandStats = { interested: 37, residents: 124, percent: 30 };
+export const demandFeed = [
+  { id: 1, who: 'A-101', action: 'Апп суулгасан', date: '04.08' },
+  { id: 2, who: 'B-301', action: 'Апп суулгасан', date: '04.07' },
+  { id: 3, who: 'C-402', action: 'Урилга хүлээж авсан', date: '04.06' },
+];
+
+// ── Лифт засвар ──
+export const elevators = [
+  { id: 1, name: 'Лифт A', status: 'maintenance', lastService: '04.08', note: 'Хаалганы мотор солих' },
+  { id: 2, name: 'Лифт B', status: 'ok', lastService: '03.20', note: '—' },
+  { id: 3, name: 'Лифт C', status: 'ok', lastService: '03.20', note: '—' },
+];
+
+// ── Автомат дүрэм (workflows) ──
+export const workflowRules = [
+  { id: 1, name: 'Төлбөр хоцролт → сануулга', trigger: 'Нэхэмжлэл 5 хоног хоцроход', action: 'SMS ноорог үүсгэх', enabled: true },
+  { id: 2, name: 'Шинэ гомдол → хариуцагч', trigger: 'Гомдол ирэхэд', action: 'Холбогдох ажилтанд оноох', enabled: true },
+  { id: 3, name: 'Сарын тайлан', trigger: 'Сар бүрийн 1-нд', action: 'Тайлангийн ноорог бэлдэх', enabled: false },
+];
+export const reviewQueue = [
+  { id: 1, title: 'Өртэй 35 айлд сануулга (SMS)', rule: 'Төлбөр хоцролт', date: '04.08' },
+  { id: 2, title: '4-р сарын тайлангийн ноорог', rule: 'Сарын тайлан', date: '04.08' },
+];
+
+// ── Үйлчилгээ тохиргоо (feature toggles) ──
+export const featureToggles = [
+  { id: 'parking', label: 'Зогсоол удирдлага', on: true },
+  { id: 'easybox', label: 'EasyBox', on: true },
+  { id: 'marketplace', label: 'Хөрш маркет', on: true },
+  { id: 'cctv', label: 'Камер (CCTV)', on: true },
+  { id: 'booking', label: 'Зай захиалга', on: false },
+  { id: 'shops', label: 'Дэлгүүр & Автомат', on: false },
+];
