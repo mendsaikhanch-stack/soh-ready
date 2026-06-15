@@ -90,3 +90,20 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   }
   return NextResponse.json({ data });
 }
+
+// DELETE /api/mng-ctrl/demo-requests/[id] — хүсэлтийг бүрмөсөн устгах
+// (notes нь ON DELETE CASCADE-ээр хамт устана)
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const a = await checkAnyAuth('superadmin');
+  if (!a.valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await ctx.params;
+  if (!UUID_RE.test(id)) return NextResponse.json({ error: 'id буруу' }, { status: 400 });
+
+  const { error } = await supabaseAdmin.from('soh_demo_requests').delete().eq('id', id);
+  if (error) {
+    console.error('[mng-ctrl/demo-requests] DELETE', error.message);
+    return NextResponse.json({ error: 'DB error' }, { status: 500 });
+  }
+  return NextResponse.json({ success: true });
+}

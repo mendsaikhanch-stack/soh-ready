@@ -256,6 +256,8 @@ function DetailDrawer({ id, onClose, onChanged }: { id: string; onClose: () => v
   const [noteMethod, setNoteMethod] = useState('phone');
   const [addingNote, setAddingNote] = useState(false);
 
+  const [deleting, setDeleting] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     const res = await fetch(`/api/mng-ctrl/demo-requests/${id}`);
@@ -296,6 +298,23 @@ function DetailDrawer({ id, onClose, onChanged }: { id: string; onClose: () => v
       const data = await res.json();
       setReq(data.data);
       onChanged();
+    }
+  };
+
+  const remove = async () => {
+    if (!req) return;
+    const ok = window.confirm(
+      `"${req.soh_name}" хүсэлтийг бүрмөсөн устгах уу?\nХарилцсан тэмдэглэлүүд хамт устана. Энэ үйлдлийг буцаах боломжгүй.`
+    );
+    if (!ok) return;
+    setDeleting(true);
+    const res = await fetch(`/api/mng-ctrl/demo-requests/${id}`, { method: 'DELETE' });
+    setDeleting(false);
+    if (res.ok) {
+      onChanged();
+      onClose();
+    } else {
+      window.alert('Устгаж чадсангүй. Дахин оролдоно уу.');
     }
   };
 
@@ -446,6 +465,15 @@ function DetailDrawer({ id, onClose, onChanged }: { id: string; onClose: () => v
                   })}
                 </div>
               )}
+            </div>
+
+            {/* Устгах */}
+            <div className="border border-red-200 bg-red-50 rounded-xl p-4">
+              <button onClick={remove} disabled={deleting}
+                className="w-full text-red-600 border border-red-300 bg-white py-2.5 rounded-lg text-sm font-medium hover:bg-red-100 transition disabled:opacity-50">
+                {deleting ? 'Устгаж байна...' : '🗑 Хүсэлтийг устгах'}
+              </button>
+              <p className="text-xs text-red-400 mt-2 text-center">Буцаах боломжгүй. Тэмдэглэлүүд хамт устана.</p>
             </div>
           </div>
         )}
