@@ -18,6 +18,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </button>
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <Link href="/find-hoa" className="text-gray-600 hover:text-gray-900 transition">СӨХ хайх</Link>
+            <Link href="/demo-request" className="text-gray-600 hover:text-gray-900 transition">Танилцуулга авах</Link>
             <Link href="/help" className="text-gray-600 hover:text-gray-900 transition">Тусламж</Link>
             <Link href="/contact" className="text-gray-600 hover:text-gray-900 transition">Холбоо барих</Link>
           </nav>

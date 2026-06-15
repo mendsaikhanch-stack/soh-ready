@@ -110,10 +110,10 @@ export default function LandingPage() {
                 🎬 Demo харах
               </Link>
               <Link
-                href="/contact"
+                href="/demo-request"
                 className="px-7 py-3.5 bg-white/10 backdrop-blur border border-white/25 text-white rounded-xl font-semibold text-sm hover:bg-white/20 transition text-center"
               >
-                СӨХ админ бол холбогдох
+                СӨХ админ бол → үнэгүй танилцуулга
               </Link>
             </div>
           </div>
@@ -421,10 +421,10 @@ export default function LandingPage() {
               ))}
             </ul>
             <Link
-              href="/contact"
+              href="/demo-request"
               className="inline-block px-6 py-3 bg-amber-600 text-white rounded-xl font-semibold text-sm hover:bg-amber-700 transition"
             >
-              СӨХ админ бол холбогдох →
+              Үнэгүй танилцуулга авах →
             </Link>
           </div>
         </div>
