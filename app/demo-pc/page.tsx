@@ -94,7 +94,7 @@ export default function DemoPcPage() {
   return (
     <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
       <div className="bg-yellow-400 text-yellow-900 text-center py-1.5 text-xs font-semibold flex-shrink-0">
-        Демо горим — СӨХ Удирдлага (ПС хувилбар) · Жишээ өгөгдөл · {ALL_ITEMS.length} модуль
+        Демо горим — СӨХ Удирдлага (ПС хувилбар) · Жишээ өгөгдөл
       </div>
 
       <div className="flex-1 flex min-h-0">
