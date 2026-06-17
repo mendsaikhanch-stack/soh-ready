@@ -98,10 +98,5 @@ BEGIN
     (v_sokh, 'Дээврийн засвар', 'Дээврийн ус нэвчилтийг засах шаардлагатай.', 'pending'),
     (v_sokh, 'Гадна талбайн гэрэлтүүлэг', 'Зогсоолын гэрэлтүүлгийг суурилуулж дууссан.', 'done');
 
-  RAISE NOTICE 'Demo дата амжилттай орлоо. sokh_id=%, demo_uid=%', v_sokh, v_uid;
+  RAISE NOTICE 'Demo data inserted. sokh_id=%, demo_uid=%', v_sokh, v_uid;
 END $$;
-
--- Шалгах (заавал биш):
--- SELECT 'residents' t, count(*) FROM residents r JOIN sokh_organizations s ON s.id=r.sokh_id WHERE s.name='Туршилтын СӨХ — Хотол демо байр'
--- UNION ALL SELECT 'announcements', count(*) FROM announcements a JOIN sokh_organizations s ON s.id=a.sokh_id WHERE s.name='Туршилтын СӨХ — Хотол демо байр'
--- UNION ALL SELECT 'complaints', count(*) FROM complaints c JOIN sokh_organizations s ON s.id=c.sokh_id WHERE s.name='Туршилтын СӨХ — Хотол демо байр';
