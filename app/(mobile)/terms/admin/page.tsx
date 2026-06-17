@@ -13,7 +13,7 @@ export default function AdminTermsPage() {
       subtitle="СӨХ-ийн дарга, нярав, удирдлагын баг ашиглах"
       accent="amber"
     >
-      <MetaBlock version="1.0" effectiveDate="[он/сар/өдөр]" />
+      <MetaBlock version="1.0" effectiveDate="2026-06-17" />
 
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
         ℹ️ Энэхүү нөхцөл нь Khotol-той байгуулсан үндсэн үйлчилгээний гэрээтэй хамт хэрэглэгдэнэ.

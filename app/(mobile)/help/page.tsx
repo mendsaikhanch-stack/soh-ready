@@ -14,7 +14,7 @@ export default function HelpPage() {
       subtitle="Хамгийн их асуугддаг асуултууд, ашиглах заавар"
       accent="slate"
     >
-      <MetaBlock version="1.0" updatedAt="[он/сар/өдөр]" />
+      <MetaBlock version="1.0" updatedAt="2026-06-17" />
 
       <LegalSection number="1" title="Khotol гэж юу вэ?">
         <p>

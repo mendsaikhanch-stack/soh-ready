@@ -13,7 +13,7 @@ export default function ResidentTermsPage() {
       subtitle="Khotol платформыг ашиглах ерөнхий журам"
       accent="blue"
     >
-      <MetaBlock version="1.0" effectiveDate="[он/сар/өдөр]" />
+      <MetaBlock version="1.0" effectiveDate="2026-06-17" />
 
       <LegalSection number="1" title="Нийтлэг үндэслэл">
         <p>1.1. Энэхүү нөхцөл нь Khotol аппыг оршин суугч, өмчлөгч, эзэмшигч, түрээслэгч болон холбогдох хэрэглэгч ашиглахтай холбоотой эрх, үүргийг тодорхойлно.</p>

@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       subtitle="Хувийн мэдээлэл цуглуулах, ашиглах журам"
       accent="slate"
     >
-      <MetaBlock version="1.0" effectiveDate="[он/сар/өдөр]" updatedAt="[он/сар/өдөр]" />
+      <MetaBlock version="1.0" effectiveDate="2026-06-17" updatedAt="2026-06-17" />
 
       <LegalSection number="1" title="Нийтлэг үндэслэл">
         <p>
