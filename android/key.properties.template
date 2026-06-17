@@ -1,0 +1,15 @@
+# Хотол — Release signing тохиргоо
+#
+# Энэ файлыг хуулж "key.properties" нэрээр (template-гүйгээр) хадгална.
+# key.properties нь .gitignore-д орсон тул Git-д ОРОХГҮЙ — нууцаа алдахгүй.
+#
+# Эхлээд keystore үүсгэнэ (README_PLAYSTORE.md → Signing):
+#   keytool -genkey -v -keystore khotol-release.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias khotol
+#
+# Дараа нь доорх утгуудыг бөглөнө:
+
+storeFile=../khotol-release.jks
+storePassword=ӨӨРИЙН_KEYSTORE_НУУЦ_ҮГ
+keyAlias=khotol
+keyPassword=ӨӨРИЙН_KEY_НУУЦ_ҮГ

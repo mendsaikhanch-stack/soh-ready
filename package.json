@@ -8,9 +8,17 @@
     "start": "next start",
     "lint": "eslint",
     "auto-save": "bash scripts/auto-save.sh",
-    "squash-wip": "bash scripts/squash-wip.sh"
+    "squash-wip": "bash scripts/squash-wip.sh",
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android",
+    "cap:assets": "capacitor-assets generate --android --iconBackgroundColor #ffffff --iconBackgroundColorDark #ffffff --splashBackgroundColor #ffffff --splashBackgroundColorDark #ffffff"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@sentry/nextjs": "^10.46.0",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.1",
@@ -28,6 +36,8 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.0",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
