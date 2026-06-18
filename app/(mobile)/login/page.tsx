@@ -159,7 +159,7 @@ function LoginInner() {
           disabled={loading}
           className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold text-sm mt-6 disabled:opacity-50 active:bg-blue-700 transition"
         >
-          {loading ? 'Нэвтэрж байна...' : 'Нэвтрэх'}
+          {loading ? 'Нэвтэрч байна...' : 'Нэвтрэх'}
         </button>
 
         {/* QR кодоор нэвтрэх */}
