@@ -13,7 +13,7 @@ Release `.aab` гаргахаас өмнө (debug APK эсвэл internal testin
 - [ ] 6. App нээгдэхэд `https://www.khotol.com` зөв ачаална.
 - [ ] 7. Эхний ачаалалт удаан үед хоосон цагаан биш — splash/loading харагдана.
 - [ ] 8. Нэвтрэх (login) хуудас ажиллана.
-- [ ] 9. Demo account (demo@khotol.com / Demo12345!) нэвтэрнэ.
+- [ ] 9. Demo account (Утас 88000000 / Нууц үг Demo12345!) нэвтэрнэ.
 - [ ] 10. Dashboard ачаалж, контент харагдана.
 
 ## Навигаци

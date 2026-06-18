@@ -163,9 +163,9 @@ android/app/build/outputs/bundle/release/app-release.aab
 5. **Screenshots** upload (доорх жагсаалт).
 6. **Privacy Policy URL** оруулах: `https://www.khotol.com/privacy`
 7. **App access** → review-ийн нэвтрэх мэдээлэл оруулах:
-   - Email: `demo@khotol.com`
-   - Password: `Demo12345!`
-   - Тэмдэглэл: "Demo СӨХ / Туршилтын байр. Бодит хувийн мэдээлэл агуулаагүй."
+   - Нэвтрэлт: **Утас `88000000`** · **Нууц үг `Demo12345!`**
+     (апп нь утсаар нэвтэрдэг; Supabase auth дээр `88000000@toot.app`)
+   - Тэмдэглэл: "Demo СӨХ / Туршилтын байр. Утас 88000000, нууц үг Demo12345!. Бодит хувийн мэдээлэл агуулаагүй."
 8. **Data safety** form бөглөх → `PLAY_STORE_DATA_SAFETY.md`-ийн дагуу.
 9. **Content rating** асуулга бөглөх.
 10. **Target audience** — 18+ эсвэл бизнесийн зорилготой гэдгийг сонго.
@@ -187,7 +187,7 @@ android/app/build/outputs/bundle/release/app-release.aab
 | Play developer account | $25 төлбөр, бүртгэл |
 | Feature graphic 1024×500 | Play listing-ийн толгой зураг — Canva/Figma-аар |
 | Screenshots (утас) | 2–8 ширхэг, доорх дэлгэцүүдээр |
-| `demo@khotol.com` бодит account | Supabase дээр demo СӨХ, demo хэрэглэгч — **бодит PII-гүй** |
+| Demo account (утас `88000000`) | Supabase дээр `88000000@toot.app` + demo СӨХ, demo хэрэглэгч — **бодит PII-гүй** |
 | Privacy/Terms-ийн **огноо** | `/privacy`, `/terms/*` дээрх `[он/сар/өдөр]` placeholder-ийг бодит огноогоор солих |
 | Content rating хариултууд | Play Console-ийн асуулга |
 
