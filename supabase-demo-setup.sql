@@ -18,7 +18,8 @@ BEGIN
       instance_id, id, aud, role, email, encrypted_password,
       email_confirmed_at, created_at, updated_at,
       raw_app_meta_data, raw_user_meta_data,
-      confirmation_token, email_change, email_change_token_new, recovery_token
+      confirmation_token, recovery_token, email_change, email_change_token_new,
+      email_change_token_current, phone_change, phone_change_token, reauthentication_token
     ) VALUES (
       '00000000-0000-0000-0000-000000000000', v_uid,
       'authenticated', 'authenticated',
@@ -26,7 +27,7 @@ BEGIN
       now(), now(), now(),
       '{"provider":"email","providers":["email"]}',
       '{"phone":"88000000"}',
-      '', '', '', ''
+      '', '', '', '', '', '', '', ''
     );
     INSERT INTO auth.identities (
       id, user_id, identity_data, provider, provider_id,
@@ -41,9 +42,13 @@ BEGIN
       SET encrypted_password = crypt('Demo12345!', gen_salt('bf')),
           email_confirmed_at = now(),
           confirmation_token = coalesce(confirmation_token, ''),
+          recovery_token = coalesce(recovery_token, ''),
           email_change = coalesce(email_change, ''),
           email_change_token_new = coalesce(email_change_token_new, ''),
-          recovery_token = coalesce(recovery_token, '')
+          email_change_token_current = coalesce(email_change_token_current, ''),
+          phone_change = coalesce(phone_change, ''),
+          phone_change_token = coalesce(phone_change_token, ''),
+          reauthentication_token = coalesce(reauthentication_token, '')
       WHERE id = v_uid;
   END IF;
 
