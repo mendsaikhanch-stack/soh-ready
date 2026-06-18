@@ -17,14 +17,16 @@ BEGIN
     INSERT INTO auth.users (
       instance_id, id, aud, role, email, encrypted_password,
       email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data
+      raw_app_meta_data, raw_user_meta_data,
+      confirmation_token, email_change, email_change_token_new, recovery_token
     ) VALUES (
       '00000000-0000-0000-0000-000000000000', v_uid,
       'authenticated', 'authenticated',
       '88000000@toot.app', crypt('Demo12345!', gen_salt('bf')),
       now(), now(), now(),
       '{"provider":"email","providers":["email"]}',
-      '{"phone":"88000000"}'
+      '{"phone":"88000000"}',
+      '', '', '', ''
     );
     INSERT INTO auth.identities (
       id, user_id, identity_data, provider, provider_id,
@@ -37,7 +39,11 @@ BEGIN
   ELSE
     UPDATE auth.users
       SET encrypted_password = crypt('Demo12345!', gen_salt('bf')),
-          email_confirmed_at = now()
+          email_confirmed_at = now(),
+          confirmation_token = coalesce(confirmation_token, ''),
+          email_change = coalesce(email_change, ''),
+          email_change_token_new = coalesce(email_change_token_new, ''),
+          recovery_token = coalesce(recovery_token, '')
       WHERE id = v_uid;
   END IF;
 
