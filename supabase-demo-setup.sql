@@ -55,9 +55,9 @@ BEGIN
   -- 2) demo дата
   DELETE FROM sokh_organizations WHERE name = 'Туршилтын СӨХ — Хотол демо байр';
 
-  INSERT INTO sokh_organizations (name, address, phone)
+  INSERT INTO sokh_organizations (name, address, phone, claim_status)
   VALUES ('Туршилтын СӨХ — Хотол демо байр',
-          'Улаанбаатар, СБД, 1-р хороо, Демо гудамж 12', '77000000')
+          'Улаанбаатар, СБД, 1-р хороо, Демо гудамж 12', '77000000', 'active')
   RETURNING id INTO v_sokh;
 
   INSERT INTO residents (name, apartment, phone, debt, area_sqm, sokh_id, auth_user_id)
