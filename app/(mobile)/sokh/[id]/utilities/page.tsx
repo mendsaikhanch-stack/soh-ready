@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
+import { PAYMENTS_ENABLED } from '@/app/lib/auth-flags';
 
 interface Usage {
   id: number;
@@ -491,7 +492,7 @@ export default function UtilitiesPage() {
                             </span>
                           </div>
                         </div>
-                        {b.status !== 'paid' && Number(b.amount) > 0 && (
+                        {PAYMENTS_ENABLED && b.status !== 'paid' && Number(b.amount) > 0 && (
                           <button
                             onClick={() => startPayBill(b)}
                             className="w-full mt-2 bg-green-600 text-white py-2.5 rounded-xl font-medium text-sm active:bg-green-700 transition flex items-center justify-center gap-2"

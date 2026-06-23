@@ -9,3 +9,18 @@
 //
 // 👉 Мэйл кодыг дахин асаахдаа доорхийг false болгоно.
 export const OTP_DISABLED = true;
+
+// 💳 Апп доторх төлбөр төлөх (QPay) товчийг харуулах эсэх.
+//
+// PAYMENTS_ENABLED = false →  "Төлөх" / "Бүгдийг төлөх" товч НУУГДАНА.
+//                             Төлбөрийн мэдээлэл зөвхөн ХАРАГДАНА (view-only).
+//                             Play Store launch-д ЭНЭ горимыг ашиглана — апп нь
+//                             мэдээллийн апп болж хурдан зөвшөөрөгдөнө, эвдэрсэн/
+//                             дутуу төлбөрийн урсгал reviewer-т харагдахгүй.
+//
+// PAYMENTS_ENABLED = true  →  Төлбөр төлөх товч идэвхжинэ (Wire/QPay production
+//                             бэлэн болсны ДАРАА л асаана).
+//
+// 👉 Wire/QPay production бэлэн болоход доорхийг true болгож, вэбээ deploy хийнэ
+//    (wrapper тул шинэ .aab, Play дахин шалгалт ШААРДЛАГАГҮЙ).
+export const PAYMENTS_ENABLED: boolean = false;

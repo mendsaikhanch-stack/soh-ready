@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
+import { PAYMENTS_ENABLED } from '@/app/lib/auth-flags';
 
 interface BillItem {
   id: number;
@@ -360,7 +361,7 @@ export default function PaymentsPage() {
               {unpaidTotal > 0 ? `${unpaidTotal.toLocaleString()}₮` : 'Төлсөн ✓'}
             </p>
           </div>
-          {unpaidTotal > 0 && (
+          {PAYMENTS_ENABLED && unpaidTotal > 0 && (
             <button
               onClick={payAll}
               className="w-full mt-3 bg-green-600 text-white py-3 rounded-xl font-medium active:bg-green-700 transition"
@@ -407,12 +408,14 @@ export default function PaymentsPage() {
                         <p className="font-medium text-sm">{bill.name}</p>
                         <p className="text-red-500 font-semibold text-sm">{bill.amount.toLocaleString()}₮</p>
                       </div>
-                      <button
-                        onClick={() => startPay(bill)}
-                        className="px-4 py-2 bg-green-600 text-white text-xs font-medium rounded-lg active:bg-green-700"
-                      >
-                        Төлөх
-                      </button>
+                      {PAYMENTS_ENABLED && (
+                        <button
+                          onClick={() => startPay(bill)}
+                          className="px-4 py-2 bg-green-600 text-white text-xs font-medium rounded-lg active:bg-green-700"
+                        >
+                          Төлөх
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
