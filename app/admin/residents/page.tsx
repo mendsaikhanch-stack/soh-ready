@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
@@ -35,8 +34,14 @@ export default function AdminResidents() {
 
   const fetchResidents = async () => {
     const sokhId = await getAdminSokhId();
-    const { data } = await supabase.from('residents').select('*').eq('sokh_id', sokhId).order('building').order('entrance').order('floor').order('apartment');
-    setResidents(data || []);
+    // adminFrom proxy (service_role + tenant-scope) ашиглана — admin нь Supabase auth биш тул
+    // anon client RLS-д бүх мөр блоклогддог. Бичих үйлдэлтэй ижил замаар уншина.
+    const { data } = await adminFrom('residents').select('*').eq('sokh_id', sokhId);
+    const cmp = (a?: string, b?: string) => (a || '').localeCompare(b || '', undefined, { numeric: true });
+    const rows = ((data as unknown as Resident[]) || []).slice().sort((a, b) =>
+      cmp(a.building, b.building) || cmp(a.entrance, b.entrance) || cmp(a.floor, b.floor) || cmp(a.apartment, b.apartment)
+    );
+    setResidents(rows);
     setLoading(false);
   };
 
