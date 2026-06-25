@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
 export default function AdminDashboard() {
@@ -22,32 +22,40 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       const sokhId = await getAdminSokhId();
 
-      const [resCountRes, resDataRes, payDataRes, annCountRes, maintCountRes, complaintCountRes, pollCountRes, msgCountRes] = await Promise.all([
-        supabase.from('residents').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId),
-        supabase.from('residents').select('debt').eq('sokh_id', sokhId),
-        supabase.from('payments').select('amount, residents!inner(sokh_id)').eq('residents.sokh_id', sokhId),
-        supabase.from('announcements').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId),
-        supabase.from('maintenance_requests').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId).eq('status', 'pending'),
-        supabase.from('complaints').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId).eq('status', 'pending'),
-        supabase.from('polls').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId).eq('status', 'active'),
-        supabase.from('messages').select('*', { count: 'exact', head: true }).eq('sokh_id', sokhId),
+      // adminFrom proxy (service_role + tenant-scope) ашиглана — admin нь Supabase auth биш тул
+      // anon client RLS-д бүх мөр блоклогдож, хянах самбар 0 харуулдаг байв.
+      const { data: resRows } = await adminFrom('residents').select('id, debt').eq('sokh_id', sokhId);
+      const residents = (resRows as unknown as { id: number; debt: number }[]) || [];
+      const debtResidents = residents.filter(r => Number(r.debt) > 0).length;
+      const totalDebt = residents.reduce((sum, r) => sum + Number(r.debt), 0);
+
+      // payments нь sokh_id шууд байхгүй — proxy resident_id-ээр scope хийдэг тул айлуудын id-аар уншина
+      const residentIds = residents.map(r => Number(r.id));
+
+      const [payRes, annRows, maintRows, compRows, pollRows, msgRows] = await Promise.all([
+        residentIds.length
+          ? adminFrom('payments').select('amount').in('resident_id', residentIds)
+          : Promise.resolve({ data: [] as { amount: number }[] }),
+        adminFrom('announcements').select('id').eq('sokh_id', sokhId),
+        adminFrom('maintenance_requests').select('id').eq('sokh_id', sokhId).eq('status', 'pending'),
+        adminFrom('complaints').select('id').eq('sokh_id', sokhId).eq('status', 'pending'),
+        adminFrom('polls').select('id').eq('sokh_id', sokhId).eq('status', 'active'),
+        adminFrom('scheduled_notifications').select('id').eq('sokh_id', sokhId),
       ]);
 
-      const resData = resDataRes.data;
-      const debtResidents = resData?.filter(r => Number(r.debt) > 0).length || 0;
-      const totalDebt = resData?.reduce((sum, r) => sum + Number(r.debt), 0) || 0;
-      const totalPaid = payDataRes.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+      const totalPaid = ((payRes.data as unknown as { amount: number }[]) || []).reduce((sum, p) => sum + Number(p.amount), 0);
+      const len = (r: { data: unknown }) => ((r.data as unknown[]) || []).length;
 
       setStats({
-        residents: resCountRes.count || 0,
+        residents: residents.length,
         debtResidents,
         totalDebt,
         totalPaid,
-        announcements: annCountRes.count || 0,
-        pendingMaintenance: maintCountRes.count || 0,
-        pendingComplaints: complaintCountRes.count || 0,
-        activePolls: pollCountRes.count || 0,
-        unreadMessages: msgCountRes.count || 0,
+        announcements: len(annRows),
+        pendingMaintenance: len(maintRows),
+        pendingComplaints: len(compRows),
+        activePolls: len(pollRows),
+        unreadMessages: len(msgRows),
       });
       setLoading(false);
     };

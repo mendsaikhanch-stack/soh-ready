@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import * as XLSX from 'xlsx';
@@ -46,10 +45,16 @@ export default function AdminPayments() {
 
   const fetchData = async () => {
     const sokhId = await getAdminSokhId();
-    const { data: res } = await supabase.from('residents').select('id,name,apartment,debt').eq('sokh_id', sokhId).order('apartment');
-    setResidents(res || []);
-    const { data: pay } = await supabase.from('payments').select('*, residents!inner(sokh_id)').eq('residents.sokh_id', sokhId).order('paid_at', { ascending: false }).limit(50);
-    setPayments(pay || []);
+    // adminFrom proxy ашиглана — admin нь Supabase auth биш тул anon client RLS-д блоклогддог.
+    const { data: res } = await adminFrom('residents').select('id,name,apartment,debt').eq('sokh_id', sokhId).order('apartment', { ascending: true });
+    const residentList = (res as unknown as Resident[]) || [];
+    setResidents(residentList);
+    // payments нь sokh_id шууд байхгүй — proxy resident_id-ээр scope хийдэг тул айлуудын id-аар уншина.
+    const residentIds = residentList.map(r => r.id);
+    const { data: pay } = residentIds.length
+      ? await adminFrom('payments').select('*').in('resident_id', residentIds).order('paid_at', { ascending: false }).limit(50)
+      : { data: [] };
+    setPayments((pay as unknown as Payment[]) || []);
     setLoading(false);
   };
 

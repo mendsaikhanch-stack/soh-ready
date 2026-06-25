@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
@@ -46,12 +45,14 @@ export default function AdminMessages() {
 
   const fetchData = async () => {
     const sokhId = await getAdminSokhId();
+    // adminFrom proxy (service_role + tenant-scope) ашиглана — admin нь Supabase auth биш тул
+    // anon client RLS-д бүх мөр блоклогддог.
     const [{ data: res }, { data: notifs }] = await Promise.all([
-      supabase.from('residents').select('*').eq('sokh_id', sokhId).order('name'),
-      supabase.from('scheduled_notifications').select('*').eq('sokh_id', sokhId).order('scheduled_at', { ascending: false }),
+      adminFrom('residents').select('*').eq('sokh_id', sokhId).order('name', { ascending: true }),
+      adminFrom('scheduled_notifications').select('*').eq('sokh_id', sokhId).order('scheduled_at', { ascending: false }),
     ]);
-    setResidents(res || []);
-    setScheduled(notifs || []);
+    setResidents((res as unknown as Resident[]) || []);
+    setScheduled((notifs as unknown as ScheduledNotification[]) || []);
     setLoading(false);
   };
 

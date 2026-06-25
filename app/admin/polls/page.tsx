@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
@@ -20,8 +19,8 @@ export default function AdminPolls() {
 
   const fetchPolls = async () => {
     const sokhId = await getAdminSokhId();
-    const { data } = await supabase.from('polls').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false });
-    setPolls(data || []);
+    const { data } = await adminFrom('polls').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false });
+    setPolls((data as unknown as Poll[]) || []);
     setLoading(false);
   };
 

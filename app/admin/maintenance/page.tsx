@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
@@ -23,8 +22,8 @@ export default function AdminMaintenance() {
 
   const fetchRequests = async () => {
     const sokhId = await getAdminSokhId();
-    const { data } = await supabase.from('maintenance_requests').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false });
-    setRequests(data || []);
+    const { data } = await adminFrom('maintenance_requests').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false });
+    setRequests((data as unknown as Request[]) || []);
     setLoading(false);
   };
 

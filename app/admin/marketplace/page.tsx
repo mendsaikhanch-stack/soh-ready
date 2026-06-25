@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
@@ -32,8 +31,8 @@ export default function AdminMarketplace() {
   useEffect(() => { fetch(); }, []);
   const fetch = async () => {
     const sokhId = await getAdminSokhId();
-    const { data } = await supabase.from('marketplace_listings').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false });
-    setListings(data || []); setLoading(false);
+    const { data } = await adminFrom('marketplace_listings').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false });
+    setListings((data as unknown as Listing[]) || []); setLoading(false);
   };
 
   const toggle = async (id: number, status: string) => {

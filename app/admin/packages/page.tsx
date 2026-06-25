@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
@@ -25,8 +24,8 @@ export default function AdminPackages() {
   useEffect(() => { fetch(); }, []);
   const fetch = async () => {
     const sokhId = await getAdminSokhId();
-    const { data } = await supabase.from('packages').select('*').eq('sokh_id', sokhId).order('delivered_at', { ascending: false });
-    setPackages(data || []); setLoading(false);
+    const { data } = await adminFrom('packages').select('*').eq('sokh_id', sokhId).order('delivered_at', { ascending: false });
+    setPackages((data as unknown as Package[]) || []); setLoading(false);
   };
 
   const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
