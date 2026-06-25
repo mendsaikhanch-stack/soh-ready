@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { registerLimiter } from '@/app/lib/rate-limit';
 import { linkManualSignupToUser, type LinkReport } from '@/app/lib/directory/link-manual-signup';
 import { enqueueRepair } from '@/app/lib/jobs/dispatch';
+import { normalizeSohName } from '@/app/lib/directory/normalize';
 
 const CLAIM_COOKIE = 'manual-hoa-claim';
 
@@ -66,16 +67,30 @@ export async function POST(req: NextRequest) {
       if (!khoroo) {
         return NextResponse.json({ error: 'Хороо олдсонгүй' }, { status: 400 });
       }
-      const { data: newOrg, error: orgErr } = await supabaseAdmin
+      // Давхардал шалгах: ижил хороонд нормчилсон нэр нь таарах СӨХ байвал
+      // шинээр үүсгэхгүй, байгааг нь дахин ашиглана (дубль tenant үүсгэхгүй).
+      const targetNorm = normalizeSohName(sokh_name);
+      const { data: sameKhorooOrgs } = await supabaseAdmin
         .from('sokh_organizations')
-        .insert([{ name: sokh_name.trim(), khoroo_id, address: '', phone: '' }])
-        .select('id')
-        .single();
-      if (orgErr || !newOrg) {
-        console.error('[register] sokh insert', orgErr?.message);
-        return NextResponse.json({ error: 'СӨХ үүсгэж чадсангүй' }, { status: 500 });
+        .select('id, name')
+        .eq('khoroo_id', khoroo_id);
+      const dup = (sameKhorooOrgs || []).find(
+        (o) => normalizeSohName(o.name as string) === targetNorm,
+      );
+      if (dup) {
+        sokh_id = dup.id as number;
+      } else {
+        const { data: newOrg, error: orgErr } = await supabaseAdmin
+          .from('sokh_organizations')
+          .insert([{ name: sokh_name.trim(), khoroo_id, address: '', phone: '' }])
+          .select('id')
+          .single();
+        if (orgErr || !newOrg) {
+          console.error('[register] sokh insert', orgErr?.message);
+          return NextResponse.json({ error: 'СӨХ үүсгэж чадсангүй' }, { status: 500 });
+        }
+        sokh_id = newOrg.id as number;
       }
-      sokh_id = newOrg.id as number;
     }
 
     // Утаснаас имэйл автоматаар үүсгэх (Supabase auth шаардлага)
