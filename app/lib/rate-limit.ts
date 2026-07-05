@@ -70,3 +70,8 @@ export const otpSendLimiter = rateLimit({ name: 'otp-send', windowMs: 60 * 60 * 
 export const otpVerifyLimiter = rateLimit({ name: 'otp-verify', windowMs: 5 * 60 * 1000, maxRequests: 10 });
 export const claimSohLimiter = rateLimit({ name: 'claim-soh', windowMs: 60 * 60 * 1000, maxRequests: 10 });
 export const demoRequestLimiter = rateLimit({ name: 'demo-request', windowMs: 60 * 60 * 1000, maxRequests: 8 });
+// Цахим ТУЗ / санал асуулга
+export const voteCreateLimiter = rateLimit({ name: 'vote-create', windowMs: 60 * 60 * 1000, maxRequests: 10 });
+export const voteOtpSendLimiter = rateLimit({ name: 'vote-otp-send', windowMs: 10 * 60 * 1000, maxRequests: 5 });
+export const voteOtpVerifyLimiter = rateLimit({ name: 'vote-otp-verify', windowMs: 5 * 60 * 1000, maxRequests: 10 });
+export const voteCastLimiter = rateLimit({ name: 'vote-cast', windowMs: 60 * 1000, maxRequests: 20 });
