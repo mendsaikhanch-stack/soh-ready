@@ -426,12 +426,20 @@ export default function LandingPage() {
                 </li>
               ))}
             </ul>
-            <Link
-              href="/demo-request"
-              className="inline-block px-6 py-3 bg-amber-600 text-white rounded-xl font-semibold text-sm hover:bg-amber-700 transition"
-            >
-              Үнэгүй танилцуулга авах →
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link
+                href="/demo-request"
+                className="inline-block px-6 py-3 bg-amber-600 text-white rounded-xl font-semibold text-sm hover:bg-amber-700 transition text-center"
+              >
+                Үнэгүй танилцуулга авах →
+              </Link>
+              <Link
+                href="/proposal"
+                className="inline-block px-6 py-3 bg-white border border-amber-300 text-amber-700 rounded-xl font-semibold text-sm hover:bg-amber-50 transition text-center"
+              >
+                ⚖️ ТУЗ-ээсээ санал аваарай →
+              </Link>
+            </div>
           </div>
         </div>
       </section>
