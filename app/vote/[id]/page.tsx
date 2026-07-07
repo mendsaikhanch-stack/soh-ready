@@ -64,7 +64,8 @@ export default function VotePage() {
   }, [proposalId]);
 
   useEffect(() => {
-    load();
+    const run = async () => { await load(); };
+    run();
   }, [load]);
 
   const closed = proposal ? proposal.status !== 'active' : false;

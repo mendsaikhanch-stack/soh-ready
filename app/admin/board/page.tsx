@@ -49,7 +49,8 @@ export default function AdminBoardPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    const run = async () => { await load(); };
+    run();
   }, [load]);
 
   const setVoter = (i: number, key: keyof VoterRow, val: string) => {

@@ -91,7 +91,8 @@ export default function ResultPage() {
   }, [proposalId]);
 
   useEffect(() => {
-    load();
+    const run = async () => { await load(); };
+    run();
   }, [load]);
 
   const printProtocol = () => {
