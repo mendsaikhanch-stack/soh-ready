@@ -6,7 +6,7 @@ import {
   aiActions, complaints, utilities, utilityReadings, staff, emergencyContacts, emergencyAlerts,
   polls, messageThreads, marketplaceItems, bookableSpaces, bookings, financeSummary, financeLedger,
   packages, shops, cameras, importHistory, directoryStats, directorySample, demandStats, demandFeed,
-  elevators, workflowRules, reviewQueue, featureToggles,
+  elevators, workflowRules, reviewQueue, featureToggles, boardMembers, boardProposals,
 } from '@/app/lib/demo/admin-mock';
 
 const fmt = (n: number) => n.toLocaleString();
@@ -286,6 +286,94 @@ export function Polls() {
             <p className="text-xs text-gray-400 mt-3">Нийт {p.total} санал</p>
           </Card>
         ))}
+      </div>
+    </div>
+  );
+}
+
+export function Board() {
+  const STATUS: Record<string, { label: string; cls: string }> = {
+    active: { label: 'Явагдаж байна', cls: 'bg-blue-100 text-blue-700' },
+    passed: { label: 'Батлагдсан', cls: 'bg-green-100 text-green-700' },
+    rejected: { label: 'Татгалзсан', cls: 'bg-red-100 text-red-700' },
+  };
+  const activeCount = boardProposals.filter((p) => p.status === 'active').length;
+  const passedCount = boardProposals.filter((p) => p.status === 'passed').length;
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">ТУЗ-ийн гишүүдээс цахимаар санал хураах — босго хувь, авто-зөвшөөрлийн дүрэмтэй</p>
+        <Btn primary>+ Шинэ санал</Btn>
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
+        <StatCard icon="🗳" label="Нийт санал" value={String(boardProposals.length)} />
+        <StatCard icon="⏳" label="Явагдаж байна" value={String(activeCount)} cls="text-blue-600" />
+        <StatCard icon="✅" label="Батлагдсан" value={String(passedCount)} cls="text-green-600" />
+        <StatCard icon="👥" label="ТУЗ гишүүд" value={String(boardMembers.length)} />
+      </div>
+
+      <div className="grid grid-cols-3 gap-6">
+        {/* Гишүүдийн жагсаалт */}
+        <Card className="p-5">
+          <Title>ТУЗ-ИЙН ГИШҮҮД</Title>
+          <div className="space-y-3">
+            {boardMembers.map((m) => (
+              <div key={m.name} className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-600">{m.name.charAt(3)}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{m.name}</p>
+                  <p className="text-xs text-gray-400">📞 {m.phone}</p>
+                </div>
+                {m.role === 'Дарга' && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">Дарга</span>}
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Саналууд */}
+        <div className="col-span-2 space-y-3">
+          {boardProposals.map((p) => {
+            const total = boardMembers.length;
+            const yesPct = Math.round((p.yes / total) * 100);
+            const noPct = Math.round((p.no / total) * 100);
+            const st = STATUS[p.status];
+            return (
+              <Card key={p.id} className="p-5">
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-gray-900">{p.title}</h3>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {p.budget != null ? `Төсөв: ${fmt(p.budget)}₮ · ` : ''}
+                      Босго: {p.thresholdLabel} · Дуусах: {p.expires}
+                    </p>
+                  </div>
+                  <button className="shrink-0 px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800">Үр дүн / Протокол</button>
+                </div>
+
+                {/* Санал өгөлтийн явц */}
+                <div className="w-full flex h-2.5 rounded-full overflow-hidden bg-gray-100 mb-2">
+                  <div className="bg-green-500 h-full" style={{ width: `${yesPct}%` }} />
+                  <div className="bg-red-400 h-full" style={{ width: `${noPct}%` }} />
+                </div>
+                <div className="flex items-center gap-4 text-xs">
+                  <span className="text-green-600 font-semibold">✓ Зөвшөөрсөн: {p.yes}</span>
+                  <span className="text-red-500 font-semibold">✕ Татгалзсан: {p.no}</span>
+                  {p.pending > 0 && <span className="text-gray-400">⏳ Хүлээгдэж буй: {p.pending}</span>}
+                </div>
+
+                {p.autoApprove && (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-3">
+                    ⚡ Хугацаанд хариу өгөөгүй гишүүнийг автоматаар «Зөвшөөрсөн»-д тооцно
+                  </p>
+                )}
+              </Card>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

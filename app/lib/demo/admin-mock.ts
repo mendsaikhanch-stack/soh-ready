@@ -416,3 +416,48 @@ export const featureToggles = [
   { id: 'booking', label: 'Зай захиалга', on: false },
   { id: 'shops', label: 'Дэлгүүр & Автомат', on: false },
 ];
+
+// ── Цахим ТУЗ (санал асуулга) ──
+export const boardMembers = [
+  { name: 'Ц. Цэрэндулам', role: 'Дарга', phone: '9911-••••' },
+  { name: 'Б. Батболд', role: 'Гишүүн', phone: '9922-••••' },
+  { name: 'Д. Сараа', role: 'Гишүүн', phone: '9933-••••' },
+  { name: 'Г. Ганбаатар', role: 'Гишүүн', phone: '9944-••••' },
+  { name: 'О. Оюунаа', role: 'Гишүүн', phone: '9955-••••' },
+];
+
+export const boardProposals = [
+  {
+    id: 1,
+    title: '2026 оны лифтний их засварын төсөв батлах',
+    budget: 8000000,
+    thresholdLabel: 'Гуравны хоёр (⅔ · 67%)',
+    thresholdPct: 67,
+    status: 'active' as const,
+    yes: 3, no: 0, pending: 2,
+    expires: '2026.07.19',
+    autoApprove: false,
+  },
+  {
+    id: 2,
+    title: 'Орцны хаалганы код улирал бүр солих журам',
+    budget: null,
+    thresholdLabel: 'Энгийн олонхи (>50%)',
+    thresholdPct: 50,
+    status: 'passed' as const,
+    yes: 4, no: 1, pending: 0,
+    expires: '2026.07.10',
+    autoApprove: true,
+  },
+  {
+    id: 3,
+    title: 'Харуулын сарын цалинг 300,000₮ нэмэх',
+    budget: 300000,
+    thresholdLabel: 'Энгийн олонхи (>50%)',
+    thresholdPct: 50,
+    status: 'rejected' as const,
+    yes: 2, no: 3, pending: 0,
+    expires: '2026.07.05',
+    autoApprove: false,
+  },
+];

@@ -10,7 +10,7 @@ import * as S from './Screens';
 
 type NavId =
   | 'dashboard' | 'residents' | 'payments' | 'finance'
-  | 'announcements' | 'messages' | 'complaints' | 'polls'
+  | 'announcements' | 'messages' | 'complaints' | 'polls' | 'board'
   | 'maintenance' | 'elevator' | 'utilities' | 'packages' | 'parking' | 'booking' | 'easybox'
   | 'emergency' | 'cctv'
   | 'staff' | 'marketplace' | 'shops'
@@ -30,6 +30,7 @@ const GROUPS: { group: string; items: Item[] }[] = [
     { id: 'messages', label: 'Мессеж', icon: '💬' },
     { id: 'complaints', label: 'Гомдол / Санал', icon: '📝' },
     { id: 'polls', label: 'Санал хураалт', icon: '🗳' },
+    { id: 'board', label: 'Цахим ТУЗ', icon: '⚖️' },
   ]},
   { group: 'Үйлчилгээ', items: [
     { id: 'maintenance', label: 'Засвар', icon: '🔧' },
@@ -146,6 +147,7 @@ export default function DemoPcPage() {
             {nav === 'messages' && <S.Messages />}
             {nav === 'complaints' && <S.Complaints />}
             {nav === 'polls' && <S.Polls />}
+            {nav === 'board' && <S.Board />}
             {nav === 'maintenance' && <S.Maintenance />}
             {nav === 'elevator' && <S.Elevator />}
             {nav === 'utilities' && <S.Utilities />}
