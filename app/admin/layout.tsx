@@ -37,6 +37,7 @@ const navItems = [
   { icon: '🛗', label: 'Лифт засвар', href: '/admin/elevator' },
   { icon: '🎨', label: 'Брэнд тохиргоо', href: '/admin/branding' },
   { icon: '🎛', label: 'Үйлчилгээ тохиргоо', href: '/admin/features' },
+  { icon: '🔑', label: 'Миний нэвтрэлт', href: '/admin/settings' },
 ];
 
 const infoItems = [
