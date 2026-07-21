@@ -4,18 +4,32 @@ import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/auth-context';
 
+const RESIDENT_TYPES = [
+  { value: 'owner', label: 'Эзэмшигч' },
+  { value: 'tenant', label: 'Түрээслэгч' },
+  { value: 'family', label: 'Гэр бүлийн гишүүн' },
+];
+
 export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
-  const { profile, user } = useAuth();
+  const { profile, user, session } = useAuth();
 
   const [name, setName] = useState(profile?.name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
+  const [residentType, setResidentType] = useState(profile?.resident_type || '');
+  const [householdSize, setHouseholdSize] = useState(profile?.household_size ? String(profile.household_size) : '');
+  const [moveInDate, setMoveInDate] = useState(profile?.move_in_date || '');
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  const hasChanges = name !== profile?.name || phone !== profile?.phone;
+  const hasChanges =
+    name !== (profile?.name || '') ||
+    phone !== (profile?.phone || '') ||
+    residentType !== (profile?.resident_type || '') ||
+    householdSize !== (profile?.household_size ? String(profile.household_size) : '') ||
+    moveInDate !== (profile?.move_in_date || '');
 
   const handleSave = async () => {
     if (!profile || !hasChanges) return;
@@ -26,8 +40,18 @@ export default function ProfilePage() {
     try {
       const res = await fetch('/api/residents/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ residentId: profile.id, name: name.trim(), phone: phone.trim() }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          residentId: profile.id,
+          name: name.trim(),
+          phone: phone.trim(),
+          resident_type: residentType || null,
+          household_size: householdSize || null,
+          move_in_date: moveInDate || null,
+        }),
       });
 
       const data = await res.json();
@@ -91,6 +115,50 @@ export default function ProfilePage() {
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
               placeholder="99001122"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Та энэ тоотод хэн бэ?</label>
+            <div className="grid grid-cols-3 gap-2">
+              {RESIDENT_TYPES.map(t => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setResidentType(t.value)}
+                  className={`py-2.5 rounded-xl text-xs font-semibold border transition ${
+                    residentType === t.value
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Гэр бүлийн тоо</label>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={householdSize}
+                onChange={e => setHouseholdSize(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                placeholder="Жишээ: 3"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Нүүж ирсэн огноо</label>
+              <input
+                type="date"
+                value={moveInDate}
+                onChange={e => setMoveInDate(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+              />
+            </div>
           </div>
 
           <div>

@@ -417,6 +417,21 @@ export default function SokhDashboard() {
         </div>
       </div>
 
+      {/* Профайл гүйцээх сануулга */}
+      {profile && !profile.profile_completed_at && (
+        <div
+          className="mx-4 mt-3 bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3 active:scale-[0.98] transition cursor-pointer"
+          onClick={() => router.push(`/sokh/${params.id}/profile`)}
+        >
+          <span className="text-2xl">👋</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-blue-700">Мэдээллээ гүйцээнэ үү</p>
+            <p className="text-xs text-blue-600">Нэр, эзэмшигч/түрээслэгчээ оруулж бүртгэлээ баталгаажуулаарай</p>
+          </div>
+          <span className="text-blue-400">›</span>
+        </div>
+      )}
+
       {/* Миний төлбөрийн үлдэгдэл banner - СӨХ таб */}
       {activeMainTab === 'sokh' && myDebt > 0 && (
         <div

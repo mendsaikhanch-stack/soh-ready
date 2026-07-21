@@ -16,9 +16,17 @@ interface Resident {
   entrance: string;
   floor: string;
   sokh_id: number;
+  resident_type: string | null;
+  household_size: number | null;
+  move_in_date: string | null;
+  profile_completed_at: string | null;
 }
 
-const emptyForm = { name: '', apartment: '', phone: '', debt: '0', area_sqm: '0', building: '', block: '', entrance: '', floor: '' };
+const emptyForm = { name: '', apartment: '', phone: '', debt: '0', area_sqm: '0', building: '', block: '', entrance: '', floor: '', resident_type: '' };
+
+const TYPE_LABELS: Record<string, string> = { owner: 'Эзэмшигч', tenant: 'Түрээслэгч', family: 'Гэр бүл' };
+const isPlaceholderName = (n: string) => /тоот\s*$/i.test(n || '') || /-р\s*байр/i.test(n || '');
+const isComplete = (r: Resident) => !!r.resident_type && !isPlaceholderName(r.name);
 
 export default function AdminResidents() {
   const [residents, setResidents] = useState<Resident[]>([]);
@@ -66,6 +74,7 @@ export default function AdminResidents() {
       debt: String(r.debt), area_sqm: String(r.area_sqm || 0),
       building: r.building || '', block: r.block || '',
       entrance: r.entrance || '', floor: r.floor || '',
+      resident_type: r.resident_type || '',
     });
     setShowForm(true);
   };
@@ -84,6 +93,7 @@ export default function AdminResidents() {
       block: form.block || null,
       entrance: form.entrance || null,
       floor: form.floor || null,
+      resident_type: form.resident_type || null,
     };
 
     if (editId) {
@@ -147,13 +157,20 @@ export default function AdminResidents() {
   };
 
   const totalDebt = filtered.reduce((s, r) => s + r.debt, 0);
+  const completedCount = residents.filter(isComplete).length;
+  const completedPct = residents.length ? Math.round((completedCount / residents.length) * 100) : 0;
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">👥 Оршин суугчид</h1>
-          <p className="text-sm text-gray-500">{residents.length} айл &middot; Нийт өр: {totalDebt.toLocaleString()}₮</p>
+          <p className="text-sm text-gray-500">
+            {residents.length} айл &middot; Нийт өр: {totalDebt.toLocaleString()}₮
+            &middot; <span className={completedPct >= 80 ? 'text-green-600' : completedPct >= 40 ? 'text-amber-600' : 'text-red-500'}>
+              Бүрдэлт: {completedCount}/{residents.length} ({completedPct}%)
+            </span>
+          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={exportCSV} className="px-4 py-2 bg-gray-200 rounded-lg text-sm hover:bg-gray-300">📥 Экспорт</button>
@@ -185,6 +202,12 @@ export default function AdminResidents() {
             <input placeholder="Орц (жнь: 1)" value={form.entrance} onChange={e => setForm({...form, entrance: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
             <input placeholder="Давхар (жнь: 3)" value={form.floor} onChange={e => setForm({...form, floor: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
             <input placeholder="Талбай (мкв)" type="number" value={form.area_sqm} onChange={e => setForm({...form, area_sqm: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
+            <select value={form.resident_type} onChange={e => setForm({...form, resident_type: e.target.value})} className="border rounded-lg px-3 py-2 text-sm text-gray-600">
+              <option value="">Эзэмшил сонгох</option>
+              <option value="owner">Эзэмшигч</option>
+              <option value="tenant">Түрээслэгч</option>
+              <option value="family">Гэр бүлийн гишүүн</option>
+            </select>
           </div>
           <div className="flex gap-2 mt-3">
             <button onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-lg text-sm">Цуцлах</button>
@@ -206,6 +229,7 @@ export default function AdminResidents() {
                 <tr className="text-left text-xs text-gray-500">
                   <th className="px-3 py-3">№</th>
                   <th className="px-3 py-3">Нэр</th>
+                  <th className="px-3 py-3">Эзэмшил</th>
                   <th className="px-3 py-3">Байр</th>
                   <th className="px-3 py-3">Блок</th>
                   <th className="px-3 py-3">Орц</th>
@@ -221,7 +245,13 @@ export default function AdminResidents() {
                 {filtered.map((r, i) => (
                   <tr key={r.id} className="border-t hover:bg-gray-50 text-sm">
                     <td className="px-3 py-2.5 text-gray-400 text-xs">{i + 1}</td>
-                    <td className="px-3 py-2.5 font-medium">{r.name}</td>
+                    <td className="px-3 py-2.5 font-medium">
+                      {r.name}
+                      {!isComplete(r) && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 align-middle">дутуу</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-gray-500">
+                      {r.resident_type ? TYPE_LABELS[r.resident_type] || r.resident_type : <span className="text-gray-300">-</span>}
+                    </td>
                     <td className="px-3 py-2.5 text-gray-500">{r.building || '-'}</td>
                     <td className="px-3 py-2.5 text-gray-500">{r.block || '-'}</td>
                     <td className="px-3 py-2.5 text-gray-500">{r.entrance || '-'}</td>

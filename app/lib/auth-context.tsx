@@ -11,6 +11,10 @@ interface UserProfile {
   apartment: string;
   sokh_id: number;
   debt: number;
+  resident_type: string | null;
+  household_size: number | null;
+  move_in_date: string | null;
+  profile_completed_at: string | null;
 }
 
 interface AuthContextType {
@@ -83,6 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         apartment: data.apartment,
         sokh_id: data.sokh_id,
         debt: data.debt,
+        resident_type: data.resident_type ?? null,
+        household_size: data.household_size ?? null,
+        move_in_date: data.move_in_date ?? null,
+        profile_completed_at: data.profile_completed_at ?? null,
       });
     }
     setLoading(false);
