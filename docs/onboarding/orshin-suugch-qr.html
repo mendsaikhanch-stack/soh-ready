@@ -98,6 +98,30 @@
     max-width: 46ch;
   }
 
+  /* ── Гол товч (утсаар нээхэд дарагдана, цаасан дээр хаяг болж харагдана) ── */
+  .cta {
+    display: block;
+    margin: 20px 34px 0;
+    padding: 15px 20px;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 14px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: -.01em;
+    box-shadow: 0 8px 20px -8px rgba(37,99,235,.65);
+  }
+  .cta small {
+    display: block;
+    font-weight: 600;
+    font-size: 12.5px;
+    opacity: .85;
+    margin-top: 3px;
+    letter-spacing: .02em;
+  }
+
   /* ── Core two-column ───────────────────────── */
   .core {
     display: grid;
@@ -129,10 +153,10 @@
   }
   .qrcard .url {
     font-size: 14px;
-    color: var(--accent-deep);
     font-weight: 700;
     letter-spacing: .01em;
   }
+  .qrcard .url a { color: var(--accent-deep); text-decoration: none; }
   .qrcard .noapp {
     margin: 11px 0 0;
     font-size: 12px;
@@ -229,13 +253,18 @@
     <p class="lede">Өрийн үлдэгдэл, зарлал мэдээ, санал хүсэлт, гомдол — байрныхаа бүх зүйлийг нэг дороос хараарай.</p>
   </div>
 
+  <a class="cta" href="https://khotol.com/zaavar">
+    Энд дарж нэвтрэх
+    <small>khotol.com/zaavar</small>
+  </a>
+
   <div class="core">
     <div class="qrcard">
       <div class="qrframe">
         <svg xmlns="http://www.w3.org/2000/svg" width="520" height="520" viewBox="0 0 27 27" shape-rendering="crispEdges" role="img" aria-label="khotol.com/login QR код"><path fill="#ffffff" d="M0 0h27v27H0z"/><path stroke="#0e1b30" d="M1 1.5h7m1 0h1m3 0h1m1 0h1m3 0h7M1 2.5h1m5 0h1m1 0h1m4 0h1m2 0h1m1 0h1m5 0h1M1 3.5h1m1 0h3m1 0h1m1 0h1m1 0h2m1 0h2m3 0h1m1 0h3m1 0h1M1 4.5h1m1 0h3m1 0h1m2 0h3m1 0h4m1 0h1m1 0h3m1 0h1M1 5.5h1m1 0h3m1 0h1m1 0h2m1 0h4m1 0h1m1 0h1m1 0h3m1 0h1M1 6.5h1m5 0h1m2 0h2m1 0h3m3 0h1m5 0h1M1 7.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M11 8.5h4m1 0h1M1 9.5h1m2 0h7m1 0h1m2 0h4m2 0h1m1 0h3M3 10.5h3m2 0h3m1 0h1m1 0h3m3 0h5M2 11.5h1m3 0h3m3 0h2m2 0h1m1 0h1m1 0h1m1 0h1m2 0h1M1 12.5h2m1 0h2m3 0h1m1 0h1m4 0h1m1 0h2m1 0h5M1 13.5h1m3 0h4m1 0h2m5 0h1m1 0h2m4 0h1M1 14.5h3m4 0h1m1 0h2m1 0h1m1 0h2m4 0h1m2 0h1M1 15.5h2m4 0h1m2 0h1m4 0h4m2 0h5M1 16.5h1m1 0h1m1 0h2m1 0h1m1 0h1m2 0h1m4 0h1m1 0h1m1 0h2m1 0h1M1 17.5h1m1 0h1m1 0h1m1 0h1m1 0h6m2 0h5m1 0h2M9 18.5h4m4 0h1m3 0h1m1 0h2M1 19.5h7m1 0h3m1 0h1m3 0h1m1 0h1m1 0h1m3 0h1M1 20.5h1m5 0h1m1 0h4m1 0h1m1 0h2m3 0h1m3 0h1M1 21.5h1m1 0h3m1 0h1m1 0h1m2 0h2m1 0h7M1 22.5h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h4m1 0h2m4 0h2M1 23.5h1m1 0h3m1 0h1m3 0h3m1 0h1m1 0h1m3 0h5M1 24.5h1m5 0h1m3 0h1m3 0h1m3 0h3m1 0h3M1 25.5h7m1 0h3m1 0h1m3 0h3m2 0h1m2 0h1"/></svg>
       </div>
       <p class="scan">Уншуулаад нэвтэр</p>
-      <p class="url">khotol.com/login</p>
+      <p class="url"><a href="https://khotol.com/login">khotol.com/login</a></p>
       <p class="noapp">Апп дэлгүүрээс татах шаардлагагүй — QR-аар шууд нээгдэнэ.</p>
     </div>
 
@@ -243,8 +272,8 @@
       <li>
         <span class="num">1</span>
         <div>
-          <p class="step-t">QR кодыг уншуулна</p>
-          <p class="step-d">Утасныхаа камерыг QR код руу чиглүүлнэ. Эсвэл хөтчөөр <b>khotol.com/login</b> хаягаар орно.</p>
+          <p class="step-t">Дарж эсвэл уншуулж нээнэ</p>
+          <p class="step-d">Утсаараа үзэж байгаа бол дээрх <b>«Энд дарж нэвтрэх»</b> товчийг дарна. Цаасан дээрээс үзэж байгаа бол <b>QR кодыг</b> утасныхаа камераар уншуулна.</p>
         </div>
       </li>
       <li>
