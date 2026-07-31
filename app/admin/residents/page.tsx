@@ -36,7 +36,38 @@ export default function AdminResidents() {
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Оршин суугчийн нууц үгийг түр нууц үг (= утасны дугаар) болгож сэргээнэ
+  const resetPassword = async (r: Resident) => {
+    if (!r.phone) {
+      alert('Энэ оршин суугчид утасны дугаар бүртгэгдээгүй байна. Эхлээд "Засах"-аас дугаарыг нь оруулна уу.');
+      return;
+    }
+    if (!confirm(`${r.apartment} тоот (${r.phone}) — нууц үгийг нь утасны дугаар болгож сэргээх үү?`)) return;
+
+    setResetting(r.id);
+    try {
+      const res = await fetch('/api/admin/residents/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ residentId: r.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Сэргээж чадсангүй');
+      } else {
+        alert(
+          `Сэргээлээ.\n\n${r.apartment} тоот\nНэвтрэх нэр: ${data.phone}\nТүр нууц үг: ${data.tempPassword}\n\n` +
+          'Оршин суугчид дамжуулаад, нэвтэрсний дараа "Миний мэдээлэл" хэсгээс нууц үгээ солихыг сануулна уу.'
+        );
+      }
+    } catch {
+      alert('Сервертэй холбогдож чадсангүй');
+    }
+    setResetting(null);
+  };
 
   useEffect(() => { fetchResidents(); }, []);
 
@@ -264,6 +295,14 @@ export default function AdminResidents() {
                     </td>
                     <td className="px-3 py-2.5 text-right">
                       <button onClick={() => openEdit(r)} className="text-blue-500 text-xs mr-2 hover:underline">Засах</button>
+                      <button
+                        onClick={() => resetPassword(r)}
+                        disabled={resetting === r.id}
+                        title="Нууц үгийг утасны дугаар болгож сэргээх"
+                        className="text-amber-600 text-xs mr-2 hover:underline disabled:text-gray-300"
+                      >
+                        {resetting === r.id ? 'Сэргээж байна...' : 'Нууц үг сэргээх'}
+                      </button>
                       <button onClick={() => deleteResident(r.id)} className="text-red-400 text-xs hover:underline">Устгах</button>
                     </td>
                   </tr>

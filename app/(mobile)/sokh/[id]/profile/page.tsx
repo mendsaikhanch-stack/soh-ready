@@ -24,6 +24,51 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  // Нууц үг солих
+  const [showPw, setShowPw] = useState(false);
+  const [curPw, setCurPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [newPw2, setNewPw2] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState(false);
+
+  const handleChangePassword = async () => {
+    setPwError('');
+    setPwSuccess(false);
+    if (newPw.length < 6) {
+      setPwError('Шинэ нууц үг 6-гаас доошгүй тэмдэгт байна');
+      return;
+    }
+    if (newPw !== newPw2) {
+      setPwError('Шинэ нууц үг хоёр удаа ижил байх ёстой');
+      return;
+    }
+    setPwSaving(true);
+    try {
+      const res = await fetch('/api/residents/password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ currentPassword: curPw, newPassword: newPw }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPwError(data.error || 'Алдаа гарлаа');
+      } else {
+        setPwSuccess(true);
+        setCurPw('');
+        setNewPw('');
+        setNewPw2('');
+      }
+    } catch {
+      setPwError('Сервертэй холбогдож чадсангүй');
+    }
+    setPwSaving(false);
+  };
+
   const hasChanges =
     name !== (profile?.name || '') ||
     phone !== (profile?.phone || '') ||
@@ -225,6 +270,77 @@ export default function ProfilePage() {
         >
           {saving ? 'Хадгалж байна...' : 'Хадгалах'}
         </button>
+
+        {/* Нууц үг солих */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            onClick={() => setShowPw(v => !v)}
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100"
+          >
+            <span className="text-sm font-bold text-gray-700"><span className="mr-2">🔑</span>Нууц үг солих</span>
+            <span className="text-gray-400">{showPw ? '⌃' : '›'}</span>
+          </button>
+
+          {showPw && (
+            <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Одоогийн нууц үг</label>
+                <input
+                  type="password"
+                  value={curPw}
+                  onChange={e => setCurPw(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                  placeholder="Эхний удаад таны утасны дугаар"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Шинэ нууц үг</label>
+                <input
+                  type="password"
+                  value={newPw}
+                  onChange={e => setNewPw(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                  placeholder="6-гаас доошгүй тэмдэгт"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Шинэ нууц үг (давтах)</label>
+                <input
+                  type="password"
+                  value={newPw2}
+                  onChange={e => setNewPw2(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                  placeholder="Дахин оруулна уу"
+                />
+              </div>
+
+              {pwError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">{pwError}</div>
+              )}
+              {pwSuccess && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-600">
+                  Нууц үг солигдлоо. Дараагийн удаа шинэ нууц үгээрээ нэвтэрнэ.
+                </div>
+              )}
+
+              <button
+                onClick={handleChangePassword}
+                disabled={pwSaving || !curPw || !newPw || !newPw2}
+                className={`w-full py-3.5 rounded-xl text-sm font-bold transition ${
+                  !pwSaving && curPw && newPw && newPw2
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {pwSaving ? 'Солиж байна...' : 'Нууц үг солих'}
+              </button>
+
+              <p className="text-[11px] text-gray-400 text-center">
+                Нууц үгээ мартвал СӨХ-ийнхөө даргад хандаж сэргээлгэнэ.
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Account info */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">

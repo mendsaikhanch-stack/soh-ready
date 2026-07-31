@@ -27,6 +27,7 @@ function LoginInner() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showForgot, setShowForgot] = useState(false);
 
   // Аль хэдийн нэвтэрсэн бол sokh руу шилжих
   useEffect(() => {
@@ -172,6 +173,31 @@ function LoginInner() {
             <span className="text-lg">📷</span>
             QR кодоор нэвтрэх
           </button>
+        </div>
+
+        {/* Нууц үг мартсан */}
+        <div className="mt-5">
+          <button
+            onClick={() => setShowForgot(v => !v)}
+            className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
+          >
+            Нууц үгээ мартсан уу?
+          </button>
+          {showForgot && (
+            <div className="mt-3 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-gray-600 space-y-2">
+              <p>
+                <b className="text-gray-800">СӨХ-ийнхөө даргад хандана уу.</b> Дарга таны нууц үгийг
+                утасны дугаар болгож сэргээж өгнө.
+              </p>
+              <p>
+                Дараа нь утасны дугаараараа нэвтрээд <b className="text-gray-800">«Миний мэдээлэл»</b> хэсгээс
+                өөрийн шинэ нууц үгээ тохируулна.
+              </p>
+              <p className="text-xs text-gray-500">
+                Анх удаа нэвтэрч байгаа бол нууц үг тань утасны дугаар байх магадлалтай — эхлээд түүнийг оролдоно уу.
+              </p>
+            </div>
+          )}
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-4">
