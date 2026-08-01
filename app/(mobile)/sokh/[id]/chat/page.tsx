@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import ReportButton from '@/app/components/ReportButton';
 
 interface Message {
   id: number;
@@ -174,9 +175,21 @@ export default function ChatPage() {
                     <p className="text-xs font-semibold text-sky-600 mb-0.5">{m.sender_name}</p>
                   )}
                   <p className="text-sm whitespace-pre-wrap">{m.message}</p>
-                  <p className={`text-[10px] mt-1 ${isMe ? 'text-white/60' : 'text-gray-400'} text-right`}>
-                    {formatTime(m.created_at)}
-                  </p>
+                  <div className="flex items-center justify-end gap-2 mt-1">
+                    {!isMe && (
+                      <ReportButton
+                        sokhId={params.id as string}
+                        contentType="chat"
+                        contentId={m.id}
+                        contentSnapshot={m.message}
+                        contentAuthor={m.sender_name}
+                        reporterName={name}
+                      />
+                    )}
+                    <p className={`text-[10px] ${isMe ? 'text-white/60' : 'text-gray-400'}`}>
+                      {formatTime(m.created_at)}
+                    </p>
+                  </div>
                 </div>
               </div>
             );

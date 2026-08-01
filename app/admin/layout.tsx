@@ -25,6 +25,7 @@ const navItems = [
   { icon: '⚖️', label: 'Цахим ТУЗ', href: '/admin/board' },
   { icon: '💬', label: 'Мессеж', href: '/admin/messages' },
   { icon: '🏪', label: 'Хөрш маркет', href: '/admin/marketplace' },
+  { icon: '🚩', label: 'Мэдээлсэн контент', href: '/admin/moderation' },
   { icon: '🏢', label: 'Зай захиалга', href: '/admin/booking' },
   { icon: '💰', label: 'Санхүү', href: '/admin/finance' },
   { icon: '📦', label: 'Илгээмж', href: '/admin/packages' },

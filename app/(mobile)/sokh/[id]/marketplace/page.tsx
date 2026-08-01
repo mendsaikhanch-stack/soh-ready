@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import ReportButton from '@/app/components/ReportButton';
 
 interface Listing {
   id: number;
@@ -197,7 +198,17 @@ export default function MarketplacePage() {
                       </a>
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1 ml-8">{new Date(l.created_at).toLocaleDateString('mn-MN')}</p>
+                  <div className="flex justify-between items-center mt-1 ml-8">
+                    <p className="text-[10px] text-gray-400">{new Date(l.created_at).toLocaleDateString('mn-MN')}</p>
+                    <ReportButton
+                      sokhId={params.id as string}
+                      contentType="marketplace"
+                      contentId={l.id}
+                      contentSnapshot={`${l.title}${l.description ? ' — ' + l.description : ''}`}
+                      contentAuthor={`${l.seller_name} (${l.seller_unit} тоот)`}
+                      reporterName={sellerName}
+                    />
+                  </div>
                 </div>
               );
             })}

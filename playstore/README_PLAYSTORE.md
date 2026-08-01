@@ -33,16 +33,23 @@ App-ийн үндсэн параметр:
 
 ---
 
-## 1. Урьдчилсан шаардлага (нэг удаа суулгана)
+## 1. Урьдчилсан шаардлага — ✅ энэ машин дээр СУУСАН
 
-Энэ репог боосон машин дээр **одоогоор Android build хэрэгсэл алга**. Доорхыг суулгана:
+Build хэрэгсэл энэ машин дээр аль хэдийн суусан (Android Studio шаардлагагүй,
+командаас шууд build хийж болно):
 
-1. **Android Studio** (хамгийн сүүлийн хувилбар) — https://developer.android.com/studio
-   - Энэ нь дотроо **JDK 21**, **Android SDK 36**, **Gradle**-ийг авчирна.
-   - Эхний нээлтэд SDK Manager-аас **Android SDK Platform 36** болон
-     **Android SDK Build-Tools** суулгана.
-2. (Build-ийг командаас хийх бол) `JAVA_HOME`-ийг Android Studio-ийн JDK руу зааж,
-   `ANDROID_HOME`-ийг SDK зам руу тохируулна.
+| Хэрэгсэл | Зам |
+|---|---|
+| JDK 21 | `C:\Users\MNG\android-build\jdk\jdk-21.0.11+10` |
+| Android SDK 36 | `C:\Users\MNG\android-build\sdk` |
+| Gradle | `android/gradlew.bat` (wrapper, 8.14.3) |
+
+PowerShell-д build хийхийн өмнө:
+
+```powershell
+$env:JAVA_HOME="C:\Users\MNG\android-build\jdk\jdk-21.0.11+10"
+$env:ANDROID_HOME="C:\Users\MNG\android-build\sdk"
+```
 
 > Node.js + энэ репогийн `npm install` аль хэдийн хийгдсэн (Capacitor суусан).
 
@@ -146,6 +153,25 @@ Output:
 android/app/build/outputs/bundle/release/app-release.aab
 ```
 
+### ✅ Одоогийн build (2026-08-01-нд баталгаажуулсан)
+
+| Зүйл | Утга |
+|---|---|
+| Файл | `android/app/build/outputs/bundle/release/app-release.aab` (4.87 MB) |
+| Гарын үсэг | ✅ `khotol` alias, RSA 2048, SHA384withRSA |
+| Сертификатын хугацаа | **2053-11-02 хүртэл** (Play-ийн "2033 оноос хойш" шаардлагыг хангасан) |
+| SHA-256 | `F4:3F:9C:33:0D:CA:86:97:CA:90:B6:25:9B:93:FC:C2:E5:11:CB:27:53:5F:E2:9B:13:DA:28:D2:63:33:1F:02` |
+| versionCode / versionName | `1` / `1.0.0` |
+
+Энэ файлыг Play Console-д шууд upload хийхэд бэлэн.
+
+> ⚠️ **Дараагийн upload бүрт `versionCode`-ыг нэмэгдүүлнэ**
+> (`android/app/build.gradle:20`) — Play нэг versionCode-ыг хоёр удаа авахгүй.
+>
+> ⚠️ `android/khotol-release.jks` + `android/key.properties` **git-д ороогүй**
+> (зөвхөн `.template` нь tracked). Энэ 2 файлыг алдвал апп-аа дахин шинэчлэх
+> боломжгүй болно — гадаад диск / нууц үгийн менежерт хуулбар хадгал.
+
 ---
 
 ## 7. Google Play Console-д байршуулах
@@ -166,6 +192,10 @@ android/app/build/outputs/bundle/release/app-release.aab
    - Нэвтрэлт: **Утас `88000000`** · **Нууц үг `Demo12345!`**
      (апп нь утсаар нэвтэрдэг; Supabase auth дээр `88000000@toot.app`)
    - Тэмдэглэл: "Demo СӨХ / Туршилтын байр. Утас 88000000, нууц үг Demo12345!. Бодит хувийн мэдээлэл агуулаагүй."
+   - ✅ **2026-08-01-нд шалгасан — ажиллаж байна.** Оршин суугч #762
+     "Та (демо хэрэглэгч)", 12 тоот, СӨХ #2678 "Туршилтын СӨХ — Хотол демо байр".
+   - Нэвтрэлтгүй үзэх demo-г мөн нэмж бичвэл review хурдасна:
+     `https://khotol.com/demo` (оршин суугч), `https://khotol.com/demo-admin` (админ).
 8. **Data safety** form бөглөх → `PLAY_STORE_DATA_SAFETY.md`-ийн дагуу.
 9. **Content rating** асуулга бөглөх.
 10. **Target audience** — 18+ эсвэл бизнесийн зорилготой гэдгийг сонго.
