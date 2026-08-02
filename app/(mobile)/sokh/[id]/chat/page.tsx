@@ -8,7 +8,7 @@ import ReportButton from '@/app/components/ReportButton';
 interface Message {
   id: number;
   sender_name: string;
-  message: string;
+  content: string;
   created_at: string;
 }
 
@@ -70,11 +70,17 @@ export default function ChatPage() {
     if (!text.trim()) return;
     setSending(true);
 
-    await supabase.from('chat_messages').insert([{
+    const { error } = await supabase.from('chat_messages').insert([{
       sokh_id: params.id,
       sender_name: name,
-      message: text.trim(),
+      content: text.trim(),
     }]);
+
+    if (error) {
+      alert('Мессеж илгээгдсэнгүй. Дахин оролдоно уу.');
+      setSending(false);
+      return;
+    }
 
     setText('');
     setSending(false);
@@ -174,14 +180,14 @@ export default function ChatPage() {
                   {!isMe && (
                     <p className="text-xs font-semibold text-sky-600 mb-0.5">{m.sender_name}</p>
                   )}
-                  <p className="text-sm whitespace-pre-wrap">{m.message}</p>
+                  <p className="text-sm whitespace-pre-wrap">{m.content}</p>
                   <div className="flex items-center justify-end gap-2 mt-1">
                     {!isMe && (
                       <ReportButton
                         sokhId={params.id as string}
                         contentType="chat"
                         contentId={m.id}
-                        contentSnapshot={m.message}
+                        contentSnapshot={m.content}
                         contentAuthor={m.sender_name}
                         reporterName={name}
                       />
