@@ -10,6 +10,8 @@ interface SokhOrg {
   address: string;
   phone: string;
   created_at: string;
+  claim_status: string | null;
+  activated_at: string | null;
 }
 
 export default function SuperAdminDashboard() {
@@ -58,18 +60,11 @@ export default function SuperAdminDashboard() {
 
   const totalDebt = residents.reduce((s, r) => s + Number(r.debt || 0), 0);
   const totalResidents = residents.length;
-  const activeOrgs = sokhs.length;
 
-  // Орлогын тооцоо (жишээ: нэг СӨХ 50,000₮/сар)
-  const monthlyRevenue = activeOrgs * 50000;
-  const annualRevenue = monthlyRevenue * 12;
-
-  const statCards = [
-    { label: 'Нийт СӨХ', value: activeOrgs, icon: '🏢', change: '+2 энэ сард', color: 'from-blue-600 to-blue-700' },
-    { label: 'Нийт хэрэглэгч', value: totalResidents, icon: '👥', change: '+15 энэ сард', color: 'from-purple-600 to-purple-700' },
-    { label: 'Сарын орлого', value: `${(monthlyRevenue / 1000).toFixed(0)}к₮`, icon: '💵', change: '+12%', color: 'from-green-600 to-green-700' },
-    { label: 'Жилийн орлого', value: `${(annualRevenue / 1000000).toFixed(1)}M₮`, icon: '📈', change: 'Төсөөлөл', color: 'from-yellow-600 to-yellow-700' },
-  ];
+  // Сарын эхлэл — "энэ сард" гэсэн өсөлтийг бодитоор тооцоход хэрэглэнэ
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
 
   // СӨХ тус бүрийн статус
   const orgStats = sokhs.map(s => {
@@ -78,6 +73,57 @@ export default function SuperAdminDashboard() {
     const debtors = orgResidents.filter(r => Number(r.debt || 0) > 0).length;
     return { ...s, residentCount: orgResidents.length, totalDebt: orgDebt, debtorCount: debtors };
   });
+
+  // sokh_organizations-ийн ихэнх нь бөөнөөр импортолсон ЛАВЛАХ бүртгэл.
+  // Жинхэнэ хэрэглэгч = идэвхжсэн эсвэл оршин суугчтай.
+  const liveOrgs = orgStats
+    .filter(o => o.claim_status === 'active' || o.activated_at || o.residentCount > 0)
+    .sort((a, b) => b.residentCount - a.residentCount);
+
+  const activeOrgs = sokhs.filter(s => s.claim_status === 'active').length;
+  const newOrgsThisMonth = sokhs.filter(
+    s => new Date(s.activated_at || s.created_at) >= monthStart && (s.claim_status === 'active' || s.activated_at)
+  ).length;
+  const newResidentsThisMonth = residents.filter(r => r.created_at && new Date(r.created_at) >= monthStart).length;
+  const debtorCount = residents.filter(r => Number(r.debt || 0) > 0).length;
+
+  const plusLabel = (n: number) => (n > 0 ? `+${n} энэ сард` : 'энэ сард 0');
+
+  const statCards = [
+    { label: 'Идэвхжсэн СӨХ', value: activeOrgs, icon: '🏢', change: plusLabel(newOrgsThisMonth), color: 'from-blue-600 to-blue-700' },
+    { label: 'Нийт оршин суугч', value: totalResidents.toLocaleString(), icon: '👥', change: plusLabel(newResidentsThisMonth), color: 'from-purple-600 to-purple-700' },
+    { label: 'Нийт өр', value: `${(totalDebt / 1000).toFixed(0)}к₮`, icon: '💵', change: `${debtorCount} өртэй`, color: 'from-green-600 to-green-700' },
+    { label: 'Лавлахад', value: sokhs.length.toLocaleString(), icon: '📇', change: 'хэрэглэгч биш', color: 'from-yellow-600 to-yellow-700' },
+  ];
+
+  // Сүүлийн үйл ажиллагаа — бодит бүртгэлээс
+  const ago = (iso: string) => {
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 60) return `${Math.max(1, mins)} мин`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} цаг`;
+    return `${Math.floor(hours / 24)} хоног`;
+  };
+
+  const orgName = new Map<number, string>(sokhs.map(s => [s.id, s.name]));
+
+  const activity = [
+    ...liveOrgs
+      .filter(o => o.activated_at || o.claim_status === 'active')
+      .map(o => ({ at: o.activated_at || o.created_at, icon: '🏢', text: `${o.name} идэвхжсэн` })),
+    ...residents
+      .filter(r => r.created_at)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 30)
+      .map(r => ({
+        at: r.created_at as string,
+        icon: '👥',
+        text: `${orgName.get(r.sokh_id) || 'СӨХ'} — ${r.name || 'оршин суугч'} бүртгүүлсэн`,
+      })),
+  ]
+    .filter(a => a.at)
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 5);
 
   return (
     <div className="p-6">
@@ -111,8 +157,11 @@ export default function SuperAdminDashboard() {
         {/* СӨХ жагсаалт */}
         <div className="col-span-2 bg-gray-800/50 rounded-2xl border border-gray-800 p-5">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-semibold">СӨХ-үүдийн байдал</h2>
-            <span className="text-xs text-gray-500">{orgStats.length} бүртгэлтэй</span>
+            <div>
+              <h2 className="font-semibold">СӨХ-үүдийн байдал</h2>
+              <p className="text-xs text-gray-500">Идэвхжсэн эсвэл оршин суугчтай СӨХ</p>
+            </div>
+            <span className="text-xs text-gray-500">{liveOrgs.length} / {orgStats.length} бүртгэл</span>
           </div>
           <table className="w-full">
             <thead>
@@ -125,7 +174,7 @@ export default function SuperAdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {orgStats.map(o => (
+              {liveOrgs.map(o => (
                 <tr key={o.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
                   <td className="py-3">
                     <p className="text-sm font-medium">{o.name}</p>
@@ -149,32 +198,41 @@ export default function SuperAdminDashboard() {
         <div className="space-y-4">
           {/* Revenue breakdown */}
           <div className="bg-gray-800/50 rounded-2xl border border-gray-800 p-5">
-            <h2 className="font-semibold mb-4">Орлогын задаргаа</h2>
+            <h2 className="font-semibold mb-4">Бүртгэлийн задаргаа</h2>
             <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-400">Стандарт багц</span>
-                  <span>4 СӨХ</span>
+              {[
+                { label: 'Идэвхжсэн', count: activeOrgs, color: 'bg-blue-500' },
+                { label: 'Оршин суугчтай', count: orgStats.filter(o => o.residentCount > 0).length, color: 'bg-emerald-500' },
+                { label: 'Лавлах (хүлээгдэж буй)', count: orgStats.length - liveOrgs.length, color: 'bg-gray-500' },
+              ].map(b => (
+                <div key={b.label}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-400">{b.label}</span>
+                    <span>{b.count.toLocaleString()} СӨХ</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div
+                      className={`${b.color} h-2 rounded-full`}
+                      style={{ width: `${orgStats.length > 0 ? (b.count / orgStats.length) * 100 : 0}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: '67%' }} />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-400">Үнэгүй</span>
-                  <span>2 СӨХ</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div className="bg-gray-500 h-2 rounded-full" style={{ width: '33%' }} />
-                </div>
-              </div>
+              ))}
             </div>
             <div className="mt-4 pt-4 border-t border-gray-700">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Энэ сарын орлого</span>
-                <span className="text-green-400 font-semibold">{monthlyRevenue.toLocaleString()}₮</span>
+                <span className="text-gray-400">Дундаж бүрдэлт</span>
+                <span className="font-semibold">
+                  {liveOrgs.length > 0
+                    ? Math.round(liveOrgs.reduce((s, o) => s + o.residentCount, 0) / liveOrgs.length)
+                    : 0}{' '}
+                  оршин суугч/СӨХ
+                </span>
               </div>
+              <p className="text-[11px] text-gray-500 mt-2">
+                Орлогын тооцоог <span className="text-gray-400">Платформ орлого</span> хэсгээс үзнэ үү — төлбөрийн
+                интеграц идэвхжээгүй тул энд харуулахгүй.
+              </p>
             </div>
           </div>
 
@@ -226,22 +284,21 @@ export default function SuperAdminDashboard() {
           {/* Recent activity */}
           <div className="bg-gray-800/50 rounded-2xl border border-gray-800 p-5">
             <h2 className="font-semibold mb-4">Сүүлийн үйл ажиллагаа</h2>
-            <div className="space-y-3">
-              {[
-                { text: 'Нарантуул СӨХ 3 шинэ оршин суугч нэмсэн', time: '5 мин', icon: '👥' },
-                { text: 'Од СӨХ засварын хүсэлт илгээсэн', time: '15 мин', icon: '🔧' },
-                { text: 'Алтан гадас СӨХ зарлал нийтэлсэн', time: '1 цаг', icon: '📢' },
-                { text: 'Шинэ СӨХ бүртгүүлсэн: Номин СӨХ', time: '3 цаг', icon: '🏢' },
-              ].map((a, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span className="text-base mt-0.5">{a.icon}</span>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-300">{a.text}</p>
-                    <p className="text-xs text-gray-600">{a.time}-ийн өмнө</p>
+            {activity.length === 0 ? (
+              <p className="text-sm text-gray-500">Одоогоор бүртгэл алга</p>
+            ) : (
+              <div className="space-y-3">
+                {activity.map((a, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="text-base mt-0.5">{a.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-300">{a.text}</p>
+                      <p className="text-xs text-gray-600">{ago(a.at)}-ийн өмнө</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
