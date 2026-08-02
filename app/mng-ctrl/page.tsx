@@ -14,19 +14,55 @@ interface SokhOrg {
   activated_at: string | null;
 }
 
+interface ResidentRow {
+  id: number;
+  name: string | null;
+  sokh_id: number | null;
+  debt: number | null;
+  created_at: string | null;
+}
+
 export default function SuperAdminDashboard() {
   const [sokhs, setSokhs] = useState<SokhOrg[]>([]);
-  const [residents, setResidents] = useState<any[]>([]);
+  const [residents, setResidents] = useState<ResidentRow[]>([]);
+  const [totalOrgs, setTotalOrgs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [errorStats, setErrorStats] = useState({ today: 0, fatal: 0, recentErrors: [] as any[] });
 
   useEffect(() => {
     const fetch = async () => {
-      const { data: sokhData } = await supabase.from('sokh_organizations').select('*');
-      setSokhs(sokhData || []);
+      // Supabase нэг хүсэлтэд 1000 мөр л буцаана. Лавлахад 1200+ СӨХ байгаа тул
+      // бүгдийг татахгүй — нийт тоог count-аар, дэлгэрэнгүйг зөвхөн хэрэгтэйг нь.
+      const PAGE = 1000;
 
-      const { data: resData } = await supabase.from('residents').select('*');
-      setResidents(resData || []);
+      const resData: ResidentRow[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data } = await supabase.from('residents').select('*').range(from, from + PAGE - 1);
+        if (!data || data.length === 0) break;
+        resData.push(...data);
+        if (data.length < PAGE) break;
+      }
+      setResidents(resData);
+
+      const { count: orgCount } = await supabase
+        .from('sokh_organizations')
+        .select('id', { count: 'exact', head: true });
+      setTotalOrgs(orgCount || 0);
+
+      const residentOrgIds = Array.from(
+        new Set(resData.map(r => r.sokh_id).filter((v): v is number => v != null))
+      );
+
+      const [{ data: activeData }, { data: residentOrgData }] = await Promise.all([
+        supabase.from('sokh_organizations').select('*').eq('claim_status', 'active'),
+        residentOrgIds.length
+          ? supabase.from('sokh_organizations').select('*').in('id', residentOrgIds)
+          : Promise.resolve({ data: [] as SokhOrg[] }),
+      ]);
+
+      const merged = new Map<number, SokhOrg>();
+      [...(activeData || []), ...(residentOrgData || [])].forEach((o: SokhOrg) => merged.set(o.id, o));
+      setSokhs(Array.from(merged.values()));
 
       // Алдааны статистик татах
       try {
@@ -93,7 +129,7 @@ export default function SuperAdminDashboard() {
     { label: 'Идэвхжсэн СӨХ', value: activeOrgs, icon: '🏢', change: plusLabel(newOrgsThisMonth), color: 'from-blue-600 to-blue-700' },
     { label: 'Нийт оршин суугч', value: totalResidents.toLocaleString(), icon: '👥', change: plusLabel(newResidentsThisMonth), color: 'from-purple-600 to-purple-700' },
     { label: 'Нийт өр', value: `${(totalDebt / 1000).toFixed(0)}к₮`, icon: '💵', change: `${debtorCount} өртэй`, color: 'from-green-600 to-green-700' },
-    { label: 'Лавлахад', value: sokhs.length.toLocaleString(), icon: '📇', change: 'хэрэглэгч биш', color: 'from-yellow-600 to-yellow-700' },
+    { label: 'Лавлахад', value: totalOrgs.toLocaleString(), icon: '📇', change: 'хэрэглэгч биш', color: 'from-yellow-600 to-yellow-700' },
   ];
 
   // Сүүлийн үйл ажиллагаа — бодит бүртгэлээс
@@ -113,12 +149,12 @@ export default function SuperAdminDashboard() {
       .map(o => ({ at: o.activated_at || o.created_at, icon: '🏢', text: `${o.name} идэвхжсэн` })),
     ...residents
       .filter(r => r.created_at)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
       .slice(0, 30)
       .map(r => ({
         at: r.created_at as string,
         icon: '👥',
-        text: `${orgName.get(r.sokh_id) || 'СӨХ'} — ${r.name || 'оршин суугч'} бүртгүүлсэн`,
+        text: `${(r.sokh_id != null ? orgName.get(r.sokh_id) : null) || 'СӨХ'} — ${r.name || 'оршин суугч'} бүртгүүлсэн`,
       })),
   ]
     .filter(a => a.at)
@@ -161,7 +197,7 @@ export default function SuperAdminDashboard() {
               <h2 className="font-semibold">СӨХ-үүдийн байдал</h2>
               <p className="text-xs text-gray-500">Идэвхжсэн эсвэл оршин суугчтай СӨХ</p>
             </div>
-            <span className="text-xs text-gray-500">{liveOrgs.length} / {orgStats.length} бүртгэл</span>
+            <span className="text-xs text-gray-500">{liveOrgs.length} / {totalOrgs.toLocaleString()} бүртгэл</span>
           </div>
           <table className="w-full">
             <thead>
@@ -203,7 +239,7 @@ export default function SuperAdminDashboard() {
               {[
                 { label: 'Идэвхжсэн', count: activeOrgs, color: 'bg-blue-500' },
                 { label: 'Оршин суугчтай', count: orgStats.filter(o => o.residentCount > 0).length, color: 'bg-emerald-500' },
-                { label: 'Лавлах (хүлээгдэж буй)', count: orgStats.length - liveOrgs.length, color: 'bg-gray-500' },
+                { label: 'Лавлах (хүлээгдэж буй)', count: Math.max(0, totalOrgs - liveOrgs.length), color: 'bg-gray-500' },
               ].map(b => (
                 <div key={b.label}>
                   <div className="flex justify-between text-sm mb-1">
@@ -213,7 +249,7 @@ export default function SuperAdminDashboard() {
                   <div className="w-full bg-gray-700 rounded-full h-2">
                     <div
                       className={`${b.color} h-2 rounded-full`}
-                      style={{ width: `${orgStats.length > 0 ? (b.count / orgStats.length) * 100 : 0}%` }}
+                      style={{ width: `${totalOrgs > 0 ? (b.count / totalOrgs) * 100 : 0}%` }}
                     />
                   </div>
                 </div>

@@ -37,16 +37,62 @@ export default function OnboardingPage() {
   }, []);
 
   const fetchData = async () => {
-    const [{ data: orgs }, { data: residents }, { data: khoroos }, { data: districts }] = await Promise.all([
-      supabase
-        .from('sokh_organizations')
-        .select('id, name, address, created_at, claim_status, activated_at, unit_count, khoroo_id')
-        .order('created_at', { ascending: false })
-        .limit(3000),
-      supabase.from('residents').select('sokh_id, created_at').limit(10000),
-      supabase.from('khoroos').select('id, name, district_id'),
-      supabase.from('districts').select('id, name'),
-    ]);
+    // Supabase нэг хүсэлтэд 1000 мөр л буцаана — тиймээс хуудаслаж уншина.
+    const PAGE = 1000;
+
+    const residents: { sokh_id: number | null; created_at: string | null }[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data } = await supabase
+        .from('residents')
+        .select('sokh_id, created_at')
+        .range(from, from + PAGE - 1);
+      if (!data || data.length === 0) break;
+      residents.push(...data);
+      if (data.length < PAGE) break;
+    }
+
+    const since = new Date();
+    since.setDate(since.getDate() - DAYS);
+
+    // Нийт тоог count-аар авна (мөрийг нь татахгүй)
+    const [{ count: allCount }, { count: activeCount }, { data: activeOrgs }, { data: recentOrgs }, { data: windowOrgs }] =
+      await Promise.all([
+        supabase.from('sokh_organizations').select('id', { count: 'exact', head: true }),
+        supabase.from('sokh_organizations').select('id', { count: 'exact', head: true }).eq('claim_status', 'active'),
+        supabase
+          .from('sokh_organizations')
+          .select('id, name, address, created_at, claim_status, activated_at, unit_count, khoroo_id')
+          .eq('claim_status', 'active'),
+        supabase
+          .from('sokh_organizations')
+          .select('id, name, address, created_at, claim_status, activated_at, unit_count, khoroo_id')
+          .order('created_at', { ascending: false })
+          .limit(15),
+        supabase.from('sokh_organizations').select('created_at').gte('created_at', since.toISOString()).limit(PAGE),
+      ]);
+
+    // Оршин суугчтай СӨХ-ийн дэлгэрэнгүйг тусад нь татна (лавлахын 1200 мөрийг татахгүй)
+    const residentOrgIds = Array.from(new Set(residents.map(r => r.sokh_id).filter((v): v is number => v != null)));
+    const { data: residentOrgs } = residentOrgIds.length
+      ? await supabase
+          .from('sokh_organizations')
+          .select('id, name, address, created_at, claim_status, activated_at, unit_count, khoroo_id')
+          .in('id', residentOrgIds)
+      : { data: [] as Org[] };
+
+    const orgMap = new Map<number, Org>();
+    [...(activeOrgs || []), ...(residentOrgs || []), ...(recentOrgs || [])].forEach((o: Org) => orgMap.set(o.id, o));
+    const orgs = Array.from(orgMap.values());
+
+    // Зөвхөн харуулах СӨХ-ийн хороо/дүүргийг татна
+    const khorooIds = Array.from(new Set(orgs.map(o => o.khoroo_id).filter((v): v is number => v != null)));
+    const { data: khoroos } = khorooIds.length
+      ? await supabase.from('khoroos').select('id, name, district_id').in('id', khorooIds)
+      : { data: [] as { id: number; name: string; district_id: number }[] };
+    const districtIds = Array.from(new Set((khoroos || []).map(k => k.district_id)));
+    const { data: districts } = districtIds.length
+      ? await supabase.from('districts').select('id, name').in('id', districtIds)
+      : { data: [] as { id: number; name: string }[] };
 
     const districtName = new Map<number, string>();
     (districts || []).forEach((d: { id: number; name: string }) => districtName.set(d.id, d.name));
@@ -58,7 +104,7 @@ export default function OnboardingPage() {
     });
 
     const residentCount = new Map<number, number>();
-    (residents || []).forEach((r: { sokh_id: number | null }) => {
+    residents.forEach(r => {
       if (r.sokh_id == null) return;
       residentCount.set(r.sokh_id, (residentCount.get(r.sokh_id) || 0) + 1);
     });
@@ -73,31 +119,30 @@ export default function OnboardingPage() {
       };
     };
 
-    const all = (orgs || []).map(toRow);
-
     // Жинхэнэ хэрэглэгч = идэвхжсэн ЭСВЭЛ оршин суугчтай.
     // Үлдсэн нь лавлахын бүртгэл (бөөнөөр импортолсон) тул энд харуулахгүй.
-    const live = all
-      .filter(r => r.claim_status === 'active' || r.activated_at || r.residents > 0)
+    const live = orgs
+      .filter(o => o.claim_status === 'active' || o.activated_at || (residentCount.get(o.id) || 0) > 0)
+      .map(toRow)
       .sort((a, b) => b.residents - a.residents);
 
     setRows(live);
-    setRecent(all.slice(0, 15));
+    setRecent((recentOrgs || []).map(toRow));
     setTotals({
-      all: all.length,
-      active: all.filter(r => r.claim_status === 'active').length,
-      withResidents: all.filter(r => r.residents > 0).length,
-      residents: (residents || []).length,
+      all: allCount || 0,
+      active: activeCount || 0,
+      withResidents: residentOrgIds.length,
+      residents: residents.length,
     });
 
     // Сүүлийн 14 хоногийн өдөр тутмын нэмэгдэл
     const orgByDay = new Map<string, number>();
-    all.forEach(o => {
+    (windowOrgs || []).forEach((o: { created_at: string }) => {
       const k = dayKey(new Date(o.created_at));
       orgByDay.set(k, (orgByDay.get(k) || 0) + 1);
     });
     const resByDay = new Map<string, number>();
-    (residents || []).forEach((r: { created_at: string | null }) => {
+    residents.forEach(r => {
       if (!r.created_at) return;
       const k = dayKey(new Date(r.created_at));
       resByDay.set(k, (resByDay.get(k) || 0) + 1);
