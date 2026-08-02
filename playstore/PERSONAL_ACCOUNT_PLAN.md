@@ -6,17 +6,47 @@ Personal (хувь хүн) developer account сонгосон тул **closed te
 
 ---
 
-## 0. Одоогийн төлөв (2026-08-01)
+## 0. Одоогийн төлөв (2026-08-02)
 
 | Зүйл | Төлөв |
 |---|---|
 | Play Console "Finish setting up your app" 11 зүйл | ✅ дуусав |
 | Store listing (mn-MN), icon, feature graphic, 8 screenshot | ✅ орсон |
-| Signed `.aab` | ✅ бэлэн — `README_PLAYSTORE.md` §6 үз |
-| Demo нэвтрэлт (88000000 / Demo12345!) | ✅ шалгасан, ажиллаж байна |
-| Зохисгүй контентыг мэдээлэх + модерацийн систем | ✅ 2026-08-01-нд нэмэгдсэн |
-| **Closed testing track үүсгэх + .aab upload** | ⬜ **дараагийн алхам** |
-| **12+ tester цуглуулах** | ⬜ **гол bottleneck — §4** |
+| Signed `.aab` | ✅ versionCode 2 |
+| Demo нэвтрэлт (88000000 / Demo12345!) | ✅ ажиллаж байна |
+| Зохисгүй контентыг мэдээлэх + модерацийн систем | ✅ 2026-08-01 |
+| Closed testing track + .aab upload | ✅ дуусав |
+| 12+ tester цуглуулах | ✅ **16 tester** |
+| **Google review** | ✅ **давсан — track "Active", release 2 (1.0.0)** |
+| **Opt-in линкийг илгээх** | ⬜ **дараагийн алхам — §3** |
+| 14 хоногийн opt-in хугацаа | ⬜ илгээснээс хойш тоолно |
+| "Apply for production" | ⬜ 14 хоногийн дараа |
+
+**Opt-in линк:** https://play.google.com/apps/testing/mn.khotol.app
+
+### Явцыг хаанаас харах вэ
+
+App dashboard → "Apply for access to production" хэсэгт Google өөрөө
+тоолуур харуулна:
+
+```
+✓ Publish a closed testing release
+○ Have at least 12 testers opted-in  →  N testers currently opted-in
+○ Run your closed test with at least 12 testers, for at least 14 days
+```
+
+⚠️ **Хэн нэгдсэнийг нэрээр нь харуулдаггүй, зөвхөн ТООГ.** Тиймээс тестер
+бүрээс "нэгдлээ" гэж бичүүлж, `testers.local.md`-д гараар тэмдэглэ —
+эс бөгөөс хэн дутуу байгааг мэдэх арга байхгүй.
+
+### Хаяг хангах ёстой шаардлага
+
+| Шаардлага | Тайлбар |
+|---|---|
+| Жинхэнэ **Google account** байх | Play хадгалах үедээ шалгана. Туршлагаас: `@yahoo.com` (Google account биш) болон буруу бичсэн gmail ("This email address doesn't exist") — хоёулаа татгалзагдсан, бүх өөрчлөлт хадгалагдаагүй. |
+| Утсан дээрх Play-д нэвтэрсэн данс байх | Өөр дансаар линк нээвэл "App not available" гарна. Хамгийн түгээмэл алдаа. |
+| Android төхөөрөмж | iPhone-той хүн оролцох боломжгүй. |
+| Тоолол **дансаар** явна | Нэг хүн олон утсанд суулгасан ч 1 гэж тоологдоно. |
 
 > Бүртгэл чинь Organization (Төгс Орчин ХХК) байвал доорх 12 tester × 14 хоногийн
 > шаардлага **хамаарахгүй**. Play Console → Setup → Developer account →
@@ -58,9 +88,10 @@ Personal (хувь хүн) developer account сонгосон тул **closed te
 
 ## 3. Tester рүү илгээх бичвэрүүд (хуулж ашигла)
 
-> ⚠️ `[ОPT-IN ЛИНК]` гэсэн газарт Play Console → Closed testing → Testers →
-> "Copy link" дээрх линкийг тавина. Линк нь release **зөвшөөрөгдсөний дараа**
-> л гарч ирнэ.
+> ✅ **Opt-in линк идэвхтэй** (2026-08-02, review давсны дараа):
+> `https://play.google.com/apps/testing/mn.khotol.app`
+> Бичвэрүүдэд аль хэдийн суулгасан — шууд хуулж илгээж болно.
+> (Console дээрээс: Closed testing → Testers → "Join on the web" → Copy link)
 
 ### 3.1. Эхний урилга — Messenger / чат (богино)
 
@@ -70,7 +101,7 @@ Personal (хувь хүн) developer account сонгосон тул **closed te
 >
 > Хийх зүйл 5 минут:
 > 1️⃣ Линк дээр дарж тест группт нэгдэнэ (**чиний өгсөн Gmail хаягаараа**
-> Play-д нэвтэрсэн байх ёстой): [ОPT-IN ЛИНК]
+> Play-д нэвтэрсэн байх ёстой): https://play.google.com/apps/testing/mn.khotol.app
 > 2️⃣ Нээгдэх хуудсан дээрх **"Download it on Google Play"** → апп суулгана
 > 3️⃣ Нэвтрэх: утас `88000000`, нууц үг `Demo12345!` (туршилтын байрны данс)
 > 4️⃣ **14 хоног аппаа устгахгүй** үлдээнэ, хааяа нээж байвал хангалттай 🙏
@@ -95,7 +126,7 @@ Personal (хувь хүн) developer account сонгосон тул **closed te
 > **Юу хийх вэ (5 минут):**
 >
 > 1. Доорх линкийг Android утаснаасаа нээнэ:
->    [ОPT-IN ЛИНК]
+>    https://play.google.com/apps/testing/mn.khotol.app
 >    (Google Play-д **надад өгсөн Gmail хаягаараа** нэвтэрсэн байх ёстой.
 >    Өөр хаягаар нэвтэрсэн бол линк "хандах эрхгүй" гэж гарна.)
 > 2. "Become a tester" / "Тестер болох" гэснийг сонгоно
