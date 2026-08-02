@@ -55,6 +55,8 @@ sokh-codes.csv
 sokh-skipped.csv
 sokh-import-skipped.csv
 bzd-target-50.csv
+# Локал ажлын бүртгэл (тестерийн имэйл, гадаад системийн төлөв) — репо public!
+*.local.md
 
 # Marketing screenshots (89 MB) — disk дээр архив, git-д хэт хүнд
 /docs/_archive/marketing/screenshots/
