@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { mkt } from '@/app/lib/marketing-client';
-import type { Campaign } from '@/app/lib/marketing/constants';
+import type { Campaign, GroupType } from '@/app/lib/marketing/constants';
+import { GROUP_TYPES } from '@/app/lib/marketing/constants';
 import { DEMO_REQUEST_FB_LINK } from '@/app/lib/demo-requests/constants';
+
+const ALL_TYPES = GROUP_TYPES.map((t) => t.value);
 
 export default function CampaignsTab() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -16,6 +19,8 @@ export default function CampaignsTab() {
   const [title, setTitle] = useState('');
   const [mainText, setMainText] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  // Хоосон = бүх төрөлд тохирно
+  const [targetTypes, setTargetTypes] = useState<GroupType[]>([]);
 
   const load = useCallback(async () => {
     const res = await mkt.campaigns.list();
@@ -29,15 +34,25 @@ export default function CampaignsTab() {
   }, [load]);
 
   const reset = () => {
-    setTitle(''); setMainText(''); setLinkUrl(''); setEditId(null); setShowForm(false); setErr('');
+    setTitle(''); setMainText(''); setLinkUrl(''); setTargetTypes([]);
+    setEditId(null); setShowForm(false); setErr('');
   };
+
+  const toggleType = (t: GroupType) =>
+    setTargetTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
   const save = async () => {
     if (!mainText) return;
     setSaving(true); setErr('');
     const res = editId
-      ? await mkt.campaigns.update(editId, { title: title || undefined, main_text: mainText, link_url: linkUrl || null })
-      : await mkt.campaigns.create({ title: title || undefined, main_text: mainText, link_url: linkUrl || undefined });
+      ? await mkt.campaigns.update(editId, {
+          title: title || undefined, main_text: mainText,
+          link_url: linkUrl || null, target_types: targetTypes,
+        })
+      : await mkt.campaigns.create({
+          title: title || undefined, main_text: mainText,
+          link_url: linkUrl || undefined, target_types: targetTypes,
+        });
     setSaving(false);
     if (res.error) { setErr(res.error); return; }
     reset();
@@ -46,6 +61,7 @@ export default function CampaignsTab() {
 
   const edit = (c: Campaign) => {
     setEditId(c.id); setTitle(c.title); setMainText(c.main_text); setLinkUrl(c.link_url || '');
+    setTargetTypes(c.target_types || []);
     setShowForm(true);
   };
 
@@ -78,6 +94,34 @@ export default function CampaignsTab() {
             <textarea placeholder="Үндсэн пост текст — энэ текстээс групп бүрт арай өөр caption үүснэ"
               value={mainText} onChange={(e) => setMainText(e.target.value)} rows={6}
               className="w-full border rounded-lg px-3 py-2 text-sm" />
+
+            {/* Хэнд зориулсан бэ — өдрийн дараалал үүсэхэд групп бүрд тохирохыг нь сонгоно */}
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-1.5">Хэнд зориулсан бэ</p>
+              <div className="flex flex-wrap gap-1.5">
+                {GROUP_TYPES.map((t) => {
+                  const on = targetTypes.includes(t.value);
+                  return (
+                    <button key={t.value} type="button" onClick={() => toggleType(t.value)}
+                      className={`px-3 py-1.5 rounded-lg text-xs border ${
+                        on ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'
+                      }`}>
+                      {t.icon} {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                {targetTypes.length === 0 || targetTypes.length === ALL_TYPES.length ? (
+                  <>Юу ч сонгохгүй бол <b>бүх группэд</b> тохирно. Ийм үед текстийг группийн
+                  төрөлд тааруулж эхний мөр, төгсгөлийн уриалгыг автоматаар нэмнэ.</>
+                ) : (
+                  <>Зөвхөн сонгосон төрлийн группэд очно. Текст нь тухайн үзэгчид зориулж
+                  бичигдсэн гэж үзээд <b>хэвээр нь</b> ашиглана — нэмэлт дэгээ, уриалга нэмэхгүй.</>
+                )}
+              </p>
+            </div>
+
             <div>
               <input placeholder="Линк (заавал биш) — жнь: https://khotol.com" value={linkUrl}
                 onChange={(e) => setLinkUrl(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" />
@@ -114,6 +158,19 @@ export default function CampaignsTab() {
                     <h3 className="font-semibold text-sm">{c.title}</h3>
                     {c.status === 'archived' && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Архивласан</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {(c.target_types && c.target_types.length > 0
+                      ? GROUP_TYPES.filter((t) => c.target_types!.includes(t.value))
+                      : []
+                    ).map((t) => (
+                      <span key={t.value} className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                        {t.icon} {t.label}
+                      </span>
+                    ))}
+                    {(!c.target_types || c.target_types.length === 0) && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-50 text-gray-500">Бүх групп</span>
                     )}
                   </div>
                   <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap line-clamp-4">{c.main_text}</p>

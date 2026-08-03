@@ -56,7 +56,8 @@ export async function POST(req: NextRequest) {
 }
 
 async function generateQueue(body: Record<string, unknown>): Promise<NextResponse> {
-  const campaignId = Number(body.campaign_id);
+  // campaign_id хоосон бол групп бүрийн төрлөөр автоматаар сонгоно
+  const campaignId = body.campaign_id ? Number(body.campaign_id) : null;
   const res = await generateDailyQueue({
     campaignId,
     limit: body.limit != null ? Number(body.limit) : undefined,
@@ -73,7 +74,6 @@ async function generateQueue(body: Record<string, unknown>): Promise<NextRespons
     .from('marketing_queue_items')
     .select('*, group:marketing_fb_groups(*)')
     .eq('queue_date', res.date)
-    .eq('campaign_id', campaignId)
     .order('id', { ascending: true });
 
   return NextResponse.json({
@@ -83,6 +83,7 @@ async function generateQueue(body: Record<string, unknown>): Promise<NextRespons
     eligibleCount: res.eligibleCount,
     aiEnhanced: res.aiEnhanced,
     warning: res.warning,
+    campaignTitles: res.campaignTitles,
   });
 }
 

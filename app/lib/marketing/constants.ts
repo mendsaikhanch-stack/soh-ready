@@ -30,6 +30,12 @@ export interface Campaign {
   main_text: string;
   link_url: string | null;
   status: 'active' | 'archived';
+  /**
+   * Аль төрлийн группэд зориулсан бэ. null/хоосон = бүгд.
+   * Утга оруулсан бол текст нь тухайн үзэгчид зориулж бичигдсэн гэж үзээд
+   * дэгээ/CTA нэмэхгүй, ХЭВЭЭР нь ашиглана.
+   */
+  target_types: GroupType[] | null;
   created_at: string;
   updated_at: string;
 }

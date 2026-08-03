@@ -6,6 +6,16 @@ async function auth() {
   return checkAnyAuth('superadmin');
 }
 
+const VALID_TARGET_TYPES = ['hoa_mgmt', 'resident', 'apartment', 'general'];
+
+/** Бүх төрөл сонгосон / юу ч сонгоогүй = null (бүгдэд тохирно) */
+function normalizeTargetTypes(raw: unknown): string[] | null {
+  if (!Array.isArray(raw)) return null;
+  const types = raw.map(String).filter((t) => VALID_TARGET_TYPES.includes(t));
+  if (types.length === 0 || types.length === VALID_TARGET_TYPES.length) return null;
+  return [...new Set(types)];
+}
+
 // GET /api/admin/marketing/campaigns
 export async function GET() {
   const a = await auth();
@@ -49,6 +59,7 @@ export async function POST(req: NextRequest) {
     title,
     main_text,
     link_url: body.link_url ? String(body.link_url).trim() : null,
+    target_types: normalizeTargetTypes(body.target_types),
     status: 'active',
   };
 
@@ -79,6 +90,7 @@ export async function PATCH(req: NextRequest) {
   for (const k of allowed) {
     if (k in body) patch[k] = body[k] === '' ? null : body[k];
   }
+  if ('target_types' in body) patch.target_types = normalizeTargetTypes(body.target_types);
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: 'Өөрчлөх талбар алга' }, { status: 400 });
   }

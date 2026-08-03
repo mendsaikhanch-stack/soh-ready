@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { mkt } from '@/app/lib/marketing-client';
-import { groupTypeMeta, priorityMeta, queueStatusMeta, QUEUE_DEFAULT } from '@/app/lib/marketing/constants';
+import { groupTypeMeta, priorityMeta, queueStatusMeta, QUEUE_DEFAULT, QUEUE_MIN, QUEUE_MAX } from '@/app/lib/marketing/constants';
 import type { Campaign, QueueItem } from '@/app/lib/marketing/constants';
 
 /** Asia/Ulaanbaatar бүсийн огноо (YYYY-MM-DD) — сервертэй ижил тооцоо */
@@ -43,7 +43,7 @@ export default function QueueTab({ onChanged }: { onChanged?: () => void }) {
     const [cRes, qRes] = await Promise.all([mkt.campaigns.list(), mkt.queue.today(date)]);
     const active = (cRes.data || []).filter((c) => c.status === 'active');
     setCampaigns(active);
-    if (active.length > 0) setCampaignId(active[0].id);
+    // Анхдагч нь «Автомат» — групп бүрд төрөлд нь тохирох текстийг сонгоно
     setItems(qRes.data || []);
     setLoading(false);
   }, [date]);
@@ -59,7 +59,6 @@ export default function QueueTab({ onChanged }: { onChanged?: () => void }) {
   };
 
   const generate = async (enhance: boolean) => {
-    if (!campaignId) { setErr('Эхлээд кампанит ажил сонгоно уу'); return; }
     setGenerating(true); setErr(''); setInfo('');
     const res = await mkt.queue.generate(campaignId, { limit, enhance });
     setGenerating(false);
@@ -68,7 +67,11 @@ export default function QueueTab({ onChanged }: { onChanged?: () => void }) {
     const added = (res as { added?: number }).added ?? 0;
     const aiOn = (res as { aiEnhanced?: boolean }).aiEnhanced;
     const warn = (res as { warning?: string }).warning;
-    setInfo(`${added} групп нэмэгдлээ${aiOn ? ' · AI-аар найруулсан 🧠' : ''}${warn ? ` · ${warn}` : ''}`);
+    const used = (res as { campaignTitles?: string[] }).campaignTitles || [];
+    setInfo(
+      `${added} групп нэмэгдлээ${used.length > 1 ? ` · ${used.length} өөр текст` : ''}` +
+      `${aiOn ? ' · AI-аар найруулсан 🧠' : ''}${warn ? ` · ${warn}` : ''}`,
+    );
     onChanged?.();
   };
 
@@ -133,22 +136,22 @@ export default function QueueTab({ onChanged }: { onChanged?: () => void }) {
             className="px-2.5 py-1 rounded-lg border text-sm hover:bg-gray-50 disabled:opacity-30">→</button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select value={campaignId ?? ''} onChange={(e) => setCampaignId(Number(e.target.value))}
-            className="border rounded-lg px-3 py-2 text-sm min-w-[200px]">
-            {campaigns.length === 0 && <option value="">Кампанит ажил байхгүй</option>}
-            {campaigns.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+          <select value={campaignId ?? ''} onChange={(e) => setCampaignId(e.target.value ? Number(e.target.value) : null)}
+            className="border rounded-lg px-3 py-2 text-sm min-w-[220px]">
+            <option value="">✨ Автомат — группийн төрлөөр</option>
+            {campaigns.map((c) => <option key={c.id} value={c.id}>Зөвхөн: {c.title}</option>)}
           </select>
           <label className="text-sm text-gray-500 flex items-center gap-1">
             Тоо:
-            <input type="number" min={10} max={15} value={limit}
+            <input type="number" min={QUEUE_MIN} max={QUEUE_MAX} value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
               className="border rounded-lg px-2 py-1.5 text-sm w-16" />
           </label>
-          <button onClick={() => generate(false)} disabled={generating || !campaignId || !isToday}
+          <button onClick={() => generate(false)} disabled={generating || !isToday}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
             {generating ? 'Үүсгэж байна...' : 'Дараалал гаргах'}
           </button>
-          <button onClick={() => generate(true)} disabled={generating || !campaignId || !isToday}
+          <button onClick={() => generate(true)} disabled={generating || !isToday}
             title="AI-аар групп бүрт caption-ийг дахин найруулна (ANTHROPIC_API_KEY шаардлагатай)"
             className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50">
             🧠 AI-аар гаргах
@@ -158,7 +161,7 @@ export default function QueueTab({ onChanged }: { onChanged?: () => void }) {
         {err && <p className="text-xs text-red-500 mt-2">{err}</p>}
         <p className="text-[11px] text-gray-400 mt-2">
           {isToday
-            ? 'Дараалал өглөө бүр 09:00-д автоматаар үүснэ — товч дарах шаардлагагүй. Сонголт: cooldown-д ороогүй, сүүлийн 7 хоногт постлоогүй, A зэрэг түрүүлсэн, төрлүүд холилдсон группүүд.'
+            ? 'Дараалал өглөө бүр 09:00-д автоматаар үүснэ — товч дарах шаардлагагүй. «Автомат» үед групп бүрд төрөлд нь зориулсан текст очно (дарга нарын группэд B2B, байрны группэд оршин суугчийн хувилбар). Сонголт: cooldown-д ороогүй, сүүлийн 7 хоногт постлоогүй, A зэрэг түрүүлсэн, төрлүүд холилдсон группүүд.'
             : 'Өнгөрсөн өдрийн түүх — шинээр дараалал зөвхөн өнөөдөр гаргана.'}
           {' '}Постлох ажлыг та өөрөө гүйцэтгэнэ — энэ зөвхөн дараалал, caption бэлтгэнэ.
         </p>

@@ -33,14 +33,15 @@ export const mkt = {
   },
   campaigns: {
     list: () => api<Campaign[]>('campaigns'),
-    create: (body: { title?: string; main_text: string; link_url?: string }) =>
+    create: (body: { title?: string; main_text: string; link_url?: string; target_types?: string[] | null }) =>
       api<Campaign>('campaigns', { method: 'POST', body }),
     update: (id: number, patch: Partial<Campaign>) => api<Campaign>('campaigns', { method: 'PATCH', body: { id, ...patch } }),
     remove: (id: number) => api(`campaigns?id=${id}`, { method: 'DELETE' }),
   },
   queue: {
     today: (date?: string) => api<QueueItem[]>(`queue${date ? `?date=${date}` : ''}`),
-    generate: (campaign_id: number, opts?: { limit?: number; enhance?: boolean }) =>
+    // campaign_id хоосон = групп бүрийн төрлөөр автоматаар сонгоно
+    generate: (campaign_id: number | null, opts?: { limit?: number; enhance?: boolean }) =>
       api<QueueItem[]>('queue', { method: 'POST', body: { action: 'generate', campaign_id, ...opts } }),
     setStatus: (id: number, action: 'mark_posted' | 'pending' | 'rejected' | 'requeue') =>
       api('queue', { method: 'POST', body: { action, id } }),
