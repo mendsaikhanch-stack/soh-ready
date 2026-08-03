@@ -89,8 +89,8 @@ export function selectQueueGroups(
   let reason: string | undefined;
   if (eligible.length === 0) {
     reason = 'Тэнцэх групп алга — бүгд cooldown-д байна эсвэл идэвхгүй байна.';
-  } else if (selected.length < QUEUE_MIN) {
-    reason = `Зөвхөн ${selected.length} групп тэнцлээ (10-аас бага). Шинэ групп нэмэх эсвэл cooldown дуусахыг хүлээнэ үү.`;
+  } else if (selected.length < limit) {
+    reason = `Зөвхөн ${selected.length} групп тэнцлээ (${limit} хүссэн). Шинэ групп нэмэх эсвэл cooldown дуусахыг хүлээнэ үү.`;
   }
 
   return { selected, eligibleCount: eligible.length, reason };

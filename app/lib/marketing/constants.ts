@@ -68,10 +68,15 @@ export interface Lead {
 // Cooldown — нэг группэд дахин постлох хүртэлх хоног
 export const COOLDOWN_DAYS = 7;
 
-// Өдрийн дараалалд орох группийн тоо (10–15)
-export const QUEUE_MIN = 10;
-export const QUEUE_DEFAULT = 12;
-export const QUEUE_MAX = 15;
+// Өдрийн дараалалд орох группийн тоо.
+//
+// Тогтвортой хурд = идэвхтэй группийн тоо ÷ COOLDOWN_DAYS.
+// 17 групп / 7 хоног ≈ 2.4 тул өдрийн норм 3. Үүнээс их бол группүүд
+// хэдхэн хоногт дуусаад дараалал долоо хоног хоосон болно, дээр нь нэг
+// данснаас олон группэд дараалж постлох нь Facebook-ийн спам шүүлтэд өртөнө.
+export const QUEUE_MIN = 1;
+export const QUEUE_DEFAULT = 3;
+export const QUEUE_MAX = 10;
 
 export const GROUP_TYPES: { value: GroupType; label: string; icon: string }[] = [
   { value: 'hoa_mgmt', label: 'СӨХ удирдлага', icon: '🏛' },
