@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAnyAuth } from '@/app/lib/session-token';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
-import { getProviderByName } from '@/app/lib/ai/core';
-import { selectQueueGroups } from '@/app/lib/marketing/selection';
-import { varyCaption, buildRewritePrompt, campaignUtmSlug, tagCampaignLink } from '@/app/lib/marketing/captions';
+import { generateDailyQueue, ubDateStr } from '@/app/lib/marketing/generate';
 import { COOLDOWN_DAYS } from '@/app/lib/marketing/constants';
-import type { FbGroup } from '@/app/lib/marketing/constants';
 
 async function auth() {
   return checkAnyAuth('superadmin');
@@ -13,12 +10,7 @@ async function auth() {
 
 // Asia/Ulaanbaatar бүсийн өнөөдрийн огноо (YYYY-MM-DD)
 function todayStr(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Ulaanbaatar',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
+  return ubDateStr();
 }
 
 // GET /api/admin/marketing/queue?date=YYYY-MM-DD  (default: өнөөдөр)
@@ -65,111 +57,32 @@ export async function POST(req: NextRequest) {
 
 async function generateQueue(body: Record<string, unknown>): Promise<NextResponse> {
   const campaignId = Number(body.campaign_id);
-  if (!campaignId) return NextResponse.json({ error: 'campaign_id шаардлагатай' }, { status: 400 });
+  const res = await generateDailyQueue({
+    campaignId,
+    limit: body.limit != null ? Number(body.limit) : undefined,
+    enhance: body.enhance === true,
+  });
 
-  const limit = body.limit != null ? Number(body.limit) : undefined;
-  const enhance = body.enhance === true;
-  const date = todayStr();
-  const now = new Date();
-
-  // Кампанит ажил
-  const { data: campaign, error: cErr } = await supabaseAdmin
-    .from('marketing_campaigns')
-    .select('*')
-    .eq('id', campaignId)
-    .single();
-  if (cErr || !campaign) {
-    return NextResponse.json({ error: 'Кампанит ажил олдсонгүй' }, { status: 404 });
-  }
-
-  // Бүх групп
-  const { data: groups, error: gErr } = await supabaseAdmin.from('marketing_fb_groups').select('*');
-  if (gErr) {
-    console.error('[marketing/queue] groups', gErr.message);
-    return NextResponse.json({ error: 'DB error' }, { status: 500 });
-  }
-
-  const selection = selectQueueGroups((groups || []) as FbGroup[], { now, limit });
-
-  // Өнөөдрийн хүлээгдэж буй (queued) item-уудыг цэвэрлэж дахин үүсгэнэ.
-  // Постолсон / лид / татгалзсан item-уудыг хадгална.
-  await supabaseAdmin
-    .from('marketing_queue_items')
-    .delete()
-    .eq('queue_date', date)
-    .eq('campaign_id', campaignId)
-    .eq('status', 'queued');
-
-  // Өнөөдөр аль хэдийн (ямар ч статустай) орсон группүүд
-  const { data: existing } = await supabaseAdmin
-    .from('marketing_queue_items')
-    .select('group_id')
-    .eq('queue_date', date)
-    .eq('campaign_id', campaignId);
-  const already = new Set((existing || []).map((r) => Number(r.group_id)));
-
-  const toAdd = selection.selected.filter((g) => !already.has(g.id));
-
-  // Caption үүсгэх (Layer 2 deterministic).
-  // Кампанит ажил бүрийн линкэнд ялгаатай utm_campaign автоматаар залгана —
-  // ингэснээр энэ кампанит ажлаас ирсэн лид CRM-д тусдаа тэмдэглэгдэнэ.
-  const taggedLink = tagCampaignLink(campaign.link_url, campaignUtmSlug(campaign.title, campaign.id));
-  const captions = toAdd.map((g, i) =>
-    varyCaption(campaign.main_text, g.group_type, i, taggedLink),
-  );
-
-  // Layer 3 — AI rewrite (сонголтоор)
-  let aiEnhanced = false;
-  if (enhance && toAdd.length > 0) {
-    const provider = getProviderByName('anthropic');
-    if (provider && provider.name !== 'template') {
-      aiEnhanced = true;
-      await Promise.all(
-        toAdd.map(async (g, i) => {
-          try {
-            const prompt = buildRewritePrompt(captions[i], g.group_type, g.name);
-            const text = await provider.generateText(prompt, { maxTokens: 500 });
-            if (text && text.trim()) captions[i] = text.trim();
-          } catch {
-            // fallback: Layer 2 caption хэвээр
-          }
-        }),
-      );
-    }
-  }
-
-  const rows = toAdd.map((g, i) => ({
-    campaign_id: campaignId,
-    group_id: g.id,
-    queue_date: date,
-    caption: captions[i],
-    status: 'queued',
-    ai_enhanced: aiEnhanced,
-  }));
-
-  if (rows.length > 0) {
-    const { error: insErr } = await supabaseAdmin.from('marketing_queue_items').insert(rows);
-    if (insErr) {
-      console.error('[marketing/queue] insert', insErr.message);
-      return NextResponse.json({ error: 'DB error' }, { status: 500 });
-    }
+  if (!res.ok) {
+    const status = res.error === 'Кампанит ажил олдсонгүй' ? 404 : res.error === 'DB error' ? 500 : 400;
+    return NextResponse.json({ error: res.error }, { status });
   }
 
   // Дахин уншиж буцаах
   const { data: items } = await supabaseAdmin
     .from('marketing_queue_items')
     .select('*, group:marketing_fb_groups(*)')
-    .eq('queue_date', date)
+    .eq('queue_date', res.date)
     .eq('campaign_id', campaignId)
     .order('id', { ascending: true });
 
   return NextResponse.json({
     data: items || [],
-    date,
-    added: rows.length,
-    eligibleCount: selection.eligibleCount,
-    aiEnhanced,
-    warning: selection.reason,
+    date: res.date,
+    added: res.added,
+    eligibleCount: res.eligibleCount,
+    aiEnhanced: res.aiEnhanced,
+    warning: res.warning,
   });
 }
 

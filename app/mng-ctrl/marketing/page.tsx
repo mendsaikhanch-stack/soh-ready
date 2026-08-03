@@ -15,6 +15,7 @@ interface DashboardData {
   date: string;
   stats: {
     postedToday: number;
+    queuedToday: number;
     pendingApproval: number;
     rejected: number;
     leadsToday: number;
@@ -22,7 +23,17 @@ interface DashboardData {
     totalGroups: number;
     activeGroups: number;
     readyCount: number;
+    postedLast14: number;
+    activeDays14: number;
   };
+  yesterday: {
+    date: string;
+    posted: number;
+    queued: number;
+    leads: number;
+    demoRequests: number;
+  };
+  last14: { date: string; posted: number; leads: number }[];
   bestGroups: FbGroup[];
   readyGroups: FbGroup[];
 }
@@ -67,6 +78,161 @@ export default function MarketingPage() {
   );
 }
 
+/**
+ * Өдрийн ажлын банner — «өнөөдөр юу хийх вэ» гэдгийг нэг харцаар.
+ * Дараалал өглөө 09:00-д cron-оор автоматаар үүсдэг тул ихэвчлэн бэлэн байна.
+ */
+function TodayBanner({
+  stats,
+  onGoQueue,
+}: {
+  stats: DashboardData['stats'];
+  onGoQueue: () => void;
+}) {
+  const { queuedToday, postedToday, readyCount } = stats;
+
+  // 1. Хүлээгдэж буй пост байна — гол дуудлага
+  if (queuedToday > 0) {
+    return (
+      <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-lg font-bold text-blue-900">
+            📤 Өнөөдөр {queuedToday} пост хүлээгдэж байна
+          </p>
+          <p className="text-sm text-blue-700 mt-0.5">
+            Бичвэр нь бэлэн — хуулж тавиад «Постолсон» дарахад л болно. Ойролцоогоор{' '}
+            {Math.max(5, queuedToday)} минутын ажил.
+            {postedToday > 0 && ` Өнөөдөр аль хэдийн ${postedToday} тавьсан 👏`}
+          </p>
+        </div>
+        <button
+          onClick={onGoQueue}
+          className="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 whitespace-nowrap"
+        >
+          Эхлэх →
+        </button>
+      </div>
+    );
+  }
+
+  // 2. Бүгдийг тавьчихсан
+  if (postedToday > 0) {
+    return (
+      <div className="rounded-xl border border-green-200 bg-green-50 p-5">
+        <p className="text-lg font-bold text-green-900">
+          ✅ Өнөөдрийн ажил дууссан — {postedToday} пост
+        </p>
+        <p className="text-sm text-green-700 mt-0.5">
+          Маргааш өглөө 09:00-д шинэ дараалал өөрөө үүснэ.
+        </p>
+      </div>
+    );
+  }
+
+  // 3. Дараалал хоосон, гэхдээ тэнцэх групп бий
+  if (readyCount > 0) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-lg font-bold text-amber-900">
+            ⏳ Өнөөдрийн дараалал үүсээгүй байна
+          </p>
+          <p className="text-sm text-amber-700 mt-0.5">
+            {readyCount} групп постонд бэлэн. Автомат үүсгэлт өглөө 09:00-д ажилладаг —
+            хүсвэл яг одоо гараар үүсгэ.
+          </p>
+        </div>
+        <button
+          onClick={onGoQueue}
+          className="bg-amber-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-amber-700 whitespace-nowrap"
+        >
+          Дараалал гаргах →
+        </button>
+      </div>
+    );
+  }
+
+  // 4. Бүх групп cooldown-д
+  return (
+    <div className="rounded-xl border bg-white p-5">
+      <p className="text-lg font-bold text-gray-700">😴 Өнөөдөр постлох групп алга</p>
+      <p className="text-sm text-gray-500 mt-0.5">
+        Бүгд 7 хоногийн завсарлагад байна. Шинэ групп нэмбэл ажил нэмэгдэнэ.
+      </p>
+    </div>
+  );
+}
+
+/** Өглөөний тайлан — өчигдөр юу болсныг тоогоор, дээр нь 14 хоногийн зурвас */
+function YesterdayReport({
+  y,
+  last14,
+  postedLast14,
+  activeDays14,
+}: {
+  y: DashboardData['yesterday'];
+  last14: DashboardData['last14'];
+  postedLast14: number;
+  activeDays14: number;
+}) {
+  const maxPosted = Math.max(1, ...last14.map((d) => d.posted));
+
+  return (
+    <div className="bg-white border rounded-xl p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <h2 className="text-sm font-semibold">🌅 Өглөөний тайлан</h2>
+        <span className="text-xs text-gray-400">Өчигдөр — {y.date}</span>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div>
+          <p className="text-2xl font-bold text-gray-800">{y.posted}</p>
+          <p className="text-xs text-gray-500">пост тавьсан</p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-purple-600">{y.leads}</p>
+          <p className="text-xs text-gray-500">лид ирсэн</p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-blue-600">{y.demoRequests}</p>
+          <p className="text-xs text-gray-500">demo хүсэлт</p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-gray-800">{y.queued}</p>
+          <p className="text-xs text-gray-500">тавилгүй үлдсэн</p>
+        </div>
+      </div>
+
+      {/* 14 хоногийн зурвас — тогтвортой ажиллаж байгаа эсэх нэг харцаар */}
+      <div className="border-t pt-3">
+        <div className="flex items-end gap-1 h-16">
+          {last14.map((d) => {
+            const isToday = d === last14[last14.length - 1];
+            const h = d.posted === 0 ? 3 : Math.round((d.posted / maxPosted) * 56) + 4;
+            return (
+              <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1" title={`${d.date}: ${d.posted} пост, ${d.leads} лид`}>
+                <div
+                  className={`w-full rounded-sm ${
+                    d.posted === 0 ? 'bg-gray-200' : isToday ? 'bg-blue-500' : 'bg-green-500'
+                  }`}
+                  style={{ height: `${h}px` }}
+                />
+                <span className="text-[10px] text-gray-400">{d.date.slice(8)}</span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Сүүлийн 14 хоногт <span className="font-semibold text-gray-700">{postedLast14} пост</span>
+          {' · '}
+          <span className="font-semibold text-gray-700">{activeDays14}/14 өдөр</span> идэвхтэй
+          {activeDays14 < 7 && <span className="text-amber-600"> — тогтвортой байдал сул</span>}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard({ onGoQueue }: { onGoQueue: () => void }) {
   const [d, setD] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,6 +263,8 @@ function Dashboard({ onGoQueue }: { onGoQueue: () => void }) {
 
   return (
     <div className="space-y-6">
+      <TodayBanner stats={s} onGoQueue={onGoQueue} />
+      <YesterdayReport y={d.yesterday} last14={d.last14} postedLast14={s.postedLast14} activeDays14={s.activeDays14} />
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {cards.map((c) => (
           <div key={c.label} className={`rounded-xl border p-4 ${c.cls}`}>

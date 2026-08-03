@@ -5,10 +5,29 @@ import { mkt } from '@/app/lib/marketing-client';
 import { groupTypeMeta, priorityMeta, queueStatusMeta, QUEUE_DEFAULT } from '@/app/lib/marketing/constants';
 import type { Campaign, QueueItem } from '@/app/lib/marketing/constants';
 
+/** Asia/Ulaanbaatar бүсийн огноо (YYYY-MM-DD) — сервертэй ижил тооцоо */
+function ubDate(offsetDays = 0): string {
+  const d = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ulaanbaatar',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
+/** YYYY-MM-DD дээр хоног нэмэх/хасах */
+function shiftDate(date: string, days: number): string {
+  const [y, m, d] = date.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  return dt.toISOString().slice(0, 10);
+}
+
 export default function QueueTab({ onChanged }: { onChanged?: () => void }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignId, setCampaignId] = useState<number | null>(null);
   const [items, setItems] = useState<QueueItem[]>([]);
+  const [date, setDate] = useState(ubDate());
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [limit, setLimit] = useState(QUEUE_DEFAULT);
@@ -21,13 +40,13 @@ export default function QueueTab({ onChanged }: { onChanged?: () => void }) {
   const [leadNote, setLeadNote] = useState('');
 
   const init = useCallback(async () => {
-    const [cRes, qRes] = await Promise.all([mkt.campaigns.list(), mkt.queue.today()]);
+    const [cRes, qRes] = await Promise.all([mkt.campaigns.list(), mkt.queue.today(date)]);
     const active = (cRes.data || []).filter((c) => c.status === 'active');
     setCampaigns(active);
     if (active.length > 0) setCampaignId(active[0].id);
     setItems(qRes.data || []);
     setLoading(false);
-  }, []);
+  }, [date]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -35,7 +54,7 @@ export default function QueueTab({ onChanged }: { onChanged?: () => void }) {
   }, [init]);
 
   const reloadQueue = async () => {
-    const qRes = await mkt.queue.today();
+    const qRes = await mkt.queue.today(date);
     setItems(qRes.data || []);
   };
 
@@ -87,14 +106,32 @@ export default function QueueTab({ onChanged }: { onChanged?: () => void }) {
     onChanged?.();
   };
 
-  const todayLabel = new Date().toLocaleDateString('mn-MN', { year: 'numeric', month: 'long', day: 'numeric' });
+  const today = ubDate();
+  const isToday = date === today;
+  const dateLabel = new Date(`${date}T00:00:00`).toLocaleDateString('mn-MN', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
   const queued = items.filter((i) => i.status === 'queued');
 
   return (
     <div>
       {/* Controls */}
       <div className="bg-white border rounded-xl p-4 mb-4">
-        <p className="text-xs text-gray-500 mb-2">📅 {todayLabel} — өдрийн постын дараалал</p>
+        {/* Огноогоор ухрах — өнгөрсөн 14 хоногт юу тавьсныг харах */}
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <button onClick={() => setDate((d) => shiftDate(d, -1))}
+            className="px-2.5 py-1 rounded-lg border text-sm hover:bg-gray-50">←</button>
+          <div className="text-center">
+            <p className="text-sm font-medium">📅 {dateLabel}</p>
+            {!isToday && (
+              <button onClick={() => setDate(today)} className="text-xs text-blue-600 hover:underline">
+                Өнөөдөр рүү буцах
+              </button>
+            )}
+          </div>
+          <button onClick={() => setDate((d) => shiftDate(d, 1))} disabled={isToday}
+            className="px-2.5 py-1 rounded-lg border text-sm hover:bg-gray-50 disabled:opacity-30">→</button>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <select value={campaignId ?? ''} onChange={(e) => setCampaignId(Number(e.target.value))}
             className="border rounded-lg px-3 py-2 text-sm min-w-[200px]">
@@ -107,11 +144,11 @@ export default function QueueTab({ onChanged }: { onChanged?: () => void }) {
               onChange={(e) => setLimit(Number(e.target.value))}
               className="border rounded-lg px-2 py-1.5 text-sm w-16" />
           </label>
-          <button onClick={() => generate(false)} disabled={generating || !campaignId}
+          <button onClick={() => generate(false)} disabled={generating || !campaignId || !isToday}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
             {generating ? 'Үүсгэж байна...' : 'Дараалал гаргах'}
           </button>
-          <button onClick={() => generate(true)} disabled={generating || !campaignId}
+          <button onClick={() => generate(true)} disabled={generating || !campaignId || !isToday}
             title="AI-аар групп бүрт caption-ийг дахин найруулна (ANTHROPIC_API_KEY шаардлагатай)"
             className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50">
             🧠 AI-аар гаргах
@@ -120,8 +157,10 @@ export default function QueueTab({ onChanged }: { onChanged?: () => void }) {
         {info && <p className="text-xs text-green-600 mt-2">{info}</p>}
         {err && <p className="text-xs text-red-500 mt-2">{err}</p>}
         <p className="text-[11px] text-gray-400 mt-2">
-          Сонголт: cooldown-д ороогүй, сүүлийн 7 хоногт постлоогүй, A зэрэг түрүүлсэн, төрлүүд холилдсон группүүд.
-          Постлох ажлыг та өөрөө гүйцэтгэнэ — энэ зөвхөн дараалал, caption бэлтгэнэ.
+          {isToday
+            ? 'Дараалал өглөө бүр 09:00-д автоматаар үүснэ — товч дарах шаардлагагүй. Сонголт: cooldown-д ороогүй, сүүлийн 7 хоногт постлоогүй, A зэрэг түрүүлсэн, төрлүүд холилдсон группүүд.'
+            : 'Өнгөрсөн өдрийн түүх — шинээр дараалал зөвхөн өнөөдөр гаргана.'}
+          {' '}Постлох ажлыг та өөрөө гүйцэтгэнэ — энэ зөвхөн дараалал, caption бэлтгэнэ.
         </p>
       </div>
 

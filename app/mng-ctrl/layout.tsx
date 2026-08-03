@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 
@@ -39,6 +39,9 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const [remember, setRemember] = useState(true);
   const [pkBusy, setPkBusy] = useState(false);
   const [pkMsg, setPkMsg] = useState('');
+
+  // Маркетингийн өдрийн дараалалд хүлээгдэж буй постын тоо (цэсэн дээрх сануулга)
+  const [marketingQueued, setMarketingQueued] = useState(0);
 
   // OTP state
   const [step, setStep] = useState<'login' | 'otp'>('login');
@@ -83,6 +86,23 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     }
     setChecking(false);
   };
+
+  // Өдрийн постын дараалал хүлээж байгаа эсэхийг цэсэн дээр харуулах
+  const loadMarketingBadge = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/marketing/dashboard');
+      if (!res.ok) return;
+      const data = await res.json();
+      setMarketingQueued(data?.stats?.queuedToday || 0);
+    } catch {
+      // сануулга бол нэмэлт зүйл — алдаа гарвал чимээгүй өнгөрнө
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!authed || !otpVerified) return;
+    loadMarketingBadge();
+  }, [authed, otpVerified, pathname, loadMarketingBadge]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -410,6 +430,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         <nav className="p-2 flex-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
+            const badge = item.href === '/mng-ctrl/marketing' ? marketingQueued : 0;
             return (
               <button
                 key={item.href}
@@ -419,7 +440,15 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                 }`}
               >
                 <span className="text-base">{item.icon}</span>
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {badge > 0 && (
+                  <span
+                    className="bg-red-500 text-white text-[11px] font-semibold rounded-full px-1.5 min-w-[20px] text-center"
+                    title="Өнөөдөр тавихыг хүлээж буй пост"
+                  >
+                    {badge}
+                  </span>
+                )}
               </button>
             );
           })}
