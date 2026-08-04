@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<title>Хотол — СӨХ-ийн зарлалын пост (1080×1080)</title>
+<!--
+  Facebook бүлэг / Viber-т тавих ДӨРВӨЛЖИН зураг (1080×1080).
+  СӨХ-ийн дарга оршин суугчиддаа тарааж, аппруу татах зорилготой.
+
+  СӨХ-ийн нэр агуулаагүй тул АЛЬ Ч СӨХ ашиглана.
+  QR нь khotol.com/login руу заана — нэвтэрсэн хүнийг систем өөрөө
+  түүний СӨХ рүү нь оруулдаг тул байр бүрт өөр код хэрэггүй.
+
+  PNG болгох:  node scripts/make-onboarding-pdf.mjs
+-->
+<style>
+  :root {
+    --paper: #ffffff;
+    --panel: #f3f6fc;
+    --ink: #0e1b30;
+    --ink-soft: #4a5b76;
+    --accent: #2563eb;
+    --accent-deep: #1d4ed8;
+    --hair: #d9e1ee;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #eef1f7;
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+  }
+
+  /* Дөрвөлжин — Facebook, Instagram, Viber бүгдэд тохирно */
+  .sheet {
+    width: 1080px;
+    height: 1080px;
+    background: var(--paper);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Толгой ─────────────────────────────────── */
+  .brandbar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 46px 64px 0;
+  }
+  .dot {
+    width: 62px; height: 62px;
+    border-radius: 18px;
+    background: linear-gradient(150deg, var(--accent), var(--accent-deep));
+    display: grid; place-items: center;
+    color: #fff; font-size: 34px; font-weight: 800;
+  }
+  .wordmark { font-weight: 800; font-size: 44px; letter-spacing: -.03em; }
+  .brandbar .tag {
+    margin-left: auto;
+    font-size: 22px;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+
+  /* ── Гарчиг ─────────────────────────────────── */
+  .hero { padding: 34px 64px 0; }
+  h1 {
+    font-size: 68px;
+    line-height: 1.02;
+    letter-spacing: -.035em;
+    font-weight: 830;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h1 em { font-style: normal; color: var(--accent-deep); }
+  .lede {
+    font-size: 27px;
+    color: var(--ink-soft);
+    margin: 16px 0 0;
+    line-height: 1.32;
+  }
+
+  /* ── Гол хэсэг: ашиг тус + QR ───────────────── */
+  .core {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 48px;
+    align-items: center;
+    padding: 24px 64px 0;
+  }
+
+  ul.perks { list-style: none; margin: 0; padding: 0; }
+  ul.perks li {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    font-size: 29px;
+    font-weight: 650;
+    line-height: 1.25;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  ul.perks li:last-child { border-bottom: 0; }
+  ul.perks .ic { font-size: 33px; flex: none; }
+
+  .qrcard {
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 26px;
+    padding: 24px 24px 20px;
+    text-align: center;
+  }
+  .qrframe {
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px;
+  }
+  .qrframe svg { width: 100%; height: auto; display: block; }
+  .qrcard .scan {
+    margin: 16px 0 0;
+    font-size: 22px;
+    font-weight: 750;
+    line-height: 1.25;
+  }
+  .qrcard .url {
+    margin: 6px 0 0;
+    font-size: 21px;
+    font-weight: 800;
+    color: var(--accent-deep);
+    letter-spacing: -.01em;
+  }
+
+  /* ── Нэвтрэх дүрэм — хамгийн чухал мэдээлэл ─── */
+  .rule {
+    margin: 20px 64px 0;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 22px;
+    padding: 22px 34px;
+    display: flex;
+    align-items: center;
+    gap: 34px;
+  }
+  .rule .col { flex: 1; }
+  .rule .k {
+    font-size: 19px;
+    opacity: .82;
+    font-weight: 650;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    margin: 0 0 4px;
+  }
+  .rule .v { font-size: 30px; font-weight: 800; margin: 0; letter-spacing: -.02em; }
+  .rule .sep { width: 1px; align-self: stretch; background: rgba(255,255,255,.28); }
+
+  /* ── Хөл ────────────────────────────────────── */
+  .foot {
+    margin-top: auto;
+    padding: 20px 64px 38px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 22px;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .foot .pill {
+    background: #eaf1fe;
+    color: var(--accent-deep);
+    border-radius: 999px;
+    padding: 9px 20px;
+    font-weight: 750;
+    font-size: 21px;
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <div class="brandbar">
+    <div class="dot">Х</div>
+    <div class="wordmark">Хотол</div>
+    <div class="tag">СӨХ-ийн апп</div>
+  </div>
+
+  <div class="hero">
+    <h1>Байрныхаа мэдээллийг<br><em>утаснаасаа</em> хараарай</h1>
+    <p class="lede">Танай СӨХ Хотол системд шилжлээ. Бүх айл бүртгэгдсэн — шууд нэвтэрнэ.</p>
+  </div>
+
+  <div class="core">
+    <ul class="perks">
+      <li><span class="ic">💳</span><span>Төлбөр, өрийн үлдэгдлээ хэзээ ч харах</span></li>
+      <li><span class="ic">🔧</span><span>Засварын хүсэлт илгээж, явцыг хянах</span></li>
+      <li><span class="ic">📢</span><span>СӨХ-ийн зарлал утсанд шууд ирэх</span></li>
+      <li><span class="ic">📊</span><span>СӨХ-ийн санхүүг ил тод харах</span></li>
+    </ul>
+
+    <div class="qrcard">
+      <div class="qrframe">
+        <svg xmlns="http://www.w3.org/2000/svg" width="520" height="520" viewBox="0 0 27 27" shape-rendering="crispEdges" role="img" aria-label="khotol.com/login QR код"><path fill="#ffffff" d="M0 0h27v27H0z"/><path stroke="#0e1b30" d="M1 1.5h7m1 0h1m3 0h1m1 0h1m3 0h7M1 2.5h1m5 0h1m1 0h1m4 0h1m2 0h1m1 0h1m5 0h1M1 3.5h1m1 0h3m1 0h1m1 0h1m1 0h2m1 0h2m3 0h1m1 0h3m1 0h1M1 4.5h1m1 0h3m1 0h1m2 0h3m1 0h4m1 0h1m1 0h3m1 0h1M1 5.5h1m1 0h3m1 0h1m1 0h2m1 0h4m1 0h1m1 0h1m1 0h3m1 0h1M1 6.5h1m5 0h1m2 0h2m1 0h3m3 0h1m5 0h1M1 7.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M11 8.5h4m1 0h1M1 9.5h1m2 0h7m1 0h1m2 0h4m2 0h1m1 0h3M3 10.5h3m2 0h3m1 0h1m1 0h3m3 0h5M2 11.5h1m3 0h3m3 0h2m2 0h1m1 0h1m1 0h1m1 0h1m2 0h1M1 12.5h2m1 0h2m3 0h1m1 0h1m4 0h1m1 0h2m1 0h5M1 13.5h1m3 0h4m1 0h2m5 0h1m1 0h2m4 0h1M1 14.5h3m4 0h1m1 0h2m1 0h1m1 0h2m4 0h1m2 0h1M1 15.5h2m4 0h1m2 0h1m4 0h4m2 0h5M1 16.5h1m1 0h1m1 0h2m1 0h1m1 0h1m2 0h1m4 0h1m1 0h1m1 0h2m1 0h1M1 17.5h1m1 0h1m1 0h1m1 0h1m1 0h6m2 0h5m1 0h2M9 18.5h4m4 0h1m3 0h1m1 0h2M1 19.5h7m1 0h3m1 0h1m3 0h1m1 0h1m1 0h1m3 0h1M1 20.5h1m5 0h1m1 0h4m1 0h1m1 0h2m3 0h1m3 0h1M1 21.5h1m1 0h3m1 0h1m1 0h1m2 0h2m1 0h7M1 22.5h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h4m1 0h2m4 0h2M1 23.5h1m1 0h3m1 0h1m3 0h3m1 0h1m1 0h1m3 0h5M1 24.5h1m5 0h1m3 0h1m3 0h1m3 0h3m1 0h3M1 25.5h7m1 0h3m1 0h1m3 0h3m2 0h1m2 0h1"/></svg>
+      </div>
+      <p class="scan">Камераараа<br>уншуулна уу</p>
+      <p class="url">khotol.com/login</p>
+    </div>
+  </div>
+
+  <div class="rule">
+    <div class="col">
+      <p class="k">Нэвтрэх нэр</p>
+      <p class="v">Утасны дугаар</p>
+    </div>
+    <div class="sep"></div>
+    <div class="col">
+      <p class="k">Нууц үг</p>
+      <p class="v">Мөн тэр дугаар</p>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="pill">Апп татах шаардлагагүй</span>
+    <span>Хөтчөөр нээгдэнэ · iPhone, Android аль нь ч болно</span>
+  </div>
+
+</div>
+
+</body>
+</html>
