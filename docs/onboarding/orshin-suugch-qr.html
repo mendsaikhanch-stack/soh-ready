@@ -236,6 +236,27 @@
     .sheet { border: none; border-radius: 0; box-shadow: none; max-width: 100%; }
     .num, .dot { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .qrcard, .creds { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    /* Нэг A4 нүүрэнд багтаах — дэлгэц/PNG хувилбарт хамаарахгүй.
+       Шалгах: node scripts/check-print-fit.mjs */
+    .brandbar { padding: 16px 30px; }
+
+    .hero { padding: 24px 30px 2px; }
+    h1 { font-size: 34px; margin-bottom: 10px; }
+    .lede { font-size: 15.5px; }
+
+    .cta { margin: 16px 30px 0; padding: 14px 18px; }
+
+    /* QR-ыг томоор — самбарт наасан хуудсыг 1-2 метрээс уншуулна */
+    .core { padding: 18px 30px 2px; gap: 26px; grid-template-columns: 262px 1fr; }
+    .qrcard .noapp { margin-top: 10px; padding-top: 9px; }
+
+    ol.steps { gap: 11px; }
+
+    .creds { margin: 14px 30px 2px; padding: 14px 18px; gap: 20px; }
+    .creds .note { padding-top: 9px; }
+
+    .foot { margin-top: 14px; padding: 14px 30px 4px; }
   }
 </style>
 </head>

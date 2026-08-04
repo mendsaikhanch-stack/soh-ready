@@ -231,11 +231,34 @@
   }
 
   /* ── Print (A4) ────────────────────────────── */
+  /* Багтаамж: 210×297mm - 12mm margin = 186×273mm ≈ 703×1032px (96dpi).
+     Дэлгэцийн хэмжээгээр хэвлэхэд 2 нүүр болдог тул хэвлэхэд л шахна —
+     Facebook/Viber-т тавьдаг PNG нь дэлгэцийн уужим хувилбараараа үлдэнэ.
+     Хэмжихдээ: node scripts/check-print-fit.mjs */
   @page { size: A4 portrait; margin: 12mm; }
   @media print {
     body { background: #fff; padding: 0; }
     .sheet { border: none; border-radius: 0; box-shadow: none; max-width: 100%; }
     .num, .dot, .qrcard, .case { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    .brandbar { padding: 16px 30px; }
+
+    .hero { padding: 24px 30px 2px; }
+    h1 { font-size: 34px; margin-bottom: 10px; }
+    .lede { font-size: 15.5px; }
+
+    .cta { margin: 16px 30px 0; padding: 14px 18px; }
+
+    /* QR-ыг томоор — самбарт наасан хуудсыг 1-2 метрээс уншуулна */
+    .core { padding: 18px 30px 2px; gap: 26px; grid-template-columns: 262px 1fr; }
+    .qrcard .noapp { margin-top: 10px; padding-top: 9px; }
+
+    ol.steps { gap: 12px; }
+
+    .cases { margin: 14px 30px 2px; }
+    .case { padding: 14px 17px; }
+
+    .foot { margin-top: 14px; padding: 14px 30px 4px; }
   }
 </style>
 </head>
