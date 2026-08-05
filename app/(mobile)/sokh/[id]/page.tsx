@@ -71,6 +71,7 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
         { icon: '🏪', label: 'Дэлгүүр', desc: 'Хотхоны дэлгүүр, үйлчилгээ', href: 'shops', color: 'bg-rose-50 border-rose-200' },
         { icon: '📞', label: 'Холбоо барих', desc: 'СӨХ-тэй холбогдох', href: 'contact', color: 'bg-teal-50 border-teal-200' },
         { icon: '🚪', label: 'Зочны бүртгэл', desc: 'QR код үүсгэж зочдод илгээх', href: 'visitors', color: 'bg-teal-50 border-teal-200' },
+        { icon: '📚', label: 'СӨХ-ийн зөвлөгөө', desc: 'Хууль, дүрмийн товч тайлбар', href: 'advice', color: 'bg-emerald-50 border-emerald-200' },
         { icon: '📖', label: 'Гарын авлага', desc: 'Апп хэрхэн ашиглах заавар', href: 'guide', color: 'bg-indigo-50 border-indigo-200' },
       ],
     },

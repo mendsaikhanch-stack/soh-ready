@@ -42,6 +42,7 @@ const navItems = [
 ];
 
 const infoItems = [
+  { icon: '📚', label: 'СӨХ-ийн зөвлөгөө', href: '/admin/advice' },
   { icon: '❓', label: 'Тусламж', href: '/help' },
   { icon: '📄', label: 'Үйлчилгээний нөхцөл', href: '/terms/admin' },
   { icon: '🔒', label: 'Нууцлалын бодлого', href: '/privacy' },
