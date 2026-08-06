@@ -97,18 +97,57 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       }
+      // Хайлт нь user_metadata.phone-оор явдаг тул түүнийг заавал шинэчилнэ.
+      await supabaseAdmin.auth.admin.updateUserById(authUserId, {
+        password: phone,
+        user_metadata: { name: resident.name, phone },
+      });
     } else {
       console.error('[residents/reset-password createUser]', createErr?.message);
       return NextResponse.json({ error: 'Нэвтрэх бүртгэл үүсгэж чадсангүй' }, { status: 500 });
     }
     await supabaseAdmin.from('residents').update({ auth_user_id: authUserId }).eq('id', resident.id);
   } else {
-    const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(authUserId, {
-      password: phone,
-    });
-    if (updErr) {
-      console.error('[residents/reset-password updateUser]', updErr.message);
-      return NextResponse.json({ error: 'Нууц үгийг сэргээж чадсангүй' }, { status: 500 });
+    // Дарга утсыг нь сольсон эсэхийг шалгана. Холбоотой бүртгэлийн хаяг одоогийн
+    // утастай таарахгүй байхад ЗӨВХӨН нууц үг сэргээвэл оршин суугч шинэ
+    // дугаараараа нэвтэрч чадахгүй, хуучнаараа орсон ч байраа олохгүй болно.
+    const { data: linked } = await supabaseAdmin.auth.admin.getUserById(authUserId);
+    const linkedEmail = linked?.user?.email || '';
+
+    if (linkedEmail && linkedEmail !== email) {
+      // Бүртгэлийг шинэ дугаар руу ШИЛЖҮҮЛНЭ (түүх нь хэвээр үлдэнэ).
+      const { error: moveErr } = await supabaseAdmin.auth.admin.updateUserById(authUserId, {
+        email,
+        password: phone,
+        user_metadata: { name: resident.name, phone },
+      });
+      if (moveErr) {
+        // Шинэ дугаар өөр бүртгэлд аль хэдийн эзэмшигдсэн бол түүн рүү холбоно.
+        const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        const taken = (list?.users || []).find((u) => u.email === email);
+        if (!taken) {
+          console.error('[residents/reset-password moveUser]', moveErr.message);
+          return NextResponse.json(
+            { error: 'Нэвтрэх бүртгэлийг шинэ дугаар руу шилжүүлж чадсангүй' },
+            { status: 500 },
+          );
+        }
+        await supabaseAdmin.auth.admin.updateUserById(taken.id, {
+          password: phone,
+          user_metadata: { name: resident.name, phone },
+        });
+        authUserId = taken.id;
+        await supabaseAdmin.from('residents').update({ auth_user_id: authUserId }).eq('id', resident.id);
+      }
+    } else {
+      const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(authUserId, {
+        password: phone,
+        user_metadata: { name: resident.name, phone },
+      });
+      if (updErr) {
+        console.error('[residents/reset-password updateUser]', updErr.message);
+        return NextResponse.json({ error: 'Нууц үгийг сэргээж чадсангүй' }, { status: 500 });
+      }
     }
   }
 

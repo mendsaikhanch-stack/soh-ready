@@ -127,6 +127,11 @@ export default function AdminResidents() {
       resident_type: form.resident_type || null,
     };
 
+    // Утас солигдвол нэвтрэх бүртгэл нь ХУУЧИН дугаартаа үлдэнэ. "Нууц үг
+    // сэргээх" дарж байж шинэ дугаар руу шилждэг тул даргад заавал сануулна.
+    const prev = editId ? residents.find(r => r.id === editId) : null;
+    const phoneChanged = !!prev && !!payload.phone && payload.phone !== (prev.phone || '');
+
     if (editId) {
       await adminFrom('residents').update(payload).eq('id', editId);
     } else {
@@ -136,6 +141,15 @@ export default function AdminResidents() {
     setShowForm(false);
     setSaving(false);
     await fetchResidents();
+
+    if (phoneChanged) {
+      alert(
+        `${payload.apartment} тоотын утас солигдлоо.\n\n` +
+        `⚠️ Одоо тэр айлын мөрөн дээрх "Нууц үг сэргээх" товчийг ЗААВАЛ дарна уу.\n\n` +
+        `Түүнийг дарж байж нэвтрэх эрх нь шинэ дугаар руу шилжинэ. Эс бөгөөс\n` +
+        `тэр айл шинэ ч, хуучин ч дугаараараа нэвтэрч чадахгүй болно.`
+      );
+    }
   };
 
   const deleteResident = async (id: number) => {
@@ -152,27 +166,80 @@ export default function AdminResidents() {
     const lines = text.split('\n').filter(l => l.trim());
 
     // CSV: name,apartment,phone,building,block,entrance,floor,area_sqm,debt
-    const newResidents = lines.slice(1).map(line => {
+    // Тоотоор нь тулгана: байгаа тоот бол ШИНЭЧИЛНЭ, байхгүй бол НЭМНЭ.
+    // (Өмнө нь бүх мөрийг insert хийдэг байсан тул засварласан жагсаалт
+    //  оруулахад бүх айл давхардаж ордог байв.)
+    const parsed = lines.slice(1).map(line => {
       const cols = line.split(',').map(s => s.trim().replace(/"/g, ''));
       return {
-        name: cols[0], apartment: cols[1], phone: cols[2] || null,
-        building: cols[3] || null, block: cols[4] || null,
-        entrance: cols[5] || null, floor: cols[6] || null,
-        area_sqm: Number(cols[7]) || 0, debt: Number(cols[8]) || 0,
+        name: cols[0] || '', apartment: cols[1] || '', phone: cols[2] || '',
+        building: cols[3] || '', block: cols[4] || '', entrance: cols[5] || '',
+        floor: cols[6] || '', area_sqm: cols[7] || '', debt: cols[8] || '',
       };
     }).filter(r => r.name && r.apartment);
 
-    if (newResidents.length === 0) {
+    if (parsed.length === 0) {
       alert('CSV формат: name,apartment,phone,building,block,entrance,floor,area_sqm,debt');
       return;
     }
 
-    const { error } = await adminFrom('residents').insert(newResidents);
-    if (error) alert('Алдаа: ' + error);
-    else {
-      alert(`${newResidents.length} оршин суугч нэмэгдлээ!`);
-      await fetchResidents();
+    const byApartment = new Map(residents.map(r => [String(r.apartment).trim(), r]));
+    const toUpdate = parsed.filter(r => byApartment.has(r.apartment));
+    const toInsert = parsed.filter(r => !byApartment.has(r.apartment));
+
+    const proceed = confirm(
+      `${parsed.length} мөр уншлаа:\n\n` +
+      `• Байгаа ${toUpdate.length} тоот ШИНЭЧЛЭГДЭНЭ\n` +
+      `• Шинэ ${toInsert.length} тоот НЭМЭГДЭНЭ\n\n` +
+      `Хоосон үлдээсэн нүд байвал тэр талбар хэвээрээ үлдэнэ.\n\n` +
+      `Үргэлжлүүлэх үү?`
+    );
+    if (!proceed) { if (fileRef.current) fileRef.current.value = ''; return; }
+
+    // Зөвхөн бөглөсөн нүдийг бичнэ — хоосон нүд байгаа өгөгдлийг арилгахгүй.
+    const patchOf = (r: typeof parsed[number]) => {
+      const p: Record<string, unknown> = {};
+      if (r.name) p.name = r.name;
+      if (r.phone) p.phone = r.phone;
+      if (r.building) p.building = r.building;
+      if (r.block) p.block = r.block;
+      if (r.entrance) p.entrance = r.entrance;
+      if (r.floor) p.floor = r.floor;
+      if (r.area_sqm !== '') p.area_sqm = Number(r.area_sqm) || 0;
+      if (r.debt !== '') p.debt = Number(r.debt) || 0;
+      return p;
+    };
+
+    let updated = 0, inserted = 0, failed = 0;
+    const phoneChanged: string[] = [];
+
+    for (const r of toUpdate) {
+      const row = byApartment.get(r.apartment);
+      if (!row) continue;
+      if (r.phone && r.phone !== (row.phone || '')) phoneChanged.push(r.apartment);
+      const { error } = await adminFrom('residents').update(patchOf(r)).eq('id', row.id);
+      if (error) failed++; else updated++;
     }
+
+    if (toInsert.length) {
+      const { error } = await adminFrom('residents').insert(
+        toInsert.map(r => ({ apartment: r.apartment, ...patchOf(r) }))
+      );
+      if (error) failed += toInsert.length; else inserted = toInsert.length;
+    }
+
+    const needsReset = [...phoneChanged, ...toInsert.map(r => r.apartment)];
+    alert(
+      `Дууслаа.\n\n` +
+      `Шинэчилсэн : ${updated}\n` +
+      `Нэмсэн     : ${inserted}\n` +
+      (failed ? `Алдаа      : ${failed}\n` : '') +
+      (needsReset.length
+        ? `\n⚠️ Утас нь солигдсон/шинэ ${needsReset.length} айл дээр "Нууц үг сэргээх" дарж өгнө үү,\n` +
+          `эс бөгөөс тэд нэвтэрч чадахгүй:\n${needsReset.join(', ')}`
+        : '')
+    );
+    await fetchResidents();
     if (fileRef.current) fileRef.current.value = '';
   };
 
