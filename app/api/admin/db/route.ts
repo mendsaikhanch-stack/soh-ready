@@ -18,6 +18,7 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'cctv_requests', 'marketplace_listings', 'content_reports', 'scheduled_notifications',
     'push_subscriptions', 'visitor_passes', 'org_features', 'points_ledger',
     'resident_points', 'finance_entries', 'budget_categories', 'error_logs',
+    'invoices', 'budget_items', 'budget_plans', 'reserve_fund',
     'platform_plans', 'sokh_subscriptions', 'platform_invoices',
     'platform_bank_accounts', 'platform_transactions', 'sokh_tiers',
     'ebarimt_configs',
@@ -34,6 +35,8 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'cctv_requests', 'marketplace_listings', 'content_reports', 'scheduled_notifications',
     'push_subscriptions', 'visitor_passes', 'org_features', 'points_ledger',
     'resident_points', 'finance_entries', 'budget_categories',
+    // Санхүү — бүгд sokh_id-тэй тул enforceTenantScope-ийн ерөнхий зам хамгаална
+    'invoices', 'budget_items', 'budget_plans', 'reserve_fund',
     'proposals', 'proposal_voters', 'proposal_votes',
   ]),
   osnaa: new Set([

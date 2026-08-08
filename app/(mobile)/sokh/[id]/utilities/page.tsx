@@ -247,19 +247,10 @@ export default function UtilitiesPage() {
           setChecking(false);
           setPaySuccess(true);
 
-          // utility_bills статус шинэчлэх
-          await supabase
-            .from('utility_bills')
-            .update({ status: 'paid', paid_at: new Date().toISOString() })
-            .eq('id', bill.id);
-
-          // payments бүртгэх
-          await supabase.from('payments').insert([{
-            resident_id: profile?.id,
-            amount: bill.amount,
-            description: `QPay — ${typeMap[bill.utility_type]?.label || bill.utility_type} (${months[bill.month - 1]} ${bill.year})`,
-          }]);
-
+          // ⚠️ Төлбөрийн төлөвийг client талаас бичихгүй. Доорх өөрчлөлт нь
+          // зөвхөн дэлгэц дээрх түр харагдац. Нэхэмжлэхийг "төлсөн" болгох,
+          // төлбөрийн түүхэнд бичих ажлыг ЗӨВХӨН сервер (QPay callback /
+          // Wire webhook, service_role) гүйцэтгэнэ.
           setBills(prev => prev.map(b => b.id === bill.id ? { ...b, status: 'paid' } : b));
 
           setTimeout(() => {

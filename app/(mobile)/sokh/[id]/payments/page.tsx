@@ -263,22 +263,11 @@ export default function PaymentsPage() {
             setBills(prev => prev.map(b => b.id === bill.id ? { ...b, paid: true } : b));
           }
 
-          // Суубаас-д төлбөр бүртгэх
-          await supabase.from('payments').insert([{
-            amount: bill.amount,
-            description: `QPay — ${bill.name}`,
-            resident_id: profile?.id,
-          }]);
-
-          // Хэрэв энэ нь invoice (bill.id > 50000) бол invoice-г paid болгох
-          if (bill.id > 50000) {
-            const invoiceId = bill.id - 50000;
-            await supabase.from('invoices').update({
-              status: 'paid',
-              paid_amount: bill.amount,
-              paid_at: new Date().toISOString(),
-            }).eq('id', invoiceId);
-          }
+          // ⚠️ Төлбөрийн төлөвийг ЭНД бичихгүй. Дээрх өөрчлөлт нь зөвхөн
+          // дэлгэц дээрх түр харагдац. Нэхэмжлэхийг "төлсөн" болгох, төлбөрийн
+          // түүхэнд бичих ажлыг ЗӨВХӨН сервер (QPay callback / Wire webhook,
+          // service_role) гүйцэтгэнэ — эс тэгвэл мөнгө төлөөгүй байж өрөө
+          // арилгах боломж үүснэ.
 
           setTimeout(() => {
             setPayingBill(null);

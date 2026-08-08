@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import * as XLSX from 'xlsx';
@@ -84,35 +83,46 @@ export default function AdminFinanceHub() {
     const sokhId = await getAdminSokhId();
     if (!sokhId) { setLoading(false); return; }
 
-    const [
-      { data: org },
-      { data: res },
-      { data: pay },
-      { data: allPay },
-      { data: items },
-      { data: plans },
-      { data: inv },
-      { data: rf },
-    ] = await Promise.all([
-      supabase.from('sokh_organizations').select('monthly_fee, name, address, phone').eq('id', sokhId).single(),
-      supabase.from('residents').select('id,name,apartment,debt,entrance').eq('sokh_id', sokhId).order('apartment'),
-      supabase.from('payments').select('*, residents!inner(sokh_id)').eq('residents.sokh_id', sokhId).gte('paid_at', `${year}-${String(month).padStart(2, '0')}-01`).lt('paid_at', month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`).order('paid_at', { ascending: false }),
-      supabase.from('payments').select('amount,paid_at,resident_id, residents!inner(sokh_id)').eq('residents.sokh_id', sokhId).order('paid_at', { ascending: false }),
-      supabase.from('budget_items').select('*').eq('sokh_id', sokhId).eq('month', month).eq('year', year).order('amount', { ascending: false }),
-      supabase.from('budget_plans').select('*').eq('sokh_id', sokhId).eq('month', month).eq('year', year),
-      supabase.from('invoices').select('*').eq('sokh_id', sokhId).eq('year', year).eq('month', month).order('id'),
-      supabase.from('reserve_fund').select('*').eq('sokh_id', sokhId).order('occurred_at', { ascending: false }).limit(100),
+    // Админ нь Supabase Auth хэрэглэгч БИШ тул anon client-д RLS 0 мөр буцаана.
+    // Бүх уншилт adminFrom proxy-гоор (service_role + tenant scope) явна.
+    const [{ data: org }, { data: res }] = await Promise.all([
+      adminFrom('sokh_organizations').select('monthly_fee, name, address, phone').eq('id', sokhId).single(),
+      adminFrom('residents').select('id,name,apartment,debt,entrance').eq('sokh_id', sokhId).order('apartment', { ascending: true }),
     ]);
 
-    setMonthlyFee(org?.monthly_fee || 0);
-    setFeeInput(String(org?.monthly_fee || ''));
-    setResidents(res || []);
-    setPayments((pay || []) as unknown as Payment[]);
-    setAllPayments((allPay || []) as unknown as Payment[]);
-    setBudgetItems(items || []);
-    setBudgetPlans(plans || []);
-    setInvoices(inv || []);
-    setReserveEntries(rf || []);
+    const residentList = (res as unknown as Resident[]) || [];
+    const residentIds = residentList.map(r => r.id);
+
+    // payments-д sokh_id байхгүй — proxy нь resident_id-ээр tenant scope хийдэг
+    const [{ data: allPay }, { data: items }, { data: plans }, { data: inv }, { data: rf }] = await Promise.all([
+      residentIds.length
+        ? adminFrom('payments').select('*').in('resident_id', residentIds).order('paid_at', { ascending: false })
+        : Promise.resolve({ data: [] }),
+      adminFrom('budget_items').select('*').eq('sokh_id', sokhId).eq('month', month).eq('year', year).order('amount', { ascending: false }),
+      adminFrom('budget_plans').select('*').eq('sokh_id', sokhId).eq('month', month).eq('year', year),
+      adminFrom('invoices').select('*').eq('sokh_id', sokhId).eq('year', year).eq('month', month).order('id', { ascending: true }),
+      adminFrom('reserve_fund').select('*').eq('sokh_id', sokhId).order('occurred_at', { ascending: false }).limit(100),
+    ]);
+
+    // Тухайн сарын төлбөрийг JS талд шүүнэ (proxy нь огнооны хязгаар дэмждэггүй)
+    const allPayList = (allPay as unknown as Payment[]) || [];
+    const from = new Date(year, month - 1, 1).getTime();
+    const to = new Date(year, month, 1).getTime();
+    const monthPayments = allPayList.filter(p => {
+      const t = new Date(p.paid_at).getTime();
+      return !isNaN(t) && t >= from && t < to;
+    });
+
+    const orgRow = org as unknown as { monthly_fee?: number } | null;
+    setMonthlyFee(orgRow?.monthly_fee || 0);
+    setFeeInput(String(orgRow?.monthly_fee || ''));
+    setResidents(residentList);
+    setPayments(monthPayments);
+    setAllPayments(allPayList);
+    setBudgetItems((items as unknown as BudgetItem[]) || []);
+    setBudgetPlans((plans as unknown as BudgetPlan[]) || []);
+    setInvoices((inv as unknown as Invoice[]) || []);
+    setReserveEntries((rf as unknown as ReserveEntry[]) || []);
     setLoading(false);
   }, [month, year]);
 
