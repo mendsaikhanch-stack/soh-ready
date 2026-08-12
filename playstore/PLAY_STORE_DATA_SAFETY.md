@@ -7,20 +7,30 @@ Google Play Console → **App content ▸ Data safety** хэсгийг бөгл�
 > Энэ тайлан нь репогийн судалгаанд (Supabase backend, Sentry, file upload талбарууд)
 > үндэслэсэн **төсөл** юм.
 
-## ⏳ Console-д ХИЙГДЭЭГҮЙ засвар (2026-08-12)
+## ✅ Console-д хийгдсэн засвар (2026-08-12)
 
-Кодыг шалгахад доорх хоёр төрөл цуглуулагддаг атлаа энэ баримтад ч, Play
-Console-ийн маягтад ч тунхаглагдаагүй байсныг илрүүлж, **энэ баримтад нэмэв**.
-Play Console дээрх маягтыг гараар ижил болгож засах шаардлагатай:
+Кодыг шалгахад доорх хоёр төрөл цуглуулагддаг атлаа тунхаглагдаагүй байсныг
+илрүүлэв:
 
 1. **Тээврийн хэрэгслийн улсын дугаар** — `parking_vehicles` (оршин суугчийн
    өөрийн машин), `guest_vehicles` (зочны машин), `blocking_reports`
    (зам түгжсэн машин мэдээлэх).
 2. **Тоолуурын заалт** — `meter_readings`, `utility_usage` (ус/дулаан/цахилгаан).
 
-Console-д хийх зам: **App content ▸ Data safety ▸ Data types ▸ Personal info ▸
-Other info** — сонгоод «Collected = Yes», зорилго нь «App functionality»,
-«Optional», «Encrypted in transit = Yes», «Users can request deletion = Yes».
+**Play Console дээр Personal info ▸ Other info-г нэмж, 2026-08-12-нд шалгалтад
+илгээв** (Publishing overview → «Changes in review»). Өгсөн хариултууд:
+
+| Асуулт | Хариулт |
+|---|---|
+| Collected / Shared | **Collected** (Shared — ҮГҮЙ) |
+| Processed ephemerally? | Үгүй (Supabase-д хадгалагдана) |
+| Required эсвэл optional? | **Optional** — «Users can choose» |
+| Зорилго | Зөвхөн **App functionality** |
+
+> ⚠️ Өмнөх хувилбарт «Other info (apartment/unit)» гэж бичсэн нь БУРУУ байв.
+> Console дээр тоот/хаяг нь **Address** дор тунхаглагдсан байсан бөгөөд
+> Other info огт сонгогдоогүй байсан. Одоо Other info нь машины дугаар,
+> тоолуурын заалт хоёрыг хамарна.
 
 > Эдгээр хүснэгтэд production-д одоогоор бараг өгөгдөл алга (parking_vehicles
 > 1 мөр, бусад нь 0). Гэхдээ Google нь «апп цуглуулах БОЛОМЖТОЙ юу» гэж
@@ -71,9 +81,8 @@ Play Console-ийн ангиллаар:
 - Name — ✔ Collected · App functionality, Account management
 - Email address — ✔ Collected · Account management, App functionality
 - Phone number — ✔ Collected (optional) · App functionality
-- Address — ✔ Collected · App functionality
-- Other info — ✔ Collected · App functionality
-  - тоот/байр (apartment/unit)
+- Address — ✔ Collected · App functionality · (тоот/байр энд орсон)
+- Other info — ✔ Collected · App functionality · Optional
   - **тээврийн хэрэгслийн улсын дугаар, марк, өнгө** (зогсоолын модуль)
   - **тоолуурын заалт** (ус/дулаан/цахилгааны хэрэглээ)
 
