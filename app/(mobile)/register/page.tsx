@@ -215,6 +215,9 @@ function RegisterInner() {
           name: name.trim(),
           password: password.trim(),
           apartment: fullAddress,
+          // Цэвэр тоот — сервер тал үүгээр даргын бүртгэлтэй тулгаж, байгаа
+          // мөр рүү нь холбоно (давхар мөр үүсгэхгүй).
+          unit: door.trim() || undefined,
           sokh_id: selectedSokh?.id,
           sokh_name: !selectedSokh && customSokhName.trim() ? customSokhName.trim() : undefined,
           khoroo_id: !selectedSokh && customSokhName.trim() ? selectedKhoroo?.id : undefined,
@@ -252,6 +255,18 @@ function RegisterInner() {
         } catch {
           // ignore
         }
+      }
+
+      // Даргын бүртгэлтэй тулгаж чадаагүй бол дарга баталгаажуулах хүртэл
+      // хүлээнэ — хэрэглэгчид энэ талаар шууд хэлнэ, дуугүй өнгөрөх ёсгүй.
+      if (result?.pendingApproval) {
+        alert(
+          'Бүртгэл үүслээ.\n\n' +
+          'Таны тоотыг СӨХ-ийн жагсаалтаас олсонгүй. Тиймээс СӨХ-ийн дарга\n' +
+          'таныг баталгаажуулах хүртэл төлбөр, өрийн мэдээлэл харагдахгүй.\n\n' +
+          'Хэрэв дарга танд утасны дугаараар бүртгэл үүсгэсэн бол «Бүртгүүлэх»\n' +
+          'биш «Нэвтрэх»-ээр тэр дугаараараа орно уу.'
+        );
       }
 
       const newSokhId = result.sokh_id ?? selectedSokh?.id;

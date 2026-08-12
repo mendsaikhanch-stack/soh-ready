@@ -11,7 +11,7 @@ interface BudgetItem { id: number; category: string; amount: number; month: numb
 interface BudgetPlan { id: number; category: string; planned_amount: number; month: number; year: number; notes: string; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
 interface Invoice { id: number; resident_id: number; year: number; month: number; amount: number; status: string; paid_amount: number; due_date: string; paid_at: string | null; description: string; }
-interface Resident { id: number; name: string; apartment: string; debt: number; entrance: number | null; monthly_fee: number | null; }
+interface Resident { id: number; name: string; apartment: string; debt: number; entrance: number | null; monthly_fee: number | null; pending_claim: boolean; }
 interface ReserveEntry { id: number; type: string; amount: number; description: string; occurred_at: string; }
 
 const categoryOptions = [
@@ -92,10 +92,12 @@ export default function AdminFinanceHub() {
     // Бүх уншилт adminFrom proxy-гоор (service_role + tenant scope) явна.
     const [{ data: org }, { data: res }] = await Promise.all([
       adminFrom('sokh_organizations').select('monthly_fee, name, address, phone').eq('id', sokhId).single(),
-      adminFrom('residents').select('id,name,apartment,debt,entrance,monthly_fee').eq('sokh_id', sokhId).order('apartment', { ascending: true }),
+      adminFrom('residents').select('id,name,apartment,debt,entrance,monthly_fee,pending_claim').eq('sokh_id', sokhId).order('apartment', { ascending: true }),
     ]);
 
-    const residentList = (res as unknown as Resident[]) || [];
+    // Дарга баталгаажуулаагүй (өөрөө бүртгүүлсэн) хүнд нэхэмжлэх үүсгэхгүй,
+    // хүлээгдэх орлогод ч тооцохгүй. Оршин суугчид цэснээс баталгаажуулна.
+    const residentList = ((res as unknown as Resident[]) || []).filter(r => !r.pending_claim);
     const residentIds = residentList.map(r => r.id);
 
     // payments-д sokh_id байхгүй — proxy нь resident_id-ээр tenant scope хийдэг

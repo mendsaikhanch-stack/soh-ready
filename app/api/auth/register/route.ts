@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { phone, password, name, apartment, sokh_id: sokhIdRaw, sokh_name, khoroo_id } = await req.json();
+    const { phone, password, name, apartment, unit, sokh_id: sokhIdRaw, sokh_name, khoroo_id } = await req.json();
     let sokh_id: number | undefined = sokhIdRaw;
 
     if (!phone || !password || !name) {
@@ -34,6 +34,9 @@ export async function POST(req: NextRequest) {
     }
     if (apartment && (typeof apartment !== 'string' || apartment.trim().length > 200)) {
       return NextResponse.json({ error: 'Хаяг хэт урт байна' }, { status: 400 });
+    }
+    if (unit && (typeof unit !== 'string' || unit.trim().length > 20)) {
+      return NextResponse.json({ error: 'Тоот буруу байна' }, { status: 400 });
     }
 
     const cleanPhone = phone.trim();
@@ -112,20 +115,74 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Бүртгэл амжилтгүй' }, { status: 400 });
     }
 
-    // Оршин суугчийн мэдээлэл хадгалах. id-г буцааж авч claim хийхэд ашиглана.
-    // auth_user_id холбоо нь tenant-scoped RLS policy-д шаардлагатай.
-    const { data: resident } = await supabaseAdmin
-      .from('residents')
-      .insert([{
-        name: name.trim(),
-        phone: cleanPhone,
-        apartment: apartment || '',
-        debt: 0,
-        sokh_id,
-        auth_user_id: authData.user?.id ?? null,
-      }])
-      .select('id')
-      .single();
+    // ── Даргын бүртгэлтэй тулгах ──
+    // Өмнө нь энд болзолгүйгээр INSERT хийдэг байсан тул даргын импортолсон
+    // айл өөр утсаар бүртгүүлбэл тэр тоот давхар мөр болж, айлын тоо ба нийт
+    // дүн буруу гардаг байв. Одоо эхлээд байгаа мөрийг хайна.
+    const cleanUnit = typeof unit === 'string' ? unit.trim() : '';
+    let resident: { id: number } | null = null;
+    let claimedExisting = false;
+    let pending = false;
+
+    if (sokh_id && cleanUnit) {
+      const { data: matches } = await supabaseAdmin
+        .from('residents')
+        .select('id, auth_user_id')
+        .eq('sokh_id', sokh_id)
+        .eq('apartment', cleanUnit);
+
+      const free = (matches || []).filter((m) => !m.auth_user_id);
+      // Яг нэг эзэнгүй мөр байвал л холбоно. Хэд хэдэн бол аль нь болох нь
+      // тодорхойгүй тул даргад шийдүүлнэ.
+      if (free.length === 1) {
+        const { data: linked } = await supabaseAdmin
+          .from('residents')
+          .update({
+            name: name.trim(),
+            // auth-context нь профайлыг УТСААР хайдаг тул заавал шинэчилнэ
+            phone: cleanPhone,
+            auth_user_id: authData.user?.id ?? null,
+          })
+          .eq('id', free[0].id)
+          .is('auth_user_id', null)   // зэрэг хоёр хүн бүртгүүлэхээс хамгаална
+          .select('id')
+          .single();
+        if (linked) {
+          resident = linked as { id: number };
+          claimedExisting = true;
+        }
+      }
+    }
+
+    if (!resident) {
+      // Холбогдох мөр олдсонгүй → шинэ мөр. Тухайн СӨХ-д баталгаажуулах дарга
+      // байвал "хүлээгдэж буй" болгоно (тоо/дүнд орохгүй). Дарга байхгүй бол
+      // баталгаажуулах хүн ч алга тул шууд хүчинтэй.
+      if (sokh_id) {
+        const { data: darga } = await supabaseAdmin
+          .from('admin_users')
+          .select('id')
+          .eq('sokh_id', sokh_id)
+          .eq('status', 'active')
+          .limit(1);
+        pending = !!(darga && darga.length);
+      }
+
+      const { data: created } = await supabaseAdmin
+        .from('residents')
+        .insert([{
+          name: name.trim(),
+          phone: cleanPhone,
+          apartment: cleanUnit || apartment || '',
+          debt: 0,
+          sokh_id,
+          auth_user_id: authData.user?.id ?? null,
+          pending_claim: pending,
+        }])
+        .select('id')
+        .single();
+      resident = created as { id: number } | null;
+    }
 
     // Pre-auth manual signup-аас үлдсэн provisional бичлэгүүдийг тус хэрэглэгч рүү
     // claim хийж оролдох. Алдаа гарвал register-ийг fail хийхгүй.
@@ -154,7 +211,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const response = NextResponse.json({ success: true, email, claim, sokh_id });
+    const response = NextResponse.json({
+      success: true, email, claim, sokh_id,
+      linkedToExisting: claimedExisting,  // даргын бүртгэлтэй мөр рүү холбогдсон
+      pendingApproval: pending,           // дарга баталгаажуулах хүртэл хүлээнэ
+    });
     if (claim?.anythingLinked) {
       // Token-ыг нэгэнт хэрэглэсэн тул cookie-г цэвэрлэнэ
       response.cookies.delete(CLAIM_COOKIE);

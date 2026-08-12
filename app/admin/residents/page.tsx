@@ -21,6 +21,7 @@ interface Resident {
   move_in_date: string | null;
   profile_completed_at: string | null;
   monthly_fee: number | null;
+  pending_claim: boolean;
 }
 
 const emptyForm = { name: '', apartment: '', phone: '', debt: '0', area_sqm: '0', building: '', block: '', entrance: '', floor: '', resident_type: '', monthly_fee: '' };
@@ -117,7 +118,8 @@ export default function AdminResidents() {
       r.apartment.toLowerCase().includes(q) ||
       (r.building || '').toLowerCase().includes(q) ||
       (r.entrance || '').toLowerCase().includes(q);
-  });
+    // Баталгаажуулах хүлээж буй мөрийг дээр гаргана — дарга анзаарахгүй өнгөрөх ёсгүй
+  }).sort((a, b) => Number(b.pending_claim) - Number(a.pending_claim));
 
   const openAdd = () => {
     setEditId(null);
@@ -180,6 +182,18 @@ export default function AdminResidents() {
         `тэр айл шинэ ч, хуучин ч дугаараараа нэвтэрч чадахгүй болно.`
       );
     }
+  };
+
+  // Өөрөө бүртгүүлсэн айлыг дарга баталгаажуулна — үүний дараа тоо/дүнд орно
+  const approveResident = async (r: Resident) => {
+    if (!confirm(
+      `${r.apartment} тоот — ${r.name} (${r.phone || 'утасгүй'})\n\n` +
+      `Энэ хүн өөрөө бүртгүүлсэн байна. Үнэхээр танай СӨХ-ийн оршин суугч мөн бол\n` +
+      `баталгаажуулна уу. Баталгаажуулсны дараа айлын тоо, нийт дүнд орно.\n\n` +
+      `Баталгаажуулах уу?`
+    )) return;
+    await adminFrom('residents').update({ pending_claim: false }).eq('id', r.id);
+    await fetchResidents();
   };
 
   const deleteResident = async (id: number) => {
@@ -288,10 +302,14 @@ export default function AdminResidents() {
     a.href = url; a.download = 'residents.csv'; a.click();
   };
 
-  const totalDebt = filtered.reduce((s, r) => s + r.debt, 0);
-  const totalFee = filtered.reduce((s, r) => s + feeOf(r), 0);
-  const completedCount = residents.filter(isComplete).length;
-  const completedPct = residents.length ? Math.round((completedCount / residents.length) * 100) : 0;
+  // Баталгаажаагүй мөрийг тоо/дүнд оруулахгүй — эс бөгөөс хэн ч бүртгүүлээд
+  // даргын тайланг гажуудуулж чадна.
+  const confirmed = residents.filter(r => !r.pending_claim);
+  const pendingCount = residents.length - confirmed.length;
+  const totalDebt = filtered.filter(r => !r.pending_claim).reduce((s, r) => s + r.debt, 0);
+  const totalFee = filtered.filter(r => !r.pending_claim).reduce((s, r) => s + feeOf(r), 0);
+  const completedCount = confirmed.filter(isComplete).length;
+  const completedPct = confirmed.length ? Math.round((completedCount / confirmed.length) * 100) : 0;
 
   return (
     <div className="p-6">
@@ -299,12 +317,17 @@ export default function AdminResidents() {
         <div>
           <h1 className="text-2xl font-bold">👥 Оршин суугчид</h1>
           <p className="text-sm text-gray-500">
-            {residents.length} айл &middot; Өмнөх үлдэгдэл: {totalDebt.toLocaleString()}₮
+            {confirmed.length} айл &middot; Өмнөх үлдэгдэл: {totalDebt.toLocaleString()}₮
             &middot; Сарын төлбөр: {totalFee.toLocaleString()}₮
             &middot; Нийт: <b>{(totalDebt + totalFee).toLocaleString()}₮</b>
             &middot; <span className={completedPct >= 80 ? 'text-green-600' : completedPct >= 40 ? 'text-amber-600' : 'text-red-500'}>
-              Бүрдэлт: {completedCount}/{residents.length} ({completedPct}%)
+              Бүрдэлт: {completedCount}/{confirmed.length} ({completedPct}%)
             </span>
+            {pendingCount > 0 && (
+              <> &middot; <span className="text-orange-600 font-semibold">
+                ⏳ {pendingCount} хүн баталгаажуулахыг хүлээж байна
+              </span></>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
@@ -385,11 +408,12 @@ export default function AdminResidents() {
               </thead>
               <tbody>
                 {filtered.map((r, i) => (
-                  <tr key={r.id} className="border-t hover:bg-gray-50 text-sm">
+                  <tr key={r.id} className={`border-t text-sm ${r.pending_claim ? 'bg-orange-50 hover:bg-orange-100' : 'hover:bg-gray-50'}`}>
                     <td className="px-3 py-2.5 text-gray-400 text-xs">{i + 1}</td>
                     <td className="px-3 py-2.5 font-medium">
                       {r.name}
-                      {!isComplete(r) && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 align-middle">дутуу</span>}
+                      {r.pending_claim && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-orange-200 text-orange-800 align-middle">өөрөө бүртгүүлсэн</span>}
+                      {!r.pending_claim && !isComplete(r) && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 align-middle">дутуу</span>}
                     </td>
                     <td className="px-3 py-2.5 font-medium">
                       {r.apartment}
@@ -415,7 +439,12 @@ export default function AdminResidents() {
                     <td className="px-3 py-2.5 text-right font-bold text-gray-800">
                       {(r.debt + feeOf(r)).toLocaleString()}₮
                     </td>
-                    <td className="px-3 py-2.5 text-right">
+                    <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                      {r.pending_claim && (
+                        <button onClick={() => approveResident(r)} className="text-white bg-green-600 text-xs mr-2 px-2 py-1 rounded hover:bg-green-700">
+                          ✓ Баталгаажуулах
+                        </button>
+                      )}
                       <button onClick={() => openEdit(r)} className="text-blue-500 text-xs mr-2 hover:underline">Засах</button>
                       <button
                         onClick={() => resetPassword(r)}
