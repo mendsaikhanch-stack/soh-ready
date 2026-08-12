@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { useAuth } from '@/app/lib/auth-context';
 
 interface BudgetItem {
   id: number;
@@ -32,6 +33,7 @@ const months = ['1-р сар','2-р сар','3-р сар','4-р сар','5-р с
 export default function FinancePage() {
   const params = useParams();
   const router = useRouter();
+  const { profile } = useAuth();
   const [items, setItems] = useState<BudgetItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -71,7 +73,11 @@ export default function FinancePage() {
         {/* Your fee breakdown */}
         <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
           <p className="text-xs text-gray-500 mb-1">Таны сарын төлбөр</p>
-          <p className="text-2xl font-bold text-cyan-700">{monthlyFee.toLocaleString()}₮</p>
+          {/* Айлд тусгай тариф тогтоосон бол түүнийг, эс бөгөөс СӨХ-ийн ерөнхий дүнг харуулна */}
+          <p className="text-2xl font-bold text-cyan-700">{(Number(profile?.monthly_fee ?? monthlyFee) || 0).toLocaleString()}₮</p>
+          {profile?.monthly_fee != null && Number(profile.monthly_fee) !== monthlyFee && (
+            <p className="text-[10px] text-gray-400">{profile.apartment} тоотод тогтоосон тариф</p>
+          )}
           {items.length > 0 && (
             <div className="mt-3 space-y-1.5">
               {items.map(item => {

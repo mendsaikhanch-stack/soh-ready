@@ -11,7 +11,7 @@ interface BudgetItem { id: number; category: string; amount: number; month: numb
 interface BudgetPlan { id: number; category: string; planned_amount: number; month: number; year: number; notes: string; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
 interface Invoice { id: number; resident_id: number; year: number; month: number; amount: number; status: string; paid_amount: number; due_date: string; paid_at: string | null; description: string; }
-interface Resident { id: number; name: string; apartment: string; debt: number; entrance: number | null; }
+interface Resident { id: number; name: string; apartment: string; debt: number; entrance: number | null; monthly_fee: number | null; }
 interface ReserveEntry { id: number; type: string; amount: number; description: string; occurred_at: string; }
 
 const categoryOptions = [
@@ -77,6 +77,11 @@ export default function AdminFinanceHub() {
   const [generating, setGenerating] = useState(false);
   const [genMessage, setGenMessage] = useState('');
 
+  // Айлын сарын хураамж: тухайн айлд тусгай тариф байвал түүнийг, эс бөгөөс
+  // СӨХ-ийн ерөнхий хураамжийг хэрэглэнэ. (Зарим СӨХ давхар/зориулалтаар
+  // ялгавартай тариф тогтоодог — жишээ нь эхний давхрын албан байгууллагууд.)
+  const feeOf = (r: Resident) => Number(r.monthly_fee ?? monthlyFee) || 0;
+
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -87,7 +92,7 @@ export default function AdminFinanceHub() {
     // Бүх уншилт adminFrom proxy-гоор (service_role + tenant scope) явна.
     const [{ data: org }, { data: res }] = await Promise.all([
       adminFrom('sokh_organizations').select('monthly_fee, name, address, phone').eq('id', sokhId).single(),
-      adminFrom('residents').select('id,name,apartment,debt,entrance').eq('sokh_id', sokhId).order('apartment', { ascending: true }),
+      adminFrom('residents').select('id,name,apartment,debt,entrance,monthly_fee').eq('sokh_id', sokhId).order('apartment', { ascending: true }),
     ]);
 
     const residentList = (res as unknown as Resident[]) || [];
@@ -180,18 +185,21 @@ export default function AdminFinanceHub() {
   };
 
   const generateInvoices = async () => {
-    if (!monthlyFee) { alert('Эхлээд сарын хураамжаа тохируулна уу.'); return; }
     if (!residents.length) { alert('Оршин суугч бүртгэгдээгүй байна.'); return; }
-    if (!confirm(`${months[month - 1]} сарын ${residents.length} нэхэмжлэх (${monthlyFee.toLocaleString()}₮ × ${residents.length}) үүсгэх үү?`)) return;
+    const noFee = residents.filter(r => !feeOf(r));
+    if (noFee.length === residents.length) { alert('Эхлээд сарын хураамжаа тохируулна уу.'); return; }
+    if (noFee.length) {
+      if (!confirm(`${noFee.length} айлд хураамж тогтоогоогүй байна (${noFee.slice(0, 8).map(r => r.apartment).join(', ')}${noFee.length > 8 ? '…' : ''}).\nТэднийг алгасаад үлдсэн ${residents.length - noFee.length} нэхэмжлэхийг үүсгэх үү?`)) return;
+    } else if (!confirm(`${months[month - 1]} сарын ${residents.length} нэхэмжлэх (нийт ${expectedMonthly.toLocaleString()}₮) үүсгэх үү?`)) return;
     setGenerating(true);
     setGenMessage('');
     const sokhId = await getAdminSokhId();
     const dueDate = new Date(year, month - 1, 25).toISOString().slice(0, 10);
-    const rows = residents.map(r => ({
+    const rows = residents.filter(r => feeOf(r) > 0).map(r => ({
       sokh_id: sokhId,
       resident_id: r.id,
       year, month,
-      amount: monthlyFee,
+      amount: feeOf(r),          // айл бүрийн өөрийн тариф (байхгүй бол СӨХ-ийн ерөнхий дүн)
       due_date: dueDate,
       status: 'pending',
       description: `${months[month - 1]} ${year} - сарын хураамж`,
@@ -232,7 +240,14 @@ export default function AdminFinanceHub() {
   const monthNet = monthIncome - monthExpense;
   const totalDebt = residents.reduce((s, r) => s + Number(r.debt || 0), 0);
   const debtors = residents.filter(r => Number(r.debt || 0) > 0).length;
-  const expectedMonthly = monthlyFee * residents.length;
+  const expectedMonthly = residents.reduce((s, r) => s + feeOf(r), 0);
+  // Тарифын хураангуй: бүх айл ижил дүнтэй юу, эсвэл ялгавартай юу
+  const feeVariants = Array.from(new Set(residents.map(feeOf).filter(Boolean))).sort((a, b) => a - b);
+  const feeSummary = feeVariants.length === 0
+    ? '—'
+    : feeVariants.length === 1
+      ? `${residents.length} айл × ${feeVariants[0].toLocaleString()}₮`
+      : `${residents.length} айл, ${feeVariants.length} янзын тариф (${feeVariants[0].toLocaleString()}–${feeVariants[feeVariants.length - 1].toLocaleString()}₮)`;
   const collectionRate = expectedMonthly > 0 ? (monthIncome / expectedMonthly * 100) : 0;
   const reserveBalance = reserveEntries.reduce((s, e) => s + (e.type === 'deposit' ? e.amount : -e.amount), 0);
   const yearIncome = allPayments.filter(p => new Date(p.paid_at).getFullYear() === year).reduce((s, p) => s + Number(p.amount), 0);
@@ -327,7 +342,14 @@ export default function AdminFinanceHub() {
                       <button onClick={() => { setFeeEditing(false); setFeeInput(String(monthlyFee)); }} className="px-3 py-1.5 border rounded-lg text-sm">Цуцлах</button>
                     </div>
                   ) : (
-                    <p className="text-2xl font-bold text-blue-700">{monthlyFee.toLocaleString()}₮</p>
+                    <>
+                      <p className="text-2xl font-bold text-blue-700">{monthlyFee.toLocaleString()}₮</p>
+                      {feeVariants.length > 1 && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          Тусгай тарифтай айлууд байгаа тул нийт хүлээгдэх дүн: <b>{expectedMonthly.toLocaleString()}₮</b> ({feeSummary})
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
                 {!feeEditing && (
@@ -395,7 +417,7 @@ export default function AdminFinanceHub() {
             <div>
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <KpiCard label="Энэ сарын орлого" value={`${monthIncome.toLocaleString()}₮`} sub={`${payments.length} төлөлт`} color="green" />
-                <KpiCard label="Хүлээгдсэн" value={`${expectedMonthly.toLocaleString()}₮`} sub={`${residents.length} айл × ${monthlyFee.toLocaleString()}₮`} color="blue" />
+                <KpiCard label="Хүлээгдсэн" value={`${expectedMonthly.toLocaleString()}₮`} sub={feeSummary} color="blue" />
                 <KpiCard label="Үлдэгдэл" value={`${Math.max(0, expectedMonthly - monthIncome).toLocaleString()}₮`} sub={`${(100 - collectionRate).toFixed(1)}%`} color="red" />
               </div>
 
@@ -561,7 +583,7 @@ export default function AdminFinanceHub() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm text-gray-500">{months[month - 1]} {year} нэхэмжлэх</p>
-                  <p className="text-xs text-gray-400">Нэг хураамж: {monthlyFee.toLocaleString()}₮ × {residents.length} айл = {expectedMonthly.toLocaleString()}₮</p>
+                  <p className="text-xs text-gray-400">{feeSummary} = {expectedMonthly.toLocaleString()}₮</p>
                 </div>
                 <button onClick={generateInvoices} disabled={generating} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
                   {generating ? 'Үүсгэж байна...' : `🧾 ${months[month - 1]} сарын нэхэмжлэх үүсгэх`}
@@ -570,7 +592,7 @@ export default function AdminFinanceHub() {
 
               {genMessage && <div className={`p-3 rounded-lg text-sm mb-4 ${genMessage.startsWith('✅') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{genMessage}</div>}
 
-              {!monthlyFee && (
+              {!expectedMonthly && (
                 <div className="bg-amber-50 border border-amber-200 text-amber-700 p-3 rounded-lg text-sm mb-4">
                   ⚠️ Сарын тогтсон хураамжаа Хяналт цэснээс эхлээд тохируулна уу.
                 </div>

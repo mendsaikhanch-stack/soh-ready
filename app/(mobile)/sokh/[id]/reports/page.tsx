@@ -42,11 +42,12 @@ export default function ReportsPage() {
   const [orgName, setOrgName] = useState('');
   const [monthlyFee, setMonthlyFee] = useState(0);
   const [residentCount, setResidentCount] = useState(0);
+  const [feeSum, setFeeSum] = useState(0); // айл бүрийн тарифын нийлбэр
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const [{ data: budgetData }, { data: org }, { count }] = await Promise.all([
+      const [{ data: budgetData }, { data: org }, { data: resList }] = await Promise.all([
         supabase
           .from('budget_items')
           .select('*')
@@ -55,12 +56,16 @@ export default function ReportsPage() {
           .eq('year', year)
           .order('amount', { ascending: false }),
         supabase.from('sokh_organizations').select('name, monthly_fee').eq('id', params.id).single(),
-        supabase.from('residents').select('id', { count: 'exact', head: true }).eq('sokh_id', params.id),
+        supabase.from('residents').select('monthly_fee').eq('sokh_id', params.id),
       ]);
       setItems(budgetData || []);
       setOrgName(org?.name || '');
       setMonthlyFee(org?.monthly_fee || 0);
-      setResidentCount(count || 0);
+      const list = resList || [];
+      setResidentCount(list.length);
+      // Айл бүр өөрийн тарифтай байж болно; байхгүй бол СӨХ-ийн ерөнхий дүнгээр
+      setFeeSum(list.reduce((s: number, r: { monthly_fee: number | null }) =>
+        s + (Number(r.monthly_fee ?? org?.monthly_fee) || 0), 0));
       setLoading(false);
     };
     fetchData();
@@ -68,7 +73,8 @@ export default function ReportsPage() {
 
   const totalExpense = items.filter(i => !i.category.includes('income')).reduce((s, i) => s + i.amount, 0);
   const totalIncome = items.filter(i => i.category.includes('income')).reduce((s, i) => s + i.amount, 0);
-  const estimatedIncome = monthlyFee * residentCount;
+  const estimatedIncome = feeSum;
+  const avgFee = residentCount ? Math.round(feeSum / residentCount) : monthlyFee;
   const getCat = (c: string) => categoryMap[c] || categoryMap.other;
   const fmt = (n: number) => n.toLocaleString('mn-MN') + '₮';
 
@@ -98,7 +104,7 @@ export default function ReportsPage() {
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <p className="text-xs text-gray-500">Нийт орлого (тооцоолол)</p>
             <p className="text-xl font-bold text-green-600">{fmt(estimatedIncome + totalIncome)}</p>
-            <p className="text-[10px] text-gray-400 mt-1">{residentCount} айл × {fmt(monthlyFee)}</p>
+            <p className="text-[10px] text-gray-400 mt-1">{residentCount} айл, дунджаар {fmt(avgFee)}</p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <p className="text-xs text-gray-500">Нийт зардал</p>
@@ -193,7 +199,7 @@ export default function ReportsPage() {
             </div>
 
             <p className="text-center text-[10px] text-gray-400 mt-4">
-              Тайлбар: Орлого нь {residentCount} айл × {fmt(monthlyFee)} сарын хураамжаар тооцоолсон. Бодит цуглуулалтаас ялгаатай байж болно.
+              Тайлбар: Орлого нь {residentCount} айлын сарын хураамжийн нийлбэрээр ({fmt(feeSum)}) тооцоолсон. Бодит цуглуулалтаас ялгаатай байж болно.
             </p>
           </>
         )}

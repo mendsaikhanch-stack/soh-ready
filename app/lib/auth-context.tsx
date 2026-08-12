@@ -15,6 +15,7 @@ interface UserProfile {
   household_size: number | null;
   move_in_date: string | null;
   profile_completed_at: string | null;
+  monthly_fee: number | null; // тухайн айлын тусгай тариф; null бол СӨХ-ийн ерөнхий дүн
 }
 
 interface AuthContextType {
@@ -91,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         household_size: data.household_size ?? null,
         move_in_date: data.move_in_date ?? null,
         profile_completed_at: data.profile_completed_at ?? null,
+        monthly_fee: data.monthly_fee ?? null,
       });
     }
     setLoading(false);
