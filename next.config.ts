@@ -3,6 +3,12 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  env: {
+    // Build хийх үеийн хувилбарыг клиент багц руу шингээнэ. Апп үүнийгээ
+    // /api/version-ээс ирэх амьд хувилбартай харьцуулж, шинэ deploy гарсныг
+    // мэднэ. (Vercel дээр VERCEL_GIT_COMMIT_SHA автоматаар өгөгддөг.)
+    NEXT_PUBLIC_APP_VERSION: process.env.VERCEL_GIT_COMMIT_SHA || 'dev',
+  },
   turbopack: {
     root: process.cwd(),
   },

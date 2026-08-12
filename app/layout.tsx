@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { DarkModeProvider } from "@/app/lib/dark-mode";
 import { I18nProvider } from "@/app/lib/i18n";
+import UpdateBanner from "@/app/lib/update-banner";
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
@@ -62,6 +63,8 @@ export default function RootLayout({
       <body className="min-h-full" style={{ fontFamily: 'var(--font-inter), sans-serif' }}>
         <I18nProvider>
           <DarkModeProvider>
+            {/* Шинэ deploy гармагц бүх хуудсанд мэдэгдэнэ (оршин суугч ба дарга хоёуланд) */}
+            <UpdateBanner />
             {children}
           </DarkModeProvider>
         </I18nProvider>
