@@ -53,7 +53,10 @@ export const errorLogLimiter = rateLimit({ name: 'error-log', windowMs: 60 * 100
 export const pushSubscribeLimiter = rateLimit({ name: 'push-sub', windowMs: 60 * 1000, maxRequests: 10 });
 export const qpayInvoiceLimiter = rateLimit({ name: 'qpay-invoice', windowMs: 60 * 1000, maxRequests: 10 });
 export const qpayCheckLimiter = rateLimit({ name: 'qpay-check', windowMs: 60 * 1000, maxRequests: 30 });
-export const adminDbLimiter = rateLimit({ name: 'admin-db', windowMs: 60 * 1000, maxRequests: 100 });
+// Админы DB proxy — нэвтэрсэн хэрэглэгч + төхөөрөмж тус бүрээр тоолно
+// (IP-ээр тоолдог байсан тул нэг оффисоос 2-3 төхөөрөмжөөр зэрэг ажиллахад
+//  квот дуусаж, товчнууд чимээгүйхэн ажиллахаа больдог байв).
+export const adminDbLimiter = rateLimit({ name: 'admin-db', windowMs: 60 * 1000, maxRequests: 300 });
 export const adminUsersLimiter = rateLimit({ name: 'admin-users', windowMs: 60 * 1000, maxRequests: 20 });
 export const authCheckLimiter = rateLimit({ name: 'auth-check', windowMs: 60 * 1000, maxRequests: 60 });
 export const pushSendLimiter = rateLimit({ name: 'push-send', windowMs: 60 * 1000, maxRequests: 20 });

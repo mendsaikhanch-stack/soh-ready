@@ -179,15 +179,19 @@ async function enforceTenantScope(
 
 // Admin DB proxy — service_role key ашиглан зөвшөөрөгдсөн хүснэгт дээр DB операц хийнэ
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
-  const rl = adminDbLimiter.check(ip);
-  if (!rl.allowed) {
-    return NextResponse.json({ error: `Хэт олон хүсэлт. ${rl.retryAfterSec}с хүлээнэ үү` }, { status: 429 });
-  }
-
   const auth = await getAuthRole();
   if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Хязгаарлалтыг нэвтэрсэн хэрэглэгч + IP-ээр түлхүүрлэнэ. Зөвхөн IP-ээр
+  // тоолдог байсан тул нэг СӨХ-ийн дарга компьютер, утас 2-3 төхөөрөмжөөр
+  // зэрэг ажиллахад квот дуусч, хуудас хоосон гарч, товч дарахад юу ч
+  // болохгүй байв.
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
+  const rl = adminDbLimiter.check(`${auth.role}:${auth.userId || '0'}:${ip}`);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: `Хэт олон хүсэлт. ${rl.retryAfterSec}с хүлээнэ үү` }, { status: 429 });
   }
 
   try {

@@ -22,9 +22,10 @@ interface Resident {
   profile_completed_at: string | null;
   monthly_fee: number | null;
   pending_claim: boolean;
+  unit_kind: string | null;
 }
 
-const emptyForm = { name: '', apartment: '', phone: '', debt: '0', area_sqm: '0', building: '', block: '', entrance: '', floor: '', resident_type: '', monthly_fee: '' };
+const emptyForm = { name: '', apartment: '', phone: '', debt: '0', area_sqm: '0', building: '', resident_type: '', monthly_fee: '', unit_kind: 'household' };
 
 const TYPE_LABELS: Record<string, string> = { owner: 'Эзэмшигч', tenant: 'Түрээслэгч', family: 'Гэр бүл' };
 const isPlaceholderName = (n: string) => /тоот\s*$/i.test(n || '') || /-р\s*байр/i.test(n || '');
@@ -46,11 +47,11 @@ export default function AdminResidents() {
   // Айлын сарын төлбөр: тусгай тариф байвал түүнийг, үгүй бол СӨХ-ийн ерөнхий дүнг
   const feeOf = (r: Resident) => Number(r.monthly_fee ?? orgFee) || 0;
 
-  // Байр/блок/орц/давхар/талбай — тусад нь багана эзлүүлэхгүй, тоотын доор нэг мөрөнд
-  const locationOf = (r: Resident) =>
-    [r.building, r.block && `${r.block} блок`, r.entrance && `${r.entrance} орц`,
-     r.floor && `${r.floor} давхар`, r.area_sqm > 0 && `${r.area_sqm} мкв`]
-      .filter(Boolean).join(' · ');
+  // Тоотын доор зөвхөн байрны нэрийг харуулна (талбай нь өөрийн баганатай)
+  const locationOf = (r: Resident) => (r.building || '').trim();
+
+  // Аж ахуйн нэгж үү, айл өрх үү (unit_kind багана хоосон бол айл гэж үзнэ)
+  const isBusiness = (r: Resident) => r.unit_kind === 'business';
 
   // Оршин суугчийн нууц үгийг түр нууц үг (= утасны дугаар) болгож сэргээнэ
   const resetPassword = async (r: Resident) => {
@@ -93,9 +94,11 @@ export default function AdminResidents() {
       adminFrom('sokh_organizations').select('monthly_fee').eq('id', sokhId).single(),
       adminFrom('parking_vehicles').select('plate_number, apartment, status').eq('sokh_id', sokhId),
     ]);
+    // Эрэмбэ нь ЗӨВХӨН тоотоос хамаарна. (Өмнө нь байр/орц/давхраар эрэмбэлдэг
+    // байсан тул тэдгээрийг бөглөсөн айл жагсаалтын хамгийн ард үсэрдэг байв.)
     const cmp = (a?: string, b?: string) => (a || '').localeCompare(b || '', undefined, { numeric: true });
     const rows = ((data as unknown as Resident[]) || []).slice().sort((a, b) =>
-      cmp(a.building, b.building) || cmp(a.entrance, b.entrance) || cmp(a.floor, b.floor) || cmp(a.apartment, b.apartment)
+      cmp(a.apartment, b.apartment) || a.id - b.id
     );
 
     // Машины бүртгэлийг тоотоор нь бүлэглэнэ (хассан машиныг оруулахгүй)
@@ -116,8 +119,8 @@ export default function AdminResidents() {
     const q = search.toLowerCase();
     return r.name.toLowerCase().includes(q) ||
       r.apartment.toLowerCase().includes(q) ||
-      (r.building || '').toLowerCase().includes(q) ||
-      (r.entrance || '').toLowerCase().includes(q);
+      (r.phone || '').includes(q) ||
+      (r.building || '').toLowerCase().includes(q);
     // Баталгаажуулах хүлээж буй мөрийг дээр гаргана — дарга анзаарахгүй өнгөрөх ёсгүй
   }).sort((a, b) => Number(b.pending_claim) - Number(a.pending_claim));
 
@@ -132,10 +135,10 @@ export default function AdminResidents() {
     setForm({
       name: r.name, apartment: r.apartment, phone: r.phone || '',
       debt: String(r.debt), area_sqm: String(r.area_sqm || 0),
-      building: r.building || '', block: r.block || '',
-      entrance: r.entrance || '', floor: r.floor || '',
+      building: r.building || '',
       resident_type: r.resident_type || '',
       monthly_fee: r.monthly_fee == null ? '' : String(r.monthly_fee),
+      unit_kind: r.unit_kind === 'business' ? 'business' : 'household',
     });
     setShowForm(true);
   };
@@ -151,10 +154,8 @@ export default function AdminResidents() {
       debt: Number(form.debt) || 0,
       area_sqm: Number(form.area_sqm) || 0,
       building: form.building || null,
-      block: form.block || null,
-      entrance: form.entrance || null,
-      floor: form.floor || null,
       resident_type: form.resident_type || null,
+      unit_kind: form.unit_kind === 'business' ? 'business' : 'household',
       // Хоосон орхивол null — тэгвэл СӨХ-ийн ерөнхий тариф үйлчилнэ
       monthly_fee: form.monthly_fee === '' ? null : Number(form.monthly_fee) || 0,
     };
@@ -164,14 +165,17 @@ export default function AdminResidents() {
     const prev = editId ? residents.find(r => r.id === editId) : null;
     const phoneChanged = !!prev && !!payload.phone && payload.phone !== (prev.phone || '');
 
-    if (editId) {
-      await adminFrom('residents').update(payload).eq('id', editId);
-    } else {
-      await adminFrom('residents').insert([payload]);
+    const { error } = editId
+      ? await adminFrom('residents').update(payload).eq('id', editId)
+      : await adminFrom('residents').insert([payload]);
+
+    setSaving(false);
+    if (error) {
+      alert(`Хадгалж чадсангүй: ${error}`);
+      return;
     }
 
     setShowForm(false);
-    setSaving(false);
     await fetchResidents();
 
     if (phoneChanged) {
@@ -209,7 +213,7 @@ export default function AdminResidents() {
     const text = await file.text();
     const lines = text.split('\n').filter(l => l.trim());
 
-    // CSV: name,apartment,phone,building,block,entrance,floor,area_sqm,debt,monthly_fee
+    // CSV: name,apartment,phone,building,block,entrance,floor,area_sqm,debt,monthly_fee,unit_kind
     // (Экспортын "plates" багана нь зөвхөн харах зориулалттай — машины бүртгэлийг
     //  Зогсоол цэснээс удирдана, эндээс импортлохгүй.)
     // Тоотоор нь тулгана: байгаа тоот бол ШИНЭЧИЛНЭ, байхгүй бол НЭМНЭ.
@@ -221,12 +225,12 @@ export default function AdminResidents() {
         name: cols[0] || '', apartment: cols[1] || '', phone: cols[2] || '',
         building: cols[3] || '', block: cols[4] || '', entrance: cols[5] || '',
         floor: cols[6] || '', area_sqm: cols[7] || '', debt: cols[8] || '',
-        monthly_fee: cols[9] || '',
+        monthly_fee: cols[9] || '', unit_kind: cols[10] || '',
       };
     }).filter(r => r.name && r.apartment);
 
     if (parsed.length === 0) {
-      alert('CSV формат: name,apartment,phone,building,block,entrance,floor,area_sqm,debt,monthly_fee');
+      alert('CSV формат: name,apartment,phone,building,block,entrance,floor,area_sqm,debt,monthly_fee,unit_kind');
       return;
     }
 
@@ -255,6 +259,10 @@ export default function AdminResidents() {
       if (r.area_sqm !== '') p.area_sqm = Number(r.area_sqm) || 0;
       if (r.debt !== '') p.debt = Number(r.debt) || 0;
       if (r.monthly_fee !== '') p.monthly_fee = Number(r.monthly_fee) || 0;
+      // "ААН", "аж ахуйн нэгж", "business" → аж ахуйн нэгж; бусад бөглөсөн утга → айл
+      if (r.unit_kind !== '') {
+        p.unit_kind = /аан|аж ахуй|business/i.test(r.unit_kind) ? 'business' : 'household';
+      }
       return p;
     };
 
@@ -292,9 +300,9 @@ export default function AdminResidents() {
   };
 
   const exportCSV = () => {
-    const header = 'name,apartment,phone,building,block,entrance,floor,area_sqm,debt,monthly_fee,plates\n';
+    const header = 'name,apartment,phone,building,block,entrance,floor,area_sqm,debt,monthly_fee,unit_kind,plates\n';
     const rows = residents.map(r =>
-      `"${r.name}","${r.apartment}","${r.phone || ''}","${r.building || ''}","${r.block || ''}","${r.entrance || ''}","${r.floor || ''}",${r.area_sqm || 0},${r.debt},${r.monthly_fee ?? ''},"${(platesByApt[String(r.apartment).trim()] || []).join(' ')}"`
+      `"${r.name}","${r.apartment}","${r.phone || ''}","${r.building || ''}","${r.block || ''}","${r.entrance || ''}","${r.floor || ''}",${r.area_sqm || 0},${r.debt},${r.monthly_fee ?? ''},"${isBusiness(r) ? 'ААН' : 'айл'}","${(platesByApt[String(r.apartment).trim()] || []).join(' ')}"`
     ).join('\n');
     const blob = new Blob(['\ufeff' + header + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -306,6 +314,7 @@ export default function AdminResidents() {
   // даргын тайланг гажуудуулж чадна.
   const confirmed = residents.filter(r => !r.pending_claim);
   const pendingCount = residents.length - confirmed.length;
+  const businessCount = confirmed.filter(isBusiness).length;
   const totalDebt = filtered.filter(r => !r.pending_claim).reduce((s, r) => s + r.debt, 0);
   const totalFee = filtered.filter(r => !r.pending_claim).reduce((s, r) => s + feeOf(r), 0);
   const completedCount = confirmed.filter(isComplete).length;
@@ -317,7 +326,9 @@ export default function AdminResidents() {
         <div>
           <h1 className="text-2xl font-bold">👥 Оршин суугчид</h1>
           <p className="text-sm text-gray-500">
-            {confirmed.length} айл &middot; Өмнөх үлдэгдэл: {totalDebt.toLocaleString()}₮
+            {confirmed.length - businessCount} айл
+            {businessCount > 0 && <> &middot; {businessCount} аж ахуйн нэгж</>}
+            &middot; Өмнөх үлдэгдэл: {totalDebt.toLocaleString()}₮
             &middot; Сарын төлбөр: {totalFee.toLocaleString()}₮
             &middot; Нийт: <b>{(totalDebt + totalFee).toLocaleString()}₮</b>
             &middot; <span className={completedPct >= 80 ? 'text-green-600' : completedPct >= 40 ? 'text-amber-600' : 'text-red-500'}>
@@ -341,7 +352,7 @@ export default function AdminResidents() {
       </div>
 
       <input
-        placeholder="Нэр, тоот, байр, орцоор хайх..."
+        placeholder="Нэр, тоот, утас, байраар хайх..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full border rounded-lg px-4 py-2 mb-4 text-sm"
@@ -356,10 +367,11 @@ export default function AdminResidents() {
             <input placeholder="Тоот * (жнь: 101)" value={form.apartment} onChange={e => setForm({...form, apartment: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
             <input placeholder="Утас" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
             <input placeholder="Байр (жнь: 1-р байр)" value={form.building} onChange={e => setForm({...form, building: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="Блок (жнь: А)" value={form.block} onChange={e => setForm({...form, block: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="Орц (жнь: 1)" value={form.entrance} onChange={e => setForm({...form, entrance: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="Давхар (жнь: 3)" value={form.floor} onChange={e => setForm({...form, floor: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="Талбай (мкв)" type="number" value={form.area_sqm} onChange={e => setForm({...form, area_sqm: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
+            <select value={form.unit_kind} onChange={e => setForm({...form, unit_kind: e.target.value})} className="border rounded-lg px-3 py-2 text-sm">
+              <option value="household">🏠 Айл өрх</option>
+              <option value="business">🏢 Аж ахуйн нэгж</option>
+            </select>
+            <input placeholder="Талбай (мкв)" type="number" step="0.1" value={form.area_sqm} onChange={e => setForm({...form, area_sqm: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
             <input placeholder="Өмнөх үлдэгдэл (₮)" type="number" value={form.debt} onChange={e => setForm({...form, debt: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
             <input
               placeholder={orgFee ? `Сарын төлбөр (хоосон = ${orgFee.toLocaleString()}₮)` : 'Сарын төлбөр (₮)'}
@@ -397,6 +409,8 @@ export default function AdminResidents() {
                   <th className="px-3 py-3">№</th>
                   <th className="px-3 py-3">Нэр</th>
                   <th className="px-3 py-3">Тоот</th>
+                  <th className="px-3 py-3 text-right">Талбай (мкв)</th>
+                  <th className="px-3 py-3">Хэлбэр</th>
                   <th className="px-3 py-3">Эзэмшлийн төрөл</th>
                   <th className="px-3 py-3">Утас</th>
                   <th className="px-3 py-3">Машины бүртгэл</th>
@@ -417,8 +431,16 @@ export default function AdminResidents() {
                     </td>
                     <td className="px-3 py-2.5 font-medium">
                       {r.apartment}
-                      {/* Байршил/талбайг тоотын доор багцалж харуулна — багана нэмэхгүйгээр мэдээллийг хадгална */}
+                      {/* Байрны нэрийг тоотын доор жижгээр — багана нэмэхгүйгээр мэдээллийг хадгална */}
                       {locationOf(r) && <div className="text-[10px] text-gray-400 font-normal">{locationOf(r)}</div>}
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-gray-600">
+                      {r.area_sqm > 0 ? r.area_sqm : <span className="text-gray-300">-</span>}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${isBusiness(r) ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {isBusiness(r) ? '🏢 Аж ахуйн нэгж' : '🏠 Айл'}
+                      </span>
                     </td>
                     <td className="px-3 py-2.5 text-gray-500">
                       {r.resident_type ? TYPE_LABELS[r.resident_type] || r.resident_type : <span className="text-gray-300">-</span>}

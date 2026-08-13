@@ -68,6 +68,8 @@ export default function AdminParking() {
   const [guestForm, setGuestForm] = useState({ plate_number: '', host_name: '', host_apartment: '', allowed_minutes: 60 });
   const [showGuestForm, setShowGuestForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [savingVehicle, setSavingVehicle] = useState(false);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -91,14 +93,37 @@ export default function AdminParking() {
   };
 
   // Vehicle CRUD
+  // Заавал шаардах цорын ганц зүйл бол машины дугаар. (Өмнө нь эзэмшигчийн
+  // нэрийг ч шаарддаг байсан тул зөвхөн дугаар бичээд Хадгалах дарахад
+  // юу ч болохгүй, ямар ч мессеж гарахгүй байв.)
   const saveVehicle = async () => {
-    if (!form.plate_number || !form.resident_name) return;
+    const plate = form.plate_number.trim();
+    if (!plate) {
+      setFormError('Машины дугаарыг бөглөнө үү');
+      return;
+    }
+    setFormError('');
+    setSavingVehicle(true);
+
     const sokhId = await getAdminSokhId();
-    const payload = { ...form, parking_type: form.parking_type || null };
-    if (editId) {
-      await adminFrom('parking_vehicles').update(payload).eq('id', editId);
-    } else {
-      await adminFrom('parking_vehicles').insert({ sokh_id: sokhId, status: 'active', ...payload });
+    const payload = {
+      plate_number: plate,
+      resident_name: form.resident_name.trim() || null,
+      apartment: form.apartment.trim() || null,
+      car_model: form.car_model.trim() || null,
+      color: form.color || null,
+      parking_spot: form.parking_spot.trim() || null,
+      parking_type: form.parking_type || null,
+    };
+
+    const { error } = editId
+      ? await adminFrom('parking_vehicles').update(payload).eq('id', editId)
+      : await adminFrom('parking_vehicles').insert({ sokh_id: sokhId, status: 'active', ...payload });
+
+    setSavingVehicle(false);
+    if (error) {
+      setFormError(`Хадгалж чадсангүй: ${error}`);
+      return;
     }
     setShowForm(false);
     fetchAll();
@@ -112,11 +137,13 @@ export default function AdminParking() {
 
   const openAdd = () => {
     setEditId(null);
+    setFormError('');
     setForm({ plate_number: '', resident_name: '', apartment: '', car_model: '', color: 'Цагаан', parking_spot: '', parking_type: '' });
     setShowForm(true);
   };
   const openEdit = (v: Vehicle) => {
     setEditId(v.id);
+    setFormError('');
     setForm({
       plate_number: v.plate_number,
       resident_name: v.resident_name || '',
@@ -245,7 +272,7 @@ export default function AdminParking() {
             <div className="bg-white border rounded-xl p-4 mb-4">
               <h3 className="font-semibold mb-3">{editId ? 'Засах' : 'Шинэ машин'}</h3>
               <div className="grid grid-cols-3 gap-3">
-                <input placeholder="Дугаар (0000 УБА)" value={form.plate_number} onChange={e => setForm({ ...form, plate_number: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
+                <input placeholder="Дугаар * (0000 УБА)" value={form.plate_number} onChange={e => setForm({ ...form, plate_number: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
                 <input placeholder="Эзэмшигч" value={form.resident_name} onChange={e => setForm({ ...form, resident_name: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
                 <input placeholder="Тоот" value={form.apartment} onChange={e => setForm({ ...form, apartment: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
                 <input placeholder="Машины загвар" value={form.car_model} onChange={e => setForm({ ...form, car_model: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
@@ -257,9 +284,12 @@ export default function AdminParking() {
                 </select>
                 <input placeholder={form.parking_type === 'garage' ? 'жнь: Г-15' : 'Зогсоолын дугаар'} value={form.parking_spot} onChange={e => setForm({ ...form, parking_spot: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
               </div>
+              {formError && <p className="text-sm text-red-600 mt-3">{formError}</p>}
               <div className="flex gap-2 mt-3">
                 <button onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-lg text-sm">Цуцлах</button>
-                <button onClick={saveVehicle} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Хадгалах</button>
+                <button onClick={saveVehicle} disabled={savingVehicle} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm disabled:opacity-50">
+                  {savingVehicle ? 'Хадгалж байна...' : 'Хадгалах'}
+                </button>
               </div>
             </div>
           )}
