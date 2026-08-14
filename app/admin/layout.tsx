@@ -15,6 +15,7 @@ const navItems = [
   { icon: '👥', label: 'Оршин суугчид', href: '/admin/residents' },
   { icon: '💰', label: 'Төлбөр', href: '/admin/payments' },
   { icon: '🏦', label: 'Хураамж хүлээн авах данс', href: '/admin/bank-account' },
+  { icon: '📄', label: 'И-биллинг', href: '/admin/e-billing' },
   { icon: '📢', label: 'Зарлал', href: '/admin/announcements' },
   { icon: '🔧', label: 'Засвар', href: '/admin/maintenance' },
   { icon: '📋', label: 'Тайлан', href: '/admin/reports' },

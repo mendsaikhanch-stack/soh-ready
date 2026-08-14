@@ -24,9 +24,10 @@ interface Resident {
   monthly_fee: number | null;
   pending_claim: boolean;
   unit_kind: string | null;
+  bank_customer_code: string | null;
 }
 
-const emptyForm = { name: '', apartment: '', phone: '', debt: '0', area_sqm: '0', building: '', resident_type: '', monthly_fee: '', unit_kind: 'household' };
+const emptyForm = { name: '', apartment: '', phone: '', debt: '0', area_sqm: '0', building: '', resident_type: '', monthly_fee: '', unit_kind: 'household', bank_customer_code: '' };
 
 const TYPE_LABELS: Record<string, string> = { owner: 'Эзэмшигч', tenant: 'Түрээслэгч', family: 'Гэр бүл' };
 const isPlaceholderName = (n: string) => /тоот\s*$/i.test(n || '') || /-р\s*байр/i.test(n || '');
@@ -140,6 +141,7 @@ export default function AdminResidents() {
       resident_type: r.resident_type || '',
       monthly_fee: r.monthly_fee == null ? '' : String(r.monthly_fee),
       unit_kind: r.unit_kind === 'business' ? 'business' : 'household',
+      bank_customer_code: r.bank_customer_code || '',
     });
     setShowForm(true);
   };
@@ -157,6 +159,8 @@ export default function AdminResidents() {
       building: form.building || null,
       resident_type: form.resident_type || null,
       unit_kind: form.unit_kind === 'business' ? 'business' : 'household',
+      // Банкны и-биллингийн код — хоосон бол тоотыг нь ашиглана
+      bank_customer_code: form.bank_customer_code.trim() || form.apartment,
       // Хоосон орхивол null — тэгвэл СӨХ-ийн ерөнхий тариф үйлчилнэ
       monthly_fee: form.monthly_fee === '' ? null : Number(form.monthly_fee) || 0,
     };
@@ -403,6 +407,9 @@ export default function AdminResidents() {
                 onChange={e => setForm({...form, monthly_fee: e.target.value})}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               />
+            </Field>
+            <Field label="Банкны код" hint="И-биллингийн хэрэглэгчийн код. Хоосон бол тоотыг ашиглана.">
+              <input placeholder={form.apartment || 'тоот'} value={form.bank_customer_code} onChange={e => setForm({...form, bank_customer_code: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
             </Field>
             <Field label="Эзэмшил">
               <select value={form.resident_type} onChange={e => setForm({...form, resident_type: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-600">
