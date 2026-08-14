@@ -24,29 +24,35 @@ interface ParsedRow {
   amount: number;
   paidAt: string | null;
   memo: string;
+  payer: string;
   externalRef: string;
   resident: Resident | null;
   matchedBy: 'code' | 'apartment' | 'memo' | null;
   duplicate: boolean;
 }
 
-type ColumnKey = 'code' | 'amount' | 'date' | 'memo' | 'ref';
+type ColumnKey = 'code' | 'amount' | 'date' | 'memo' | 'payer' | 'ref';
 
 const COLUMN_LABELS: Record<ColumnKey, string> = {
   code: 'Хэрэглэгчийн код / тоот',
-  amount: 'Дүн',
+  amount: 'Орлого (дүн)',
   date: 'Огноо',
   memo: 'Гүйлгээний утга',
+  payer: 'Мөнгө илгээгч',
   ref: 'Гүйлгээний дугаар',
 };
 
-// Толгой мөрийг таних түлхүүр үгс — банк болгон өөр нэр хэрэглэдэг тул өргөн барина
+// Толгой мөрийг таних түлхүүр үгс. Банк бүр өөр нэр хэрэглэдэг тул өргөн барина.
+// Дараалал нь ЭРЭМБЭ — эхний тохирсон нь сонгогдоно. Тиймээс "орлого" нь
+// ерөнхий "дүн"-ээс өмнө байна: орлого/зарлага 2 баганатай хуулгад зөвхөн
+// ОРЛОГЫН баганыг авах ёстой, эс бөгөөс СӨХ-ийн зарлагыг төлбөр гэж үзнэ.
 const HEADER_HINTS: Record<ColumnKey, string[]> = {
-  code: ['код', 'code', 'хэрэглэгч', 'тоот', 'дугаар харилцагч', 'customer'],
-  amount: ['дүн', 'дун', 'мөнгө', 'monge', 'amount', 'орлого', 'credit', 'тушаасан'],
-  date: ['огноо', 'date', 'он сар', 'гүйлгээний огноо'],
-  memo: ['утга', 'гүйлгээний утга', 'тайлбар', 'description', 'memo', 'narrative'],
-  ref: ['гүйлгээний дугаар', 'дансны хуулгын дугаар', 'ref', 'reference', 'txn', 'баримт'],
+  code: ['хэрэглэгчийн код', 'харилцагчийн код', 'customer', 'код', 'code', 'тоот'],
+  amount: ['орлого', 'credit', 'кредит', 'тушаасан', 'гүйлгээний дүн', 'дүн', 'дун', 'amount', 'мөнгөн дүн'],
+  date: ['гүйлгээний огноо', 'огноо', 'date', 'он сар'],
+  memo: ['гүйлгээний утга', 'утга', 'тайлбар', 'description', 'memo', 'narrative', 'гүйлгээний тайлбар'],
+  payer: ['харилцагчийн нэр', 'илгээгч', 'эсрэг талын нэр', 'payer', 'нэр'],
+  ref: ['гүйлгээний дугаар', 'баримтын дугаар', 'дансны хуулгын дугаар', 'ref', 'reference', 'txn'],
 };
 
 const num = (v: unknown) => {
@@ -71,7 +77,7 @@ export default function AdminEBilling() {
   // Импорт
   const [rawRows, setRawRows] = useState<unknown[][]>([]);
   const [headerRow, setHeaderRow] = useState(0);
-  const [mapping, setMapping] = useState<Record<ColumnKey, number>>({ code: -1, amount: -1, date: -1, memo: -1, ref: -1 });
+  const [mapping, setMapping] = useState<Record<ColumnKey, number>>({ code: -1, amount: -1, date: -1, memo: -1, payer: -1, ref: -1 });
   const [existingRefs, setExistingRefs] = useState<Set<string>>(new Set());
   const [applying, setApplying] = useState(false);
   const [result, setResult] = useState('');
@@ -139,15 +145,23 @@ export default function AdminEBilling() {
 
   // ---------- ИМПОРТ ----------
 
+  // Толгойн нэрсийг түлхүүр үгтэй тааруулна. Түлхүүр үгийн ДАРААЛАЛ нь эрэмбэ —
+  // жагсаалтын эхэнд байгаа үг тохирвол түүнийг сонгоно (жнь "Зарлага" биш "Орлого").
   const guessMapping = (header: unknown[]): Record<ColumnKey, number> => {
-    const found: Record<ColumnKey, number> = { code: -1, amount: -1, date: -1, memo: -1, ref: -1 };
-    header.forEach((cell, i) => {
-      const h = String(cell ?? '').toLowerCase().trim();
-      if (!h) return;
-      (Object.keys(HEADER_HINTS) as ColumnKey[]).forEach(key => {
-        if (found[key] === -1 && HEADER_HINTS[key].some(hint => h.includes(hint))) found[key] = i;
-      });
-    });
+    const cells = header.map(c => String(c ?? '').toLowerCase().trim());
+    const found: Record<ColumnKey, number> = { code: -1, amount: -1, date: -1, memo: -1, payer: -1, ref: -1 };
+    for (const key of Object.keys(HEADER_HINTS) as ColumnKey[]) {
+      for (const hint of HEADER_HINTS[key]) {
+        const idx = cells.findIndex(h => h && h.includes(hint));
+        if (idx >= 0) { found[key] = idx; break; }
+      }
+    }
+    // Нэг багана 2 үүрэгт орохоос сэргийлнэ (жнь "нэр" нь "хэрэглэгчийн нэр"-т 2 удаа таарах)
+    const used = new Set<number>();
+    for (const key of ['amount', 'date', 'code', 'ref', 'memo', 'payer'] as ColumnKey[]) {
+      if (found[key] >= 0 && used.has(found[key])) found[key] = -1;
+      else if (found[key] >= 0) used.add(found[key]);
+    }
     return found;
   };
 
@@ -196,6 +210,7 @@ export default function AdminEBilling() {
 
       const code = mapping.code >= 0 ? String(row[mapping.code] ?? '').trim() : '';
       const memo = mapping.memo >= 0 ? String(row[mapping.memo] ?? '').trim() : '';
+      const payer = mapping.payer >= 0 ? String(row[mapping.payer] ?? '').trim() : '';
       const dateRaw = mapping.date >= 0 ? row[mapping.date] : null;
       let paidAt: string | null = null;
       if (dateRaw) {
@@ -213,8 +228,9 @@ export default function AdminEBilling() {
         if (byCode.has(code)) { resident = byCode.get(code)!; matchedBy = 'code'; }
         else if (byApt.has(code)) { resident = byApt.get(code)!; matchedBy = 'apartment'; }
       }
-      if (!resident && memo) {
-        for (const m of memo.match(/\d{1,5}/g) || []) {
+      // Гүйлгээний утга (шаардлагатай бол илгээгчийн нэр) дотроос тоот хайна
+      if (!resident) {
+        for (const m of `${memo} ${payer}`.match(/\d{1,5}/g) || []) {
           const hit = byCode.get(m) || byApt.get(m);
           if (hit) { resident = hit; matchedBy = 'memo'; break; }
         }
@@ -226,7 +242,7 @@ export default function AdminEBilling() {
         : `bank:${(paidAt || '').slice(0, 10)}:${amount}:${code || memo.slice(0, 20) || i}`;
 
       out.push({
-        rowNo: i + 1, code, amount, paidAt, memo, externalRef,
+        rowNo: i + 1, code, amount, paidAt, memo, payer, externalRef,
         resident, matchedBy, duplicate: existingRefs.has(externalRef),
       });
     }
@@ -453,6 +469,7 @@ export default function AdminEBilling() {
                         <th className="px-3 py-2">Мөр</th>
                         <th className="px-3 py-2">Код</th>
                         <th className="px-3 py-2">Гүйлгээний утга</th>
+                        <th className="px-3 py-2">Илгээгч</th>
                         <th className="px-3 py-2 text-right">Дүн</th>
                         <th className="px-3 py-2">Айл</th>
                       </tr>
@@ -463,6 +480,7 @@ export default function AdminEBilling() {
                           <td className="px-3 py-2 text-xs text-gray-400">{p.rowNo}</td>
                           <td className="px-3 py-2">{p.code || '-'}</td>
                           <td className="px-3 py-2 text-xs text-gray-500 max-w-xs truncate">{p.memo || '-'}</td>
+                          <td className="px-3 py-2 text-xs text-gray-500 max-w-[10rem] truncate">{p.payer || '-'}</td>
                           <td className="px-3 py-2 text-right font-medium">{p.amount.toLocaleString()}₮</td>
                           <td className="px-3 py-2">
                             {p.duplicate ? (
