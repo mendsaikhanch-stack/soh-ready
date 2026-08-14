@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
+import Field from '@/app/components/Field';
 
 interface Vehicle {
   id: number;
@@ -272,17 +273,31 @@ export default function AdminParking() {
             <div className="bg-white border rounded-xl p-4 mb-4">
               <h3 className="font-semibold mb-3">{editId ? 'Засах' : 'Шинэ машин'}</h3>
               <div className="grid grid-cols-3 gap-3">
-                <input placeholder="Дугаар * (0000 УБА)" value={form.plate_number} onChange={e => setForm({ ...form, plate_number: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
-                <input placeholder="Эзэмшигч" value={form.resident_name} onChange={e => setForm({ ...form, resident_name: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
-                <input placeholder="Тоот" value={form.apartment} onChange={e => setForm({ ...form, apartment: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
-                <input placeholder="Машины загвар" value={form.car_model} onChange={e => setForm({ ...form, car_model: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
-                <select value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} className="border rounded-lg px-3 py-2 text-sm">{COLORS.map(c => <option key={c}>{c}</option>)}</select>
-                <select value={form.parking_type} onChange={e => setForm({ ...form, parking_type: e.target.value as '' | 'garage' | 'outdoor' })} className="border rounded-lg px-3 py-2 text-sm">
-                  <option value="">Төрөл сонгох</option>
-                  <option value="garage">🏚 Гараж</option>
-                  <option value="outdoor">🅿️ Задгай</option>
-                </select>
-                <input placeholder={form.parking_type === 'garage' ? 'жнь: Г-15' : 'Зогсоолын дугаар'} value={form.parking_spot} onChange={e => setForm({ ...form, parking_spot: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
+                <Field label="Машины дугаар" required>
+                  <input placeholder="0000 УБА" value={form.plate_number} onChange={e => setForm({ ...form, plate_number: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </Field>
+                <Field label="Эзэмшигч">
+                  <input placeholder="Овог нэр" value={form.resident_name} onChange={e => setForm({ ...form, resident_name: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </Field>
+                <Field label="Тоот">
+                  <input placeholder="жнь: 101" value={form.apartment} onChange={e => setForm({ ...form, apartment: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </Field>
+                <Field label="Машины загвар">
+                  <input placeholder="жнь: Prius 30" value={form.car_model} onChange={e => setForm({ ...form, car_model: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </Field>
+                <Field label="Өнгө">
+                  <select value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm">{COLORS.map(c => <option key={c}>{c}</option>)}</select>
+                </Field>
+                <Field label="Зогсоолын төрөл">
+                  <select value={form.parking_type} onChange={e => setForm({ ...form, parking_type: e.target.value as '' | 'garage' | 'outdoor' })} className="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="">Сонгоогүй</option>
+                    <option value="garage">🏚 Гараж</option>
+                    <option value="outdoor">🅿️ Задгай</option>
+                  </select>
+                </Field>
+                <Field label="Зогсоолын дугаар">
+                  <input placeholder={form.parking_type === 'garage' ? 'жнь: Г-15' : 'жнь: P-12'} value={form.parking_spot} onChange={e => setForm({ ...form, parking_spot: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </Field>
               </div>
               {formError && <p className="text-sm text-red-600 mt-3">{formError}</p>}
               <div className="flex gap-2 mt-3">

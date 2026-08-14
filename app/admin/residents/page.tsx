@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
+import Field from '@/app/components/Field';
 
 interface Resident {
   id: number;
@@ -362,31 +363,55 @@ export default function AdminResidents() {
       {showForm && (
         <div className="bg-white border rounded-xl p-4 mb-4">
           <h3 className="font-semibold mb-3">{editId ? 'Засах' : 'Шинэ оршин суугч'}</h3>
+          {/* Нүд бүрийн дээр нэр нь бичээстэй байна — бөглөсний дараа ч ямар
+              талбар болох нь харагдана (placeholder бол бөглөхөд алга болдог) */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <input placeholder="Нэр *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="Тоот * (жнь: 101)" value={form.apartment} onChange={e => setForm({...form, apartment: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="Утас" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="Байр (жнь: 1-р байр)" value={form.building} onChange={e => setForm({...form, building: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
-            <select value={form.unit_kind} onChange={e => setForm({...form, unit_kind: e.target.value})} className="border rounded-lg px-3 py-2 text-sm">
-              <option value="household">🏠 Айл өрх</option>
-              <option value="business">🏢 Аж ахуйн нэгж</option>
-            </select>
-            <input placeholder="Талбай (мкв)" type="number" step="0.1" value={form.area_sqm} onChange={e => setForm({...form, area_sqm: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
-            <input placeholder="Өмнөх үлдэгдэл (₮)" type="number" value={form.debt} onChange={e => setForm({...form, debt: e.target.value})} className="border rounded-lg px-3 py-2 text-sm" />
-            <input
-              placeholder={orgFee ? `Сарын төлбөр (хоосон = ${orgFee.toLocaleString()}₮)` : 'Сарын төлбөр (₮)'}
-              type="number"
-              value={form.monthly_fee}
-              onChange={e => setForm({...form, monthly_fee: e.target.value})}
-              title="Энэ тоотод тусгай тариф тогтоох бол бөглөнө. Хоосон орхивол СӨХ-ийн ерөнхий хураамж үйлчилнэ."
-              className="border rounded-lg px-3 py-2 text-sm"
-            />
-            <select value={form.resident_type} onChange={e => setForm({...form, resident_type: e.target.value})} className="border rounded-lg px-3 py-2 text-sm text-gray-600">
-              <option value="">Эзэмшил сонгох</option>
-              <option value="owner">Эзэмшигч</option>
-              <option value="tenant">Түрээслэгч</option>
-              <option value="family">Гэр бүлийн гишүүн</option>
-            </select>
+            <Field label="Нэр" required>
+              <input placeholder="Овог нэр" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            </Field>
+            <Field label="Тоот" required>
+              <input placeholder="жнь: 101" value={form.apartment} onChange={e => setForm({...form, apartment: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            </Field>
+            <Field label="Утас">
+              <input placeholder="99001122" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            </Field>
+            <Field label="Байр">
+              <input placeholder="жнь: 1-р байр" value={form.building} onChange={e => setForm({...form, building: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            </Field>
+            <Field label="Хэлбэр">
+              <select value={form.unit_kind} onChange={e => setForm({...form, unit_kind: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm">
+                <option value="household">🏠 Айл өрх</option>
+                <option value="business">🏢 Аж ахуйн нэгж</option>
+              </select>
+            </Field>
+            <Field label="Талбай (мкв)">
+              <input placeholder="жнь: 42.5" type="number" step="0.1" value={form.area_sqm} onChange={e => setForm({...form, area_sqm: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            </Field>
+            <Field label="Өмнөх үлдэгдэл (₮)" hint="Энэ айлын өмнөх саруудаас үлдсэн өр">
+              <input placeholder="0" type="number" value={form.debt} onChange={e => setForm({...form, debt: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            </Field>
+            <Field
+              label="Сарын төлбөр (₮)"
+              hint={orgFee
+                ? `Хоосон орхивол СӨХ-ийн ерөнхий тариф (${orgFee.toLocaleString()}₮) үйлчилнэ`
+                : 'Зөвхөн энэ тоотод тусгай тариф тогтоох бол бөглөнө'}
+            >
+              <input
+                placeholder={orgFee ? `Хоосон = ${orgFee.toLocaleString()}₮` : 'Тусгай тариф'}
+                type="number"
+                value={form.monthly_fee}
+                onChange={e => setForm({...form, monthly_fee: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+              />
+            </Field>
+            <Field label="Эзэмшил">
+              <select value={form.resident_type} onChange={e => setForm({...form, resident_type: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-600">
+                <option value="">Сонгоогүй</option>
+                <option value="owner">Эзэмшигч</option>
+                <option value="tenant">Түрээслэгч</option>
+                <option value="family">Гэр бүлийн гишүүн</option>
+              </select>
+            </Field>
           </div>
           <div className="flex gap-2 mt-3">
             <button onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-lg text-sm">Цуцлах</button>
