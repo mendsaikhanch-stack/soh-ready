@@ -21,7 +21,7 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'invoices', 'budget_items', 'budget_plans', 'reserve_fund',
     'platform_plans', 'sokh_subscriptions', 'platform_invoices',
     'platform_bank_accounts', 'platform_transactions', 'sokh_tiers',
-    'ebarimt_configs', 'sokh_bank_accounts',
+    'ebarimt_configs', 'sokh_bank_accounts', 'payment_notices',
     'proposals', 'proposal_voters', 'proposal_votes',
   ]),
   admin: new Set([
@@ -38,8 +38,8 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     // Санхүү — бүгд sokh_id-тэй тул enforceTenantScope-ийн ерөнхий зам хамгаална
     'invoices', 'budget_items', 'budget_plans', 'reserve_fund',
     'proposals', 'proposal_voters', 'proposal_votes',
-    // Хураамж хүлээн авах данс — зөвхөн өөрийн СӨХ-ийнхийг (tenant scope)
-    'sokh_bank_accounts',
+    // Хураамж хүлээн авах данс + "Би шилжүүлсэн" мэдэгдэл (tenant scope)
+    'sokh_bank_accounts', 'payment_notices',
   ]),
   osnaa: new Set([
     'sokh_organizations', 'residents', 'utility_usage', 'payments', 'announcements',

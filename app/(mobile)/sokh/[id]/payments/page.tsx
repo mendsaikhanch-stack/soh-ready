@@ -65,6 +65,9 @@ export default function PaymentsPage() {
   const [myInvoices, setMyInvoices] = useState<MyInvoice[]>([]);
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
   const [copied, setCopied] = useState('');
+  const [noticeSending, setNoticeSending] = useState(false);
+  const [noticeSent, setNoticeSent] = useState(false);
+  const [noticeError, setNoticeError] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -229,6 +232,8 @@ export default function PaymentsPage() {
     setQpayInvoice(null);
     setPaySuccess(false);
     setPaymentStep('select');
+    setNoticeSent(false);
+    setNoticeError('');
   };
 
   const selectQPay = async () => {
@@ -325,6 +330,27 @@ export default function PaymentsPage() {
     } catch {
       // Клипбоард хаалттай хөтөч дээр — хэрэглэгч гараар хуулна
     }
+  };
+
+  // "Би шилжүүлсэн" — даргад мэдэгдэнэ. Өрийг ЭНД хасахгүй: төлбөрийн төлөв
+  // солих эрх зөвхөн даргад (RLS нь ч status='pending'-ээс өөрөөр бичихийг хориглоно).
+  const sendNotice = async () => {
+    if (!payingBill || !profile) return;
+    setNoticeError('');
+    setNoticeSending(true);
+    const { error } = await supabase.from('payment_notices').insert([{
+      sokh_id: Number(params.id),
+      resident_id: profile.id,
+      amount: payingBill.amount,
+      description: `${payingBill.name} — ${transferRef}`,
+      status: 'pending',
+    }]);
+    setNoticeSending(false);
+    if (error) {
+      setNoticeError('Мэдэгдэл илгээж чадсангүй. Дахин оролдоно уу.');
+      return;
+    }
+    setNoticeSent(true);
   };
 
   const PAYMENT_METHODS = [
@@ -568,9 +594,29 @@ export default function PaymentsPage() {
                       хэн төлснийг СӨХ таних боломжгүй.
                       {bankAccount.note && <><br />{bankAccount.note}</>}
                     </p>
+                    {/* Шилжүүлсний дараа даргад мэдэгдэх — өрийг ЭНД хасахгүй,
+                        зөвхөн дарга банкны хуулгатай тулгаж баталгаажуулна */}
+                    {noticeSent ? (
+                      <div className="bg-green-100 border border-green-300 rounded-xl p-3 mt-3 text-center">
+                        <p className="text-sm text-green-800 font-medium">✓ СӨХ-д мэдэгдлээ</p>
+                        <p className="text-[11px] text-green-700 mt-0.5">
+                          Дарга банкны хуулгатай тулгаж баталгаажуулмагц төлбөрийн түүхэнд орно.
+                        </p>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={sendNotice}
+                        disabled={noticeSending || !profile}
+                        className="w-full mt-3 bg-green-600 text-white py-3 rounded-xl font-semibold text-sm active:bg-green-700 disabled:opacity-50"
+                      >
+                        {noticeSending ? 'Илгээж байна...' : 'Би шилжүүлсэн — СӨХ-д мэдэгдэх'}
+                      </button>
+                    )}
+                    {noticeError && <p className="text-xs text-red-600 mt-2">{noticeError}</p>}
+
                     <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
-                      Шилжүүлсний дараа СӨХ баталгаажуулахад төлбөрийн түүхэнд орно.
-                      Ихэвчлэн 1 ажлын өдөрт багтдаг.
+                      Шилжүүлээд дээрх товчийг дарвал СӨХ-ийн даргад мэдэгдэл очно.
+                      Баталгаажуулалт ихэвчлэн 1 ажлын өдөрт багтдаг.
                     </p>
                   </div>
                 )}
