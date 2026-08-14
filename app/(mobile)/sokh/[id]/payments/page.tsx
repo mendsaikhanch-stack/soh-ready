@@ -21,6 +21,14 @@ interface QPayInvoice {
   urls: { name: string; logo: string; link: string }[];
 }
 
+interface BankAccount {
+  bank_name: string;
+  account_number: string;
+  account_holder: string;
+  qr_image_url: string | null;
+  note: string | null;
+}
+
 interface MyInvoice {
   id: number;
   year: number;
@@ -55,6 +63,8 @@ export default function PaymentsPage() {
   const [paymentStep, setPaymentStep] = useState<'select' | 'qpay'>('select');
   const [receiptPayment, setReceiptPayment] = useState<any>(null);
   const [myInvoices, setMyInvoices] = useState<MyInvoice[]>([]);
+  const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
+  const [copied, setCopied] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -195,6 +205,16 @@ export default function PaymentsPage() {
       const { data: payData } = await payQuery;
       setPayments(payData || []);
 
+      // 5. СӨХ-ийн хураамж хүлээн авах данс (QR + дансны дугаар).
+      //    RLS нь зөвхөн өөрийн СӨХ-ийн мөрийг л буцаана.
+      const { data: bank } = await supabase
+        .from('sokh_bank_accounts')
+        .select('bank_name, account_number, account_holder, qr_image_url, note')
+        .eq('sokh_id', params.id)
+        .eq('is_active', true)
+        .maybeSingle();
+      setBankAccount((bank as BankAccount) || null);
+
       setLoading(false);
     };
     fetchData();
@@ -294,24 +314,21 @@ export default function PaymentsPage() {
     setPaymentStep('select');
   };
 
+  // Гүйлгээний утга — дарга мөнгө хэн төлснийг үүгээр таних тул тоот заавал орно
+  const transferRef = profile?.apartment ? `${profile.apartment} тоот` : 'Тоотоо бичнэ үү';
+
+  const copy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+      setTimeout(() => setCopied(''), 1500);
+    } catch {
+      // Клипбоард хаалттай хөтөч дээр — хэрэглэгч гараар хуулна
+    }
+  };
+
   const PAYMENT_METHODS = [
     { name: 'QPay', color: '#00B140', textColor: 'white', action: 'qpay' },
-    { name: 'SocialPay', color: '#6C3EF5', textColor: 'white', action: 'socialpay' },
-  ];
-
-  const BANK_APPS = [
-    { name: 'Хаан банк', short: 'ХААН', color: '#00529B' },
-    { name: 'Голомт банк', short: 'ГОЛ', color: '#F26522' },
-    { name: 'ХХБ', short: 'ХХБ', color: '#009FE3' },
-    { name: 'Хас банк', short: 'ХАС', color: '#E30613' },
-    { name: 'Төрийн банк', short: 'ТӨР', color: '#003876' },
-    { name: 'Богд банк', short: 'БОГД', color: '#8B0000' },
-    { name: 'Капитрон', short: 'КАП', color: '#1B3A5C' },
-    { name: 'Чингис хаан', short: 'ЧХБ', color: '#C8102E' },
-    { name: 'М банк', short: 'М', color: '#E91E63' },
-    { name: 'Ард', short: 'АРД', color: '#FF6F00' },
-    { name: 'Most Money', short: 'МОСТ', color: '#4CAF50' },
-    { name: 'Invescore', short: 'INV', color: '#1A237E' },
   ];
 
   const timeAgo = (dateStr: string) => {
@@ -350,7 +367,7 @@ export default function PaymentsPage() {
               {unpaidTotal > 0 ? `${unpaidTotal.toLocaleString()}₮` : 'Төлсөн ✓'}
             </p>
           </div>
-          {PAYMENTS_ENABLED && unpaidTotal > 0 && (
+          {(bankAccount || PAYMENTS_ENABLED) && unpaidTotal > 0 && (
             <button
               onClick={payAll}
               className="w-full mt-3 bg-green-600 text-white py-3 rounded-xl font-medium active:bg-green-700 transition"
@@ -397,7 +414,7 @@ export default function PaymentsPage() {
                         <p className="font-medium text-sm">{bill.name}</p>
                         <p className="text-red-500 font-semibold text-sm">{bill.amount.toLocaleString()}₮</p>
                       </div>
-                      {PAYMENTS_ENABLED && (
+                      {(bankAccount || PAYMENTS_ENABLED) && (
                         <button
                           onClick={() => startPay(bill)}
                           className="px-4 py-2 bg-green-600 text-white text-xs font-medium rounded-lg active:bg-green-700"
@@ -482,44 +499,114 @@ export default function PaymentsPage() {
             {/* Step 1: Төлбөрийн арга сонгох */}
             {paymentStep === 'select' && (
               <>
-                {/* QPay, SocialPay */}
-                <h3 className="text-xs font-semibold text-gray-400 mb-3">ТӨЛБӨРИЙН СИСТЕМ</h3>
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  {PAYMENT_METHODS.map(pm => (
-                    <button
-                      key={pm.name}
-                      onClick={pm.action === 'qpay' ? selectQPay : undefined}
-                      className="flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-gray-100 hover:border-gray-300 active:scale-95 transition"
-                    >
-                      <div
-                        className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm"
-                        style={{ backgroundColor: pm.color }}
-                      >
-                        <span className="text-white font-bold text-xs">{pm.name}</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-700">{pm.name}</span>
-                    </button>
-                  ))}
-                </div>
+                {/* СӨХ-ийн данс руу шууд шилжүүлэх — банкны QR */}
+                {bankAccount && (
+                  <div className="border-2 border-green-200 bg-green-50/50 rounded-2xl p-4 mb-5">
+                    {bankAccount.qr_image_url ? (
+                      <>
+                        <div className="bg-white rounded-xl p-3 mb-3">
+                          <img
+                            src={bankAccount.qr_image_url}
+                            alt="СӨХ-ийн банкны QR"
+                            className="w-44 h-44 mx-auto object-contain"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-600 text-center mb-4">
+                          Банкны аппаараа QR-ыг уншуулж, доорх дүн, гүйлгээний утгыг оруулна уу
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-600 mb-3">
+                        Банкны аппаараа доорх данс руу шилжүүлнэ үү
+                      </p>
+                    )}
 
-                {/* Банкны аппууд */}
-                <h3 className="text-xs font-semibold text-gray-400 mb-3">БАНКНЫ АПП</h3>
-                <div className="grid grid-cols-4 gap-3 mb-5">
-                  {BANK_APPS.map(bank => (
-                    <button
-                      key={bank.name}
-                      className="flex flex-col items-center gap-1.5 active:scale-95 transition"
-                    >
-                      <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm"
-                        style={{ backgroundColor: bank.color }}
-                      >
-                        <span className="text-white font-bold text-[10px]">{bank.short}</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2 bg-white rounded-xl px-3 py-2.5">
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-gray-400">Дүн</p>
+                          <p className="font-bold text-base">{payingBill.amount.toLocaleString()}₮</p>
+                        </div>
+                        <button
+                          onClick={() => copy(String(payingBill.amount), 'amount')}
+                          className="text-xs text-blue-600 font-medium shrink-0 px-2 py-1"
+                        >
+                          {copied === 'amount' ? 'Хууллаа ✓' : 'Хуулах'}
+                        </button>
                       </div>
-                      <span className="text-[10px] text-gray-600 text-center leading-tight">{bank.name}</span>
-                    </button>
-                  ))}
-                </div>
+
+                      <div className="flex items-center justify-between gap-2 bg-white rounded-xl px-3 py-2.5">
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-gray-400">{bankAccount.bank_name} · данс</p>
+                          <p className="font-bold text-base truncate">{bankAccount.account_number}</p>
+                          <p className="text-[11px] text-gray-500 truncate">{bankAccount.account_holder}</p>
+                        </div>
+                        <button
+                          onClick={() => copy(bankAccount.account_number, 'acc')}
+                          className="text-xs text-blue-600 font-medium shrink-0 px-2 py-1"
+                        >
+                          {copied === 'acc' ? 'Хууллаа ✓' : 'Хуулах'}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 bg-white rounded-xl px-3 py-2.5">
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-gray-400">Гүйлгээний утга</p>
+                          <p className="font-bold text-base truncate">{transferRef}</p>
+                        </div>
+                        <button
+                          onClick={() => copy(transferRef, 'ref')}
+                          className="text-xs text-blue-600 font-medium shrink-0 px-2 py-1"
+                        >
+                          {copied === 'ref' ? 'Хууллаа ✓' : 'Хуулах'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg p-2.5 mt-3 leading-relaxed">
+                      ⚠️ Гүйлгээний утгад <b>тоотоо заавал</b> бичнэ үү. Эс бөгөөс таны төлбөр
+                      хэн төлснийг СӨХ таних боломжгүй.
+                      {bankAccount.note && <><br />{bankAccount.note}</>}
+                    </p>
+                    <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+                      Шилжүүлсний дараа СӨХ баталгаажуулахад төлбөрийн түүхэнд орно.
+                      Ихэвчлэн 1 ажлын өдөрт багтдаг.
+                    </p>
+                  </div>
+                )}
+
+                {/* QPay — production түлхүүр бэлэн болоход л харагдана */}
+                {PAYMENTS_ENABLED && (
+                  <>
+                    <h3 className="text-xs font-semibold text-gray-400 mb-3">ТӨЛБӨРИЙН СИСТЕМ</h3>
+                    <div className="grid grid-cols-2 gap-3 mb-5">
+                      {PAYMENT_METHODS.map(pm => (
+                        <button
+                          key={pm.name}
+                          onClick={pm.action === 'qpay' ? selectQPay : undefined}
+                          className="flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-gray-100 hover:border-gray-300 active:scale-95 transition"
+                        >
+                          <div
+                            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm"
+                            style={{ backgroundColor: pm.color }}
+                          >
+                            <span className="text-white font-bold text-xs">{pm.name}</span>
+                          </div>
+                          <span className="text-sm font-medium text-gray-700">{pm.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {!bankAccount && !PAYMENTS_ENABLED && (
+                  <div className="bg-gray-50 border rounded-2xl p-4 mb-4">
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      Танай СӨХ төлбөр хүлээн авах дансаа хараахан оруулаагүй байна.
+                      СӨХ-ийнхөө даргад хандаж, дансны мэдээллийг нь асууна уу.
+                    </p>
+                  </div>
+                )}
               </>
             )}
 
