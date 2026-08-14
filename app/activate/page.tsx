@@ -26,6 +26,11 @@ function ActivateInner() {
   const router = useRouter();
   const params = useSearchParams();
   const presetSokhId = params.get('sokh');
+  // Линкээр код, утсыг урьдчилж дамжуулна — дарга зөвхөн нэвтрэх нэр,
+  // нууц үгээ бөглөнө. (Урьд нь бүгдийг гараар шивдэг байсан.)
+  const presetCode = (params.get('code') || '').replace(/\D/g, '').slice(0, 6);
+  const presetPhone = (params.get('phone') || '').replace(/\D/g, '').slice(0, 8);
+  const prefilled = presetCode.length === 6 && presetPhone.length === 8;
 
   const [step, setStep] = useState<'select' | 'form'>(presetSokhId ? 'form' : 'select');
   const [sokhs, setSokhs] = useState<SokhRow[]>([]);
@@ -34,8 +39,8 @@ function ActivateInner() {
 
   const [sokhId, setSokhId] = useState<number | null>(presetSokhId ? Number(presetSokhId) : null);
   const [sokhName, setSokhName] = useState('');
-  const [code, setCode] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
+  const [code, setCode] = useState(presetCode);
+  const [contactPhone, setContactPhone] = useState(presetPhone);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
@@ -170,6 +175,15 @@ function ActivateInner() {
                 )}
               </div>
 
+              {prefilled && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
+                  <p className="text-sm text-green-800 font-medium">✓ Код, утас бөглөгдсөн байна</p>
+                  <p className="text-xs text-green-700 mt-0.5">
+                    Доор нэвтрэх нэр, нууц үгээ л оруулаад «Идэвхжүүлэх» дарна уу.
+                  </p>
+                </div>
+              )}
+
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-sm mb-4">
                   {error}
@@ -212,6 +226,7 @@ function ActivateInner() {
                     value={username}
                     onChange={e => setUsername(e.target.value.trim())}
                     placeholder="darga, nyarav гэх мэт"
+                    autoFocus={prefilled}
                     autoCapitalize="off"
                     autoCorrect="off"
                     className="w-full border rounded-xl px-4 py-3 text-sm bg-white"

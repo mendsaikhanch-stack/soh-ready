@@ -98,6 +98,32 @@ export default function OrganizationsPage() {
   const [activateLoading, setActivateLoading] = useState(false);
   const [activateError, setActivateError] = useState('');
   const [activateResult, setActivateResult] = useState<ActivationResult | null>(null);
+  const [activateCopied, setActivateCopied] = useState('');
+
+  // Дарга дарахад /activate хуудас код, утастайгаа нээгдэнэ — гараар шивэх шаардлагагүй
+  const activationLink = (r: ActivationResult) =>
+    `${typeof window === 'undefined' ? 'https://www.khotol.com' : window.location.origin}` +
+    `/activate?sokh=${r.sokh_id}&phone=${r.contact_phone}&code=${r.code}`;
+
+  const activationMessage = (r: ActivationResult) =>
+    `Сайн байна уу. Хотол апп-д ${r.sokh_name}-ийн бүртгэл бэлэн боллоо.
+
+` +
+    `Доорх линк рүү орж нэвтрэх нэр, нууц үгээ тохируулна уу:
+${activationLink(r)}
+
+` +
+    `Код: ${r.code} (${new Date(r.expires_at).toLocaleDateString('mn-MN')} хүртэл хүчинтэй)`;
+
+  const copyActivation = (what: 'link' | 'message' | 'code') => {
+    if (!activateResult) return;
+    const text = what === 'link' ? activationLink(activateResult)
+      : what === 'message' ? activationMessage(activateResult)
+      : activateResult.code;
+    navigator.clipboard.writeText(text);
+    setActivateCopied(what);
+    setTimeout(() => setActivateCopied(''), 1500);
+  };
 
   const nameRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -603,6 +629,7 @@ export default function OrganizationsPage() {
     setActivateError('');
     setActivateResult(null);
     setActivateLoading(false);
+    setActivateCopied('');
   };
 
   const submitActivate = async () => {
@@ -1670,11 +1697,29 @@ export default function OrganizationsPage() {
                   ⚠️ Энэ кодыг зөвхөн нэг удаа харуулна. СӨХ-н даргад утсаар, SMS-ээр дамжуулна уу.
                   Хэрэглэгч <code className="bg-black/30 px-1 rounded">/activate</code> хуудсаар орж нууц үгээ тавина.
                 </div>
+                {/* Бэлэн линк — дарга дарахад код, утас нь бөглөгдсөн байна */}
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-3">
+                  <p className="text-xs text-gray-400 mb-1">Даргад илгээх линк</p>
+                  <p className="text-[11px] text-blue-300 break-all font-mono">{activationLink(activateResult)}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <button
+                    onClick={() => copyActivation('link')}
+                    className="py-2 bg-green-700 hover:bg-green-600 text-white rounded-lg text-sm">
+                    {activateCopied === 'link' ? '✓ Хууллаа' : '🔗 Линк хуулах'}
+                  </button>
+                  <button
+                    onClick={() => copyActivation('message')}
+                    className="py-2 bg-green-800 hover:bg-green-700 text-white rounded-lg text-sm">
+                    {activateCopied === 'message' ? '✓ Хууллаа' : '💬 Бичвэр хуулах'}
+                  </button>
+                </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => { navigator.clipboard.writeText(activateResult.code); }}
+                    onClick={() => copyActivation('code')}
                     className="flex-1 py-2 border border-gray-700 rounded-lg text-sm text-gray-300 hover:bg-gray-800">
-                    📋 Код хуулах
+                    {activateCopied === 'code' ? '✓ Хууллаа' : '📋 Зөвхөн код'}
                   </button>
                   <button onClick={closeActivate} className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm">Хаах</button>
                 </div>
