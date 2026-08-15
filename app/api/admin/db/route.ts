@@ -23,6 +23,7 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'platform_bank_accounts', 'platform_transactions', 'sokh_tiers',
     'ebarimt_configs', 'sokh_bank_accounts', 'payment_notices',
     'proposals', 'proposal_voters', 'proposal_votes',
+    'debt_agreements',
   ]),
   admin: new Set([
     // Admin өөрийн СӨХ-д холбогдох хүснэгтүүд
@@ -40,6 +41,8 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'proposals', 'proposal_voters', 'proposal_votes',
     // Хураамж хүлээн авах данс + "Би шилжүүлсэн" мэдэгдэл (tenant scope)
     'sokh_bank_accounts', 'payment_notices',
+    // Өр барагдуулах гэрээ — sokh_id-тэй тул ерөнхий tenant scope хамгаална
+    'debt_agreements',
   ]),
   osnaa: new Set([
     'sokh_organizations', 'residents', 'utility_usage', 'payments', 'announcements',
@@ -61,6 +64,11 @@ const PLATFORM_ONLY_TABLES = new Set([
 
 // resident_id-аар хязгаарлагддаг хүснэгтүүд (sokh_id шууд байхгүй)
 const VIA_RESIDENT_TABLES = new Set(['payments', 'poll_votes']);
+
+// "Хэн үүсгэсэн" талбарыг сешнээс тамгалдаг хүснэгтүүд.
+// Клиентээс ирсэн created_by_admin_id-г үл тоомсорлоно — эс бөгөөс нэг СӨХ-ийн
+// дарга нөгөө даргынхаа нэрээр гэрээ бичиж, хариуцлагаас мултарч чадна.
+const STAMP_ADMIN_TABLES = new Set(['debt_agreements']);
 
 type EnforceResult =
   | { ok: true; params: Record<string, unknown> }
@@ -220,6 +228,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: enforced.error }, { status: enforced.status });
     }
     const params = enforced.params;
+
+    // Үүсгэгчийг сешнээс тамгалах (sokh_id-тэй ижил зарчим)
+    if ((action === 'insert' || action === 'upsert') && STAMP_ADMIN_TABLES.has(table)) {
+      const adminId = auth.userId ? parseInt(auth.userId, 10) : 0;
+      if (adminId) {
+        const d = params.data as Record<string, unknown> | Record<string, unknown>[] | undefined;
+        if (Array.isArray(d)) {
+          params.data = d.map(x => ({ ...x, created_by_admin_id: adminId }));
+        } else if (d) {
+          params.data = { ...d, created_by_admin_id: adminId };
+        }
+      }
+    }
 
     let query;
 

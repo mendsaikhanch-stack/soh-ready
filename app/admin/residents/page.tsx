@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import Field from '@/app/components/Field';
+import CreateDebtAgreementModal from '@/app/components/admin/CreateDebtAgreementModal';
 
 interface Resident {
   id: number;
@@ -44,6 +45,8 @@ export default function AdminResidents() {
   const [resetting, setResetting] = useState<number | null>(null);
   const [orgFee, setOrgFee] = useState(0);                                  // СӨХ-ийн ерөнхий тариф
   const [platesByApt, setPlatesByApt] = useState<Record<string, string[]>>({}); // тоот → улсын дугаарууд
+  const [agreementFor, setAgreementFor] = useState<number | null>(null);    // өрийн гэрээ байгуулах айл
+  const [showAgreement, setShowAgreement] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Айлын сарын төлбөр: тусгай тариф байвал түүнийг, үгүй бол СӨХ-ийн ерөнхий дүнг
@@ -352,6 +355,12 @@ export default function AdminResidents() {
             📤 Импорт
             <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={handleFileImport} />
           </label>
+          <button
+            onClick={() => { setAgreementFor(null); setShowAgreement(true); }}
+            className="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg text-sm hover:bg-amber-200"
+          >
+            🤝 Гэрээ байгуулах
+          </button>
           <button onClick={openAdd} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">+ Нэмэх</button>
         </div>
       </div>
@@ -499,6 +508,15 @@ export default function AdminResidents() {
                           ✓ Баталгаажуулах
                         </button>
                       )}
+                      {r.debt > 0 && (
+                        <button
+                          onClick={() => { setAgreementFor(r.id); setShowAgreement(true); }}
+                          title="Өрөө хуваан төлөх гэрээ байгуулах"
+                          className="text-amber-600 text-xs mr-2 hover:underline"
+                        >
+                          Гэрээ
+                        </button>
+                      )}
                       <button onClick={() => openEdit(r)} className="text-blue-500 text-xs mr-2 hover:underline">Засах</button>
                       <button
                         onClick={() => resetPassword(r)}
@@ -519,6 +537,16 @@ export default function AdminResidents() {
             <p className="text-gray-400 text-center py-6">Өгөгдөл байхгүй</p>
           )}
         </div>
+      )}
+
+      {/* Өр төлөх гэрээ байгуулах цонх */}
+      {showAgreement && (
+        <CreateDebtAgreementModal
+          residents={residents.map(r => ({ id: r.id, name: r.name, apartment: r.apartment, debt: r.debt }))}
+          initialResidentId={agreementFor}
+          onClose={() => setShowAgreement(false)}
+          onCreated={fetchResidents}
+        />
       )}
     </div>
   );

@@ -61,6 +61,8 @@ export const adminUsersLimiter = rateLimit({ name: 'admin-users', windowMs: 60 *
 export const authCheckLimiter = rateLimit({ name: 'auth-check', windowMs: 60 * 1000, maxRequests: 60 });
 export const pushSendLimiter = rateLimit({ name: 'push-send', windowMs: 60 * 1000, maxRequests: 20 });
 export const profileLimiter = rateLimit({ name: 'profile', windowMs: 60 * 1000, maxRequests: 20 });
+// Оршин суугч өр төлөх гэрээгээ зөвшөөрөх — нэг хүн олон дахин дардаггүй үйлдэл
+export const debtAgreementSignLimiter = rateLimit({ name: 'debt-agreement-sign', windowMs: 60 * 60 * 1000, maxRequests: 20 });
 // Дарга оршин суугчийн нууц үгийг түр дугаар болгож сэргээх
 export const residentPwResetLimiter = rateLimit({ name: 'resident-pw-reset', windowMs: 60 * 60 * 1000, maxRequests: 30 });
 // Оршин суугч өөрийн нууц үгээ солих (буруу оролдлогоос хамгаална)

@@ -29,6 +29,25 @@ interface BankAccount {
   note: string | null;
 }
 
+/** Даргатай тохирсон өр төлөх хуваарь (debt_agreements).
+ *  agreed_payment_plan-ыг CreateDebtAgreementModal ийм бүтэцтэй бичдэг. */
+interface PaymentPlan {
+  months?: number;
+  monthly_amount?: number;
+  start_date?: string;
+  installments?: { no: number; due_date: string; amount: number }[];
+  note?: string;
+}
+
+interface DebtAgreement {
+  id: string;
+  total_debt: number;
+  status: string;
+  agreed_payment_plan: PaymentPlan | null;
+  signed_at: string | null;
+  created_at: string;
+}
+
 interface MyInvoice {
   id: number;
   year: number;
@@ -65,6 +84,9 @@ export default function PaymentsPage() {
   const [myInvoices, setMyInvoices] = useState<MyInvoice[]>([]);
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
   const [copied, setCopied] = useState('');
+  const [agreements, setAgreements] = useState<DebtAgreement[]>([]);
+  const [signingId, setSigningId] = useState<string | null>(null);
+  const [signError, setSignError] = useState('');
   const [noticeSending, setNoticeSending] = useState(false);
   const [noticeSent, setNoticeSent] = useState(false);
   const [noticeError, setNoticeError] = useState('');
@@ -218,10 +240,62 @@ export default function PaymentsPage() {
         .maybeSingle();
       setBankAccount((bank as BankAccount) || null);
 
+      // 6. Даргатай тохирсон өр төлөх гэрээ.
+      //    RLS (debt_agreements_select_own) нь өөрийн мөрийг л буцаадаг ч,
+      //    resident_id-г мөн шүүнэ — policy тавигдаагүй тохиолдолд ч бусдын
+      //    гэрээ харагдахгүй байх хоёр дахь хамгаалалт.
+      if (profile) {
+        const { data: agr } = await supabase
+          .from('debt_agreements')
+          .select('id, total_debt, status, agreed_payment_plan, signed_at, created_at')
+          .eq('resident_id', profile.id)
+          .in('status', ['pending', 'signed'])
+          .order('created_at', { ascending: false });
+        setAgreements((agr as DebtAgreement[]) || []);
+      }
+
       setLoading(false);
     };
     fetchData();
   }, [params.id, profile]);
+
+  // Гэрээг зөвшөөрөх. Клиент шууд UPDATE хийж чадахгүй (бичих эрхийг татсан)
+  // тул сервер маршрутаар — тэнд өөрийн гэрээ мөн эсэхийг дахин шалгана.
+  const signAgreement = async (a: DebtAgreement) => {
+    const plan = a.agreed_payment_plan || {};
+    if (!confirm(
+      `${Number(a.total_debt).toLocaleString()}₮-ийг ${plan.months || 0} сард хуваан, ` +
+      `сар бүр ${Number(plan.monthly_amount || 0).toLocaleString()}₮ төлөхөөр зөвшөөрөх үү?\n\n` +
+      'Зөвшөөрсний дараа өөрчлөх бол СӨХ-ийн даргатайгаа ярина.'
+    )) return;
+
+    setSigningId(a.id);
+    setSignError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setSignError('Дахин нэвтэрнэ үү.');
+        setSigningId(null);
+        return;
+      }
+      const res = await fetch('/api/residents/debt-agreement/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ agreementId: a.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSignError(data.error || 'Зөвшөөрч чадсангүй');
+      } else {
+        setAgreements(prev => prev.map(x =>
+          x.id === a.id ? { ...x, status: 'signed', signed_at: data.agreement?.signed_at ?? null } : x
+        ));
+      }
+    } catch {
+      setSignError('Сервертэй холбогдож чадсангүй');
+    }
+    setSigningId(null);
+  };
 
   const unpaidBills = bills.filter(b => !b.paid);
   const paidBills = bills.filter(b => b.paid);
@@ -481,6 +555,99 @@ export default function PaymentsPage() {
       {/* History tab */}
       {activeTab === 'history' && (
         <div className="px-4 py-4">
+          {/* Даргатай тохирсон өр төлөх хуваарь */}
+          {agreements.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-gray-500 mb-3">МИНИЙ ТОХИРОЛЦСОН ГЭРЭЭ</h2>
+              {agreements.map(a => {
+                const plan = a.agreed_payment_plan || {};
+                const items = plan.installments || [];
+                const nextItem = items.find(it => new Date(it.due_date) >= new Date());
+                return (
+                  <div key={a.id} className="bg-white rounded-xl border border-amber-200 overflow-hidden mb-3">
+                    <div className="bg-amber-50 px-4 py-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-amber-900">
+                          🤝 {Number(a.total_debt).toLocaleString()}₮-ийг {plan.months || items.length} сард хуваан төлөх
+                        </p>
+                        <p className="text-[11px] text-amber-700 mt-0.5">
+                          {a.status === 'signed'
+                            ? `Зөвшөөрсөн${a.signed_at ? ' · ' + new Date(a.signed_at).toLocaleDateString('mn-MN') : ''}`
+                            : 'СӨХ-ийн даргаас санал болгосон — хараахан баталгаажаагүй'}
+                        </p>
+                      </div>
+                      <span className={`text-[10px] px-2 py-1 rounded-full font-medium shrink-0 ${
+                        a.status === 'signed' ? 'bg-green-100 text-green-700' : 'bg-amber-200 text-amber-800'
+                      }`}>
+                        {a.status === 'signed' ? 'Хүчинтэй' : 'Хүлээгдэж буй'}
+                      </span>
+                    </div>
+
+                    {items.length > 0 ? (
+                      <div className="divide-y">
+                        {items.map(it => {
+                          const isNext = nextItem && it.no === nextItem.no;
+                          const isPast = new Date(it.due_date) < new Date();
+                          return (
+                            <div
+                              key={it.no}
+                              className={`px-4 py-2.5 flex items-center justify-between ${isNext ? 'bg-blue-50' : ''}`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className={`w-6 h-6 rounded-full text-[11px] flex items-center justify-center font-medium ${
+                                  isNext ? 'bg-blue-600 text-white' : isPast ? 'bg-gray-100 text-gray-400' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {it.no}
+                                </span>
+                                <div>
+                                  <p className={`text-sm ${isPast && !isNext ? 'text-gray-400' : 'text-gray-800'}`}>
+                                    {new Date(it.due_date).toLocaleDateString('mn-MN', { year: 'numeric', month: 'long' })}
+                                  </p>
+                                  {isNext && <p className="text-[10px] text-blue-600 font-medium">Дараагийн төлөлт</p>}
+                                </div>
+                              </div>
+                              <span className={`text-sm font-semibold ${isPast && !isNext ? 'text-gray-400' : 'text-gray-800'}`}>
+                                {Number(it.amount).toLocaleString()}₮
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="px-4 py-3 text-xs text-gray-400">Хуваарь оруулаагүй байна.</p>
+                    )}
+
+                    {plan.note && (
+                      <p className="px-4 py-2.5 text-xs text-gray-500 bg-gray-50 border-t">📝 {plan.note}</p>
+                    )}
+
+                    {a.status === 'pending' ? (
+                      <div className="px-4 py-3 border-t bg-gray-50">
+                        <p className="text-[11px] text-gray-600 mb-2.5">
+                          Энэ хуваарийг хүлээн зөвшөөрч байвал доорх товчийг дарна уу.
+                          Зөвшөөрсний дараа хуваарь тань баталгаажна.
+                        </p>
+                        <button
+                          onClick={() => signAgreement(a)}
+                          disabled={signingId === a.id}
+                          className="w-full bg-green-600 text-white py-3 rounded-xl text-sm font-semibold active:bg-green-700 disabled:opacity-50"
+                        >
+                          {signingId === a.id ? 'Илгээж байна...' : '✓ Гэрээг зөвшөөрөх'}
+                        </button>
+                        {signError && <p className="text-xs text-red-600 mt-2">{signError}</p>}
+                      </div>
+                    ) : (
+                      <p className="px-4 py-2.5 text-[11px] text-gray-500 bg-gray-50 border-t">
+                        Хуваарийн дагуу төлбөрөө хийхэд өр тань буурна. Асуух зүйл байвал
+                        СӨХ-ийн даргатайгаа холбогдоно уу.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <h2 className="text-sm font-semibold text-gray-500 mb-3">ТӨЛБӨРИЙН ТҮҮХ</h2>
           {payments.length === 0 ? (
             <div className="bg-white rounded-xl p-6 text-center">

@@ -18,6 +18,32 @@ interface PaymentNotice {
   created_at: string;
 }
 
+/** Өр барагдуулах гэрээ. agreed_payment_plan-ыг CreateDebtAgreementModal бичдэг. */
+interface DebtAgreement {
+  id: string;
+  resident_id: number;
+  total_debt: number;
+  status: string;
+  agreed_payment_plan: {
+    months?: number;
+    monthly_amount?: number;
+    start_date?: string;
+    installments?: { no: number; due_date: string; amount: number }[];
+    note?: string;
+  } | null;
+  signed_at: string | null;
+  created_at: string;
+}
+
+/** Гэрээний төлөв — оршин суугчийн талын нэр томъёотой ижил ("Хүлээгдэж буй"/"Хүчинтэй") */
+const AGREEMENT_STATUS: Record<string, { label: string; cls: string }> = {
+  pending: { label: 'Хүлээгдэж буй', cls: 'bg-amber-100 text-amber-800' },
+  signed: { label: 'Хүчинтэй', cls: 'bg-green-100 text-green-700' },
+  completed: { label: 'Төлж дууссан', cls: 'bg-blue-100 text-blue-700' },
+  cancelled: { label: 'Цуцалсан', cls: 'bg-gray-100 text-gray-500' },
+  broken: { label: 'Зөрчсөн', cls: 'bg-red-100 text-red-600' },
+};
+
 /** /admin/bank-account дээр тохируулсан хураамж хүлээн авах данс */
 interface BankRow {
   bank_name: string;
@@ -32,8 +58,10 @@ export default function AdminPayments() {
   const [notices, setNotices] = useState<PaymentNotice[]>([]);
   const [resolving, setResolving] = useState<number | null>(null);
   const [bankRow, setBankRow] = useState<BankRow | null>(null);
+  const [agreements, setAgreements] = useState<DebtAgreement[]>([]);
+  const [closingId, setClosingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'record' | 'bank'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'record' | 'agreements' | 'bank'>('overview');
   const [showForm, setShowForm] = useState(false);
   const [selectedResident, setSelectedResident] = useState('');
   const [amount, setAmount] = useState('');
@@ -63,6 +91,11 @@ export default function AdminPayments() {
     // Хураамж хүлээн авах данс (/admin/bank-account дээр тохируулдаг)
     const { data: bank } = await adminFrom('sokh_bank_accounts').select('*').eq('sokh_id', sokhId).single();
     setBankRow((bank as unknown as BankRow) || null);
+
+    // Өр барагдуулах гэрээнүүд (/admin/residents дээр байгуулдаг)
+    const { data: agr } = await adminFrom('debt_agreements')
+      .select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false });
+    setAgreements((agr as unknown as DebtAgreement[]) || []);
 
     setLoading(false);
   };
@@ -110,6 +143,31 @@ export default function AdminPayments() {
     await adminFrom('payment_notices')
       .update({ status: 'rejected', resolved_at: new Date().toISOString() }).eq('id', n.id);
     setResolving(null);
+    await fetchData();
+  };
+
+  // Гэрээг хаах. Зөвхөн төлвийг солино — өрийг ХӨНДӨХГҮЙ. Өр нь жинхэнэ төлбөр
+  // бүртгэгдэхэд буурна, эс бөгөөс "дууссан" гэж дарахад л өр арилчихсан мэт болно.
+  // Хаагдмагц тухайн айлд шинэ гэрээ байгуулах боломж нээгдэнэ (pending/signed дээр
+  // ганцхан гэрээ зөвшөөрдөг unique индекстэй).
+  const closeAgreement = async (a: DebtAgreement, next: 'completed' | 'cancelled') => {
+    const who = getResidentName(a.resident_id);
+    if (!confirm(
+      next === 'completed'
+        ? `${who} — гэрээгээ бүрэн төлж дууссан гэж тэмдэглэх үү?\n\n` +
+          `Энэ нь өрийг хасахгүй. Төлбөрүүдийг «Төлбөр бүртгэх» хэсэгт бүртгэсэн эсэхээ шалгана уу.`
+        : `${who} — энэ гэрээг цуцлах уу?\n\n` +
+          `Цуцалсны дараа тухайн айлд шинэ гэрээ байгуулах боломжтой болно.`
+    )) return;
+
+    setClosingId(a.id);
+    const { error } = await adminFrom('debt_agreements')
+      .update({ status: next, updated_at: new Date().toISOString() }).eq('id', a.id);
+    setClosingId(null);
+    if (error) {
+      alert(`Хадгалж чадсангүй: ${error}`);
+      return;
+    }
     await fetchData();
   };
 
@@ -163,6 +221,11 @@ export default function AdminPayments() {
     XLSX.writeFile(wb, `төлбөр-${today}.xlsx`);
   };
 
+  // Нээлттэй гэрээ = хүчин төгөлдөр эсвэл айлын зөвшөөрөл хүлээж буй нь
+  const openAgreements = agreements.filter(a => a.status === 'pending' || a.status === 'signed');
+  const awaitingAgreements = agreements.filter(a => a.status === 'pending');
+  const agreementTotal = openAgreements.reduce((s, a) => s + Number(a.total_debt), 0);
+
   const totalDebt = residents.reduce((s, r) => s + r.debt, 0);
   const totalCollected = payments.reduce((s, p) => s + Number(p.amount), 0);
   const debtors = residents.filter(r => r.debt > 0).length;
@@ -193,6 +256,7 @@ export default function AdminPayments() {
         {[
           { key: 'overview' as const, label: '📊 Орлого', },
           { key: 'record' as const, label: '💳 Төлбөр бүртгэх' },
+          { key: 'agreements' as const, label: `🤝 Гэрээнүүд${openAgreements.length ? ` (${openAgreements.length})` : ''}` },
           { key: 'bank' as const, label: '🏦 Данс холболт' },
         ].map(t => (
           <button
@@ -413,6 +477,124 @@ export default function AdminPayments() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* ========== ГЭРЭЭНҮҮД ========== */}
+      {activeTab === 'agreements' && (
+        <div>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <p className="text-sm text-gray-500">
+              Өрөө хуваан төлөхөөр тохирсон айлууд. Шинэ гэрээг{' '}
+              <a href="/admin/residents" className="text-blue-600 hover:underline">Оршин суугчид</a>{' '}
+              хуудаснаас байгуулна.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+              <p className="text-sm text-green-600">Нээлттэй гэрээ</p>
+              <p className="text-2xl font-bold text-green-700">{openAgreements.length}</p>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p className="text-sm text-amber-600">Айлын зөвшөөрөл хүлээж буй</p>
+              <p className="text-2xl font-bold text-amber-700">{awaitingAgreements.length}</p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <p className="text-sm text-blue-600">Гэрээнд хамрагдсан дүн</p>
+              <p className="text-2xl font-bold text-blue-700">{agreementTotal.toLocaleString()}₮</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr className="text-left text-sm text-gray-500">
+                  <th className="px-4 py-3">Оршин суугч</th>
+                  <th className="px-4 py-3 text-right">Гэрээний дүн</th>
+                  <th className="px-4 py-3">Хуваарь</th>
+                  <th className="px-4 py-3">Төлөв</th>
+                  <th className="px-4 py-3 text-right">Үйлдэл</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agreements.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                      Гэрээ байгуулаагүй байна
+                    </td>
+                  </tr>
+                ) : agreements.map(a => {
+                  const st = AGREEMENT_STATUS[a.status] || { label: a.status, cls: 'bg-gray-100 text-gray-500' };
+                  const plan = a.agreed_payment_plan;
+                  const isOpen = a.status === 'pending' || a.status === 'signed';
+                  return (
+                    <tr key={a.id} className="border-t hover:bg-gray-50 align-top">
+                      <td className="px-4 py-3 text-sm">
+                        <p className="font-medium">{getResidentName(a.resident_id)}</p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(a.created_at).toLocaleDateString('mn-MN')}-нд байгуулсан
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-semibold">
+                        {Number(a.total_debt).toLocaleString()}₮
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {plan?.months ? (
+                          <>
+                            <p>{plan.months} сар × {Number(plan.monthly_amount || 0).toLocaleString()}₮</p>
+                            {plan.start_date && (
+                              <p className="text-xs text-gray-400">
+                                {new Date(plan.start_date).toLocaleDateString('mn-MN', { year: 'numeric', month: 'long' })}-аас
+                              </p>
+                            )}
+                          </>
+                        ) : <span className="text-gray-400">—</span>}
+                        {plan?.note && <p className="text-xs text-gray-500 mt-1 max-w-xs">{plan.note}</p>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${st.cls}`}>
+                          {st.label}
+                        </span>
+                        {a.signed_at && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {new Date(a.signed_at).toLocaleDateString('mn-MN')}-нд зөвшөөрсөн
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {isOpen ? (
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => closeAgreement(a, 'completed')}
+                              disabled={closingId === a.id}
+                              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium disabled:opacity-50"
+                            >
+                              {closingId === a.id ? '...' : 'Төлж дууссан'}
+                            </button>
+                            <button
+                              onClick={() => closeAgreement(a, 'cancelled')}
+                              disabled={closingId === a.id}
+                              className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs disabled:opacity-50"
+                            >
+                              Цуцлах
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">Хаагдсан</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3 mt-4">
+            ⚠️ Гэрээ нь өрийг хасахгүй — зөвхөн тохиролцсон хуваарийг бүртгэнэ. Айл
+            төлбөрөө хийхэд «Төлбөр бүртгэх» хэсэгт бүртгэснээр л өр буурна.
+          </p>
         </div>
       )}
 
