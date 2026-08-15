@@ -1,20 +1,20 @@
-// СВД СӨХ (id=1787) -г бүрэн идэвхжүүлнэ.
+// СӨХ-ийг бүрэн идэвхжүүлнэ (даргын бүртгэл үүсгээд, төлөвийг active болгоно).
 //
-// Оршин суугчид нь аль хэдийн орсон (43 айл) ч байгууллага нь `pending`
-// төлөвтэй, ДАРГЫН НЭВТРЭХ БҮРТГЭЛГҮЙ байсан тул дарга нь ороод ажиллаж
-// чадахгүй байв.
-//
-// Энэ скрипт нь /api/auth/activate маршрутын хийдэг ЯГ ТЭР 2 зүйлийг хийнэ:
-//   1. admin_users-д дарга үүсгэх (bcrypt cost 12, бусад СӨХ-тэй ижил)
+// /api/auth/activate маршрутын хийдэг ЯГ ТЭР 2 зүйлийг хийнэ:
+//   1. admin_users-д дарга үүсгэх (bcrypt cost 12)
 //   2. sokh_organizations-г claim_status='active', activated_at=now болгох
 //
-// Нэвтрэх нэр = утасны дугаар, түр нууц үг = утасны дугаар. Бусад СӨХ
-// (Хөгжил хаус 88373982, Ариун Очир 89046609) яг ийм журмаар орсон.
-// ⚠️ Дарга нэвтэрсэн даруйдаа нууц үгээ солих ёстой.
+// Ялгаа нь: тэр маршрут дарга өөрөө код оруулж, нууц үгээ СОНГОХ замаар
+// ажилладаг. Энэ скрипт нь дарга руу код хүргэх боломжгүй үед (утсаар нь
+// тохирсон гэх мэт) супер админ гараар нээж өгөх зориулалттай.
+//
+// Нэвтрэх нэр = утасны дугаар, түр нууц үг = утасны дугаар.
+// ⚠️ Түр нууц үг СУЛ. Дарга нэвтэрсэн даруйдаа солих ёстой. Боломжтой бол
+//    /mng-ctrl/organizations → «Идэвхжүүлэх» кодоор явуулах нь илүү аюулгүй.
 //
 // Ажиллуулах:
-//   node scripts/activate-svd.js            # зөвхөн шалгана, юу ч өөрчлөхгүй
-//   node scripts/activate-svd.js --commit   # бодитоор идэвхжүүлнэ
+//   node scripts/activate-sokh.js --id=2686            # зөвхөн шалгана
+//   node scripts/activate-sokh.js --id=2686 --commit   # бодитоор идэвхжүүлнэ
 
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
@@ -38,8 +38,14 @@ const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const SOKH_ID = 1787;
+const idArg = process.argv.find(a => a.startsWith('--id='));
+const SOKH_ID = idArg ? Number(idArg.split('=')[1]) : null;
 const commit = process.argv.includes('--commit');
+
+if (!SOKH_ID) {
+  console.error('Хэрэглээ: node scripts/activate-sokh.js --id=<sokh_id> [--commit]');
+  process.exit(1);
+}
 
 async function main() {
   const { data: org, error: orgErr } = await sb
@@ -94,7 +100,11 @@ async function main() {
 
   console.log('\n📋 Хийх ажил:');
   console.log(`   ${needsAdmin ? '➕' : '✓ '} Даргын бүртгэл: ${needsAdmin ? `${username} үүсгэнэ (нууц үг = утас)` : 'аль хэдийн байна'}`);
-  console.log(`   ${needsActivation ? '➕' : '✓ '} Төлөв: ${needsActivation ? "active болгоно" : 'аль хэдийн active'}`);
+  console.log(`   ${needsActivation ? '➕' : '✓ '} Төлөв: ${needsActivation ? 'active болгоно' : 'аль хэдийн active'}`);
+
+  if (residentCount === 0) {
+    console.log('\n⚠️  Оршин суугчгүй — дарга ороход жагсаалт хоосон байна.');
+  }
 
   if (!needsAdmin && !needsActivation) {
     console.log('\n✅ Аль хэдийн бүрэн идэвхтэй — өөрчлөх зүйл алга.');
@@ -102,7 +112,7 @@ async function main() {
   }
 
   if (!commit) {
-    console.log('\n💡 Бодитоор хийхийн тулд: node scripts/activate-svd.js --commit');
+    console.log(`\n💡 Бодитоор хийхийн тулд: node scripts/activate-sokh.js --id=${SOKH_ID} --commit`);
     return;
   }
 
