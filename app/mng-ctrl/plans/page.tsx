@@ -28,7 +28,7 @@ const emptyPlan = {
 };
 
 export default function PlansPage() {
-  const [tab, setTab] = useState<'plans' | 'tiers'>('plans');
+  const [tab, setTab] = useState<'tariff' | 'plans' | 'tiers'>('tariff');
   const [plans, setPlans] = useState<PlatformPlan[]>([]);
   const [tiers, setTiers] = useState<SokhTier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +36,15 @@ export default function PlansPage() {
   const [editing, setEditing] = useState<PlatformPlan | null>(null);
   const [form, setForm] = useState(emptyPlan);
   const [saving, setSaving] = useState(false);
+
+  // Тариф — БҮХ СӨХ-д ижил үйлчилдэг ганц бүртгэл (багц шиг олон биш)
+  const [tariff, setTariff] = useState({
+    setup_per_unit: 1500, monthly_per_unit: 1000,
+    free_months_threshold: 150, free_months_below: 1, free_months_above: 2,
+  });
+  const [tariffMigrated, setTariffMigrated] = useState(true);
+  const [tariffSaving, setTariffSaving] = useState(false);
+  const [tariffMsg, setTariffMsg] = useState('');
 
   // Зэрэглэл state
   const [showTierModal, setShowTierModal] = useState(false);
@@ -54,9 +63,34 @@ export default function PlansPage() {
     setTiers(Array.isArray(data) ? data : []);
   };
 
+  const fetchTariff = async () => {
+    const res = await fetch('/api/superadmin/tariff');
+    const data = await res.json();
+    if (data && !data.error) {
+      const { migrated, ...values } = data;
+      setTariffMigrated(migrated !== false);
+      setTariff(t => ({ ...t, ...values }));
+    }
+  };
+
+  const saveTariff = async () => {
+    setTariffSaving(true);
+    setTariffMsg('');
+    const res = await fetch('/api/superadmin/tariff', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tariff),
+    });
+    const data = await res.json();
+    setTariffSaving(false);
+    if (data.error) { setTariffMsg(data.error); return; }
+    setTariffMsg('Хадгаллаа ✓');
+    await fetchTariff();
+  };
+
   useEffect(() => {
     const loadData = async () => {
-      await Promise.all([fetchPlans(), fetchTiers()]);
+      await Promise.all([fetchPlans(), fetchTiers(), fetchTariff()]);
       setLoading(false);
     };
     loadData();
@@ -166,14 +200,20 @@ export default function PlansPage() {
           <h1 className="text-2xl font-bold text-gray-900">Багц & Зэрэглэл</h1>
           <p className="text-sm text-gray-500 mt-1">Төлбөрийн багцууд болон СӨХ-ийн зэрэглэл</p>
         </div>
-        <button onClick={tab === 'plans' ? openCreate : openCreateTier}
-          className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700">
-          + {tab === 'plans' ? 'Багц нэмэх' : 'Зэрэглэл нэмэх'}
-        </button>
+        {tab !== 'tariff' && (
+          <button onClick={tab === 'plans' ? openCreate : openCreateTier}
+            className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700">
+            + {tab === 'plans' ? 'Багц нэмэх' : 'Зэрэглэл нэмэх'}
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+        <button onClick={() => setTab('tariff')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === 'tariff' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>
+          Тариф
+        </button>
         <button onClick={() => setTab('plans')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === 'plans' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>
           Багцууд
@@ -183,6 +223,106 @@ export default function PlansPage() {
           Зэрэглэлүүд
         </button>
       </div>
+
+      {/* Тариф — Хотол → СӨХ-өөс авах төлбөр */}
+      {tab === 'tariff' && (
+        <div className="max-w-2xl">
+          {!tariffMigrated && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
+              <p className="text-sm font-semibold text-amber-800">⚠️ Тарифын хүснэгт үүсээгүй байна</p>
+              <p className="text-xs text-amber-700 mt-1">
+                Доорх нь үндсэн утга. Хадгалахын тулд{' '}
+                <code className="bg-amber-100 px-1 rounded">supabase-platform-tariff-migration.sql</code>-ийг
+                Supabase → SQL Editor дээр ажиллуулна уу.
+              </p>
+            </div>
+          )}
+
+          <div className="bg-white border rounded-2xl p-5">
+            <h2 className="font-bold mb-1">Хотолын тариф</h2>
+            <p className="text-xs text-gray-500 mb-5">
+              Бүх СӨХ-д ижил үйлчилнэ. Энд өөрчилсөн дүн шинээр үүсэх нэхэмжлэлд шууд тусна —
+              өмнө үүссэн нэхэмжлэл хэвээр үлдэнэ.
+            </p>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Суурилуулалт — нэг айлд (₮)
+                </label>
+                <input type="number" min={0} value={tariff.setup_per_unit}
+                  onChange={e => setTariff(t => ({ ...t, setup_per_unit: Number(e.target.value) }))}
+                  className="w-full border rounded-lg px-3 py-2 text-sm" />
+                <p className="text-[11px] text-gray-400 mt-1">Нэг удаа авна</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Сарын хураамж — нэг айлд (₮)
+                </label>
+                <input type="number" min={0} value={tariff.monthly_per_unit}
+                  onChange={e => setTariff(t => ({ ...t, monthly_per_unit: Number(e.target.value) }))}
+                  className="w-full border rounded-lg px-3 py-2 text-sm" />
+                <p className="text-[11px] text-gray-400 mt-1">Сар бүр авна</p>
+              </div>
+            </div>
+
+            <div className="border-t mt-5 pt-5">
+              <p className="text-xs font-medium text-gray-600 mb-3">Үнэгүй ашиглах хугацаа</p>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[11px] text-gray-500 mb-1">Айлын хязгаар</label>
+                  <input type="number" min={1} value={tariff.free_months_threshold}
+                    onChange={e => setTariff(t => ({ ...t, free_months_threshold: Number(e.target.value) }))}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-gray-500 mb-1">Хязгаараас доош (сар)</label>
+                  <input type="number" min={0} value={tariff.free_months_below}
+                    onChange={e => setTariff(t => ({ ...t, free_months_below: Number(e.target.value) }))}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-gray-500 mb-1">Түүнээс их (сар)</label>
+                  <input type="number" min={0} value={tariff.free_months_above}
+                    onChange={e => setTariff(t => ({ ...t, free_months_above: Number(e.target.value) }))}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-2">
+                {tariff.free_months_threshold} айлаас доош бол {tariff.free_months_below} сар,
+                түүнээс их бол {tariff.free_months_above} сар үнэгүй. Идэвхжсэн өдрөөс тоолно.
+              </p>
+            </div>
+
+            {/* Жишээ тооцоо — тоо солиход шууд хэрхэн өөрчлөгдөхийг харуулна */}
+            <div className="bg-gray-50 rounded-xl p-3 mt-5">
+              <p className="text-[11px] font-semibold text-gray-600 mb-2">Жишээ</p>
+              {[43, 111, 332].map(n => (
+                <div key={n} className="flex justify-between text-xs text-gray-600 py-0.5">
+                  <span>{n} айлтай СӨХ</span>
+                  <span>
+                    суурилуулалт <b>{(n * tariff.setup_per_unit).toLocaleString()}₮</b> ·
+                    сард <b>{(n * tariff.monthly_per_unit).toLocaleString()}₮</b> ·
+                    үнэгүй {n < tariff.free_months_threshold ? tariff.free_months_below : tariff.free_months_above} сар
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3 mt-5">
+              <button onClick={saveTariff} disabled={tariffSaving}
+                className="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                {tariffSaving ? 'Хадгалж байна...' : 'Хадгалах'}
+              </button>
+              {tariffMsg && (
+                <span className={`text-sm ${tariffMsg.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>
+                  {tariffMsg}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Зэрэглэлүүд */}
       {tab === 'tiers' && (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { getAuthRole } from '@/app/lib/session-token';
+import { DEFAULT_TARIFF, setupFee, monthlyFee } from '@/app/lib/platform-pricing';
 
 async function requireSuperadmin() {
   const auth = await getAuthRole();
@@ -171,6 +172,78 @@ export async function POST(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ generated: data?.length || 0, invoices: data });
+  }
+
+  // Тарифаар нэг СӨХ-д нэхэмжлэл үүсгэх (суурилуулалт эсвэл сарын хураамж).
+  // Захиалга (sokh_subscriptions) шаарддаггүй — тариф бүх СӨХ-д ижил тул
+  // айлын тоо × нэгжийн үнэ гэсэн тооцоо хангалттай.
+  if (body.action === 'create') {
+    const { sokh_id, kind, period_year, period_month, mark_paid } = body;
+
+    if (!sokh_id || !period_year || !period_month) {
+      return NextResponse.json({ error: 'sokh_id, period_year, period_month шаардлагатай' }, { status: 400 });
+    }
+    if (kind !== 'setup' && kind !== 'monthly') {
+      return NextResponse.json({ error: 'kind нь setup эсвэл monthly байна' }, { status: 400 });
+    }
+
+    // Тариф + айлын тоог СЕРВЕР дээр дахин тооцно. Клиентээс ирсэн дүнд
+    // найдвал хөтчөөс дүнг өөрчилж, дурын нэхэмжлэл бичих боломж үүснэ.
+    const { data: tRow } = await supabaseAdmin
+      .from('platform_tariff').select('*').eq('id', 1).maybeSingle();
+    const tariff = { ...DEFAULT_TARIFF, ...(tRow || {}) };
+
+    const { count } = await supabaseAdmin
+      .from('residents')
+      .select('id', { count: 'exact', head: true })
+      .eq('sokh_id', sokh_id);
+    const apartments = count || 0;
+
+    if (apartments === 0) {
+      return NextResponse.json({ error: 'Айлгүй СӨХ-д нэхэмжлэл үүсгэхгүй' }, { status: 400 });
+    }
+
+    const amount = kind === 'setup'
+      ? setupFee(tariff, apartments)
+      : monthlyFee(tariff, apartments);
+
+    // Тухайн сарын дараа сарын 15-нд төлөх хугацаа дуусна
+    const dueDate = new Date(period_year, period_month, 15).toISOString().split('T')[0];
+
+    const row: Record<string, unknown> = {
+      sokh_id,
+      kind,
+      period_year,
+      period_month,
+      amount,
+      calculation_details: {
+        apartments,
+        per_unit_fee: kind === 'setup' ? tariff.setup_per_unit : tariff.monthly_per_unit,
+        unit_total: amount,
+        plan_name: kind === 'setup' ? 'Суурилуулалт' : 'Сарын хураамж',
+      },
+      status: mark_paid ? 'paid' : 'pending',
+      due_date: dueDate,
+    };
+    if (mark_paid) {
+      row.paid_at = new Date().toISOString();
+      row.paid_amount = amount;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('platform_invoices')
+      .upsert([row], { onConflict: 'sokh_id,period_year,period_month,kind' })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[superadmin/invoices create]', error.message);
+      return NextResponse.json(
+        { error: 'Нэхэмжлэл үүсгэж чадсангүй. supabase-platform-tariff-migration.sql ажилласан эсэхийг шалгана уу.' },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json(data);
   }
 
   return NextResponse.json({ error: 'action шаардлагатай' }, { status: 400 });

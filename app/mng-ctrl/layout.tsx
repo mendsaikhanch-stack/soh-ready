@@ -6,6 +6,7 @@ import { startAuthentication, startRegistration } from '@simplewebauthn/browser'
 
 const navItems = [
   { icon: '📊', label: 'Хянах самбар', href: '/mng-ctrl' },
+  { icon: '🤝', label: 'Хэрэглэгч СӨХ', href: '/mng-ctrl/customers' },
   { icon: '🏢', label: 'СӨХ-үүд', href: '/mng-ctrl/organizations' },
   { icon: '📋', label: 'Бүртгэлийн явц', href: '/mng-ctrl/onboarding' },
   { icon: '📦', label: 'Багц & Зэрэглэл', href: '/mng-ctrl/plans' },
