@@ -56,6 +56,26 @@ export function billingStartDate(
   return start;
 }
 
+/**
+ * Төлбөр тооцох ЭХНИЙ БҮТЭН сар.
+ *
+ * Үнэгүй хугацаа сарын дунд дуусдаг (ж: 8-р сарын 24). Тэр сарыг бүтнээр нь
+ * нэхэмжилбэл айл 7 хоногийн хэрэглээнд бүтэн сарын төлбөр төлнө — шударга
+ * бус. Хуваарилж тооцох нь ойлгоход хэцүү. Тиймээс үлдсэн хэдэн өдрийг
+ * үнэгүйд тооцоод, ДАРАА сараас нь эхэлнэ.
+ */
+export function firstBillableMonth(
+  activatedAt: string | null | undefined,
+  tariff: PlatformTariff,
+  apartments: number,
+): Date | null {
+  const start = billingStartDate(activatedAt, tariff, apartments);
+  if (!start) return null;
+  // Яг сарын 1-нд дуусвал тэр сар бүтэн тул шууд тооцно
+  const month = start.getDate() === 1 ? start.getMonth() : start.getMonth() + 1;
+  return new Date(start.getFullYear(), month, 1);
+}
+
 export interface BillingPeriod {
   year: number;
   month: number;   // 1-12
@@ -88,12 +108,12 @@ export function nextBillingPeriod(
   billedPeriods: Set<string> = new Set(),
   now: Date = new Date(),
 ): BillingPeriod | null {
-  const start = billingStartDate(activatedAt, tariff, apartments);
-  if (!start) return null;
+  const first = firstBillableMonth(activatedAt, tariff, apartments);
+  if (!first) return null;
 
   // Эхний тооцоот сараас эхлээд нэхэмжлээгүй хамгийн эртний сарыг олно.
   // 120 сар (10 жил) хүрээд олдохгүй бол ямар нэг зүйл буруу — зогсооно.
-  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const cursor = new Date(first);
   for (let i = 0; i < 120; i++) {
     const year = cursor.getFullYear();
     const month = cursor.getMonth() + 1;
