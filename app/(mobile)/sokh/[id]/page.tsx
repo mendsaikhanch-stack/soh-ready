@@ -52,7 +52,7 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
     {
       title: '🔧 Үйлчилгээ',
       items: [
-        { icon: '🔧', label: 'Засвар', desc: 'Засвар үйлчилгээний хүсэлт', href: 'maintenance', color: 'bg-orange-50 border-orange-200' },
+        { icon: '🔧', label: 'Засвар', desc: 'Хүсэлт гаргах, хийсэн засвар харах', href: 'maintenance', color: 'bg-orange-50 border-orange-200' },
         { icon: '🚗', label: 'Зогсоол', desc: 'Машин бүртгэл, зогсоолын мэдээлэл', href: 'parking', color: 'bg-indigo-50 border-indigo-200' },
         { icon: '🎬', label: 'Камер бичлэг', desc: 'Бичлэг шүүх хүсэлт илгээх', href: 'cctv-request', color: 'bg-gray-50 border-gray-300' },
         { icon: '🏢', label: 'Зай захиалга', desc: 'Хурлын өрөө, спорт заал', href: 'booking', color: 'bg-indigo-50 border-indigo-200' },
