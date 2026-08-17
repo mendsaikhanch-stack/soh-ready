@@ -3,13 +3,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { compressImage } from '@/app/lib/compress-image';
+
+const MAX_PHOTOS = 4;
 
 interface Request {
   id: number;
   title: string;
   description: string;
   status: string;
+  // Ганц зурагтай ХУУЧИН мөрүүдэд үлдсэн багана. Шинэ мөр `photos`-ыг хэрэглэнэ.
   image_url: string | null;
+  photos: string[] | null;
   created_at: string;
 }
 
@@ -39,8 +44,8 @@ export default function MaintenancePage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<{ file: File; preview: string }[]>([]);
+  const [formError, setFormError] = useState('');
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -71,61 +76,89 @@ export default function MaintenancePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
-  const handleImageSelect =(e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const addPhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (fileRef.current) fileRef.current.value = '';
+    if (files.length === 0) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Зургийн хэмжээ 5MB-с бага байх ёстой');
+    const room = MAX_PHOTOS - photos.length;
+    if (room <= 0) {
+      setFormError(`Хамгийн ихдээ ${MAX_PHOTOS} зураг оруулна`);
       return;
     }
 
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
+    // 15MB-с доош бүх зургийг авна — илгээхийн өмнө шахагдаж ~200-500KB болно.
+    const accepted: { file: File; preview: string }[] = [];
+    let tooBig = false;
+    for (const file of files.slice(0, room)) {
+      if (file.size > 15 * 1024 * 1024) { tooBig = true; continue; }
+      accepted.push({ file, preview: URL.createObjectURL(file) });
+    }
+
+    setFormError(
+      tooBig ? 'Зарим зураг хэт том (15MB-с дээш) тул оруулаагүй' :
+      files.length > room ? `Хамгийн ихдээ ${MAX_PHOTOS} зураг тул эхний ${room}-г нь авлаа` : ''
+    );
+    setPhotos(prev => [...prev, ...accepted]);
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
-    if (fileRef.current) fileRef.current.value = '';
+  const removePhoto = (index: number) => {
+    setPhotos(prev => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const resetForm = () => {
+    photos.forEach(p => URL.revokeObjectURL(p.preview));
+    setPhotos([]);
+    setTitle('');
+    setDescription('');
+    setFormError('');
+    setShowForm(false);
   };
 
   const submitRequest = async () => {
     if (!title) return;
     setSaving(true);
+    setFormError('');
 
-    let imageUrl: string | null = null;
+    const urls: string[] = [];
 
-    // Зураг upload
-    if (imageFile) {
-      const ext = imageFile.name.split('.').pop();
-      const fileName = `maintenance/${params.id}/${Date.now()}.${ext}`;
+    for (let i = 0; i < photos.length; i++) {
+      const blob = await compressImage(photos[i].file);
+      const path = `maintenance/${params.id}/${Date.now()}-${i}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from('uploads')
-        .upload(fileName, imageFile, { contentType: imageFile.type });
+        .upload(path, blob, { contentType: 'image/jpeg' });
 
-      if (!uploadError) {
-        const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
-        imageUrl = urlData.publicUrl;
+      // Өмнө нь энэ алдааг чимээгүй залгидаг байсан тул оршин суугч зураг
+      // хавсаргасан гэж бодоод үлддэг, дарга нь юу ч харахгүй байв.
+      if (uploadError) {
+        setFormError('Зураг хуулахад алдаа гарлаа: ' + uploadError.message);
+        setSaving(false);
+        return;
       }
+
+      urls.push(supabase.storage.from('uploads').getPublicUrl(path).data.publicUrl);
     }
 
-    await supabase.from('maintenance_requests').insert([{
+    const { error } = await supabase.from('maintenance_requests').insert([{
       sokh_id: params.id,
       title,
       description,
       status: 'pending',
-      image_url: imageUrl,
+      photos: urls,
     }]);
 
-    setTitle('');
-    setDescription('');
-    removeImage();
-    setShowForm(false);
     setSaving(false);
+    if (error) {
+      setFormError('Илгээхэд алдаа гарлаа: ' + error.message);
+      return;
+    }
+
+    resetForm();
     await fetchRequests();
   };
 
@@ -183,28 +216,39 @@ export default function MaintenancePage() {
                 className="w-full border rounded-lg px-3 py-2 mb-2 text-sm"
               />
 
-              {/* Зураг хавсаргах */}
+              {/* Зураг хавсаргах — хамгийн ихдээ MAX_PHOTOS ширхэг */}
               <input
                 ref={fileRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
-                onChange={handleImageSelect}
+                multiple
+                onChange={addPhotos}
                 className="hidden"
               />
 
-              {imagePreview ? (
-                <div className="relative mb-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
-                  <button
-                    onClick={removeImage}
-                    className="absolute top-2 right-2 w-7 h-7 bg-black/60 text-white rounded-full flex items-center justify-center text-sm"
-                  >
-                    ✕
-                  </button>
+              <p className="text-xs text-gray-400 mb-1">
+                Зураг ({photos.length}/{MAX_PHOTOS})
+              </p>
+
+              {photos.length > 0 && (
+                <div className="grid grid-cols-4 gap-1.5 mb-2">
+                  {photos.map((p, i) => (
+                    <div key={p.preview} className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.preview} alt={`Зураг ${i + 1}`} className="w-full h-16 object-cover rounded-lg" />
+                      <button
+                        onClick={() => removePhoto(i)}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-black/70 text-white rounded-full flex items-center justify-center text-xs"
+                        aria-label={`${i + 1}-р зургийг хасах`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ) : (
+              )}
+
+              {photos.length < MAX_PHOTOS && (
                 <button
                   onClick={() => fileRef.current?.click()}
                   className="w-full border-2 border-dashed border-gray-300 rounded-lg py-4 mb-2 flex flex-col items-center gap-1 text-gray-400 hover:border-orange-400 hover:text-orange-500 transition"
@@ -214,9 +258,13 @@ export default function MaintenancePage() {
                 </button>
               )}
 
+              {formError && (
+                <p className="text-xs text-red-500 mb-2">{formError}</p>
+              )}
+
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setShowForm(false); removeImage(); }}
+                  onClick={resetForm}
                   className="flex-1 py-2 rounded-lg border text-sm"
                 >
                   Цуцлах
@@ -256,12 +304,25 @@ export default function MaintenancePage() {
                     {r.description && (
                       <p className="text-xs text-gray-500 mt-1">{r.description}</p>
                     )}
-                    {r.image_url && (
-                      <button onClick={() => setExpandedImage(r.image_url)} className="mt-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={r.image_url} alt="Хавсралт" className="w-full h-32 object-cover rounded-lg" />
-                      </button>
-                    )}
+                    {(() => {
+                      // Шинэ мөр `photos`-той, хуучин нь ганц `image_url`-тэй
+                      const imgs = r.photos?.length ? r.photos : r.image_url ? [r.image_url] : [];
+                      if (!imgs.length) return null;
+                      return (
+                        <div className={`mt-2 grid gap-1.5 ${imgs.length === 1 ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                          {imgs.map((url, i) => (
+                            <button key={url} onClick={() => setExpandedImage(url)}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={url}
+                                alt={`Хавсралт ${i + 1}`}
+                                className={`w-full object-cover rounded-lg ${imgs.length === 1 ? 'h-32' : 'h-20'}`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     <p className="text-xs text-gray-400 mt-2">
                       {new Date(r.created_at).toLocaleDateString('mn-MN')}
                     </p>

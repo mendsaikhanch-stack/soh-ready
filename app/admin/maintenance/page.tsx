@@ -4,8 +4,19 @@ import { useState, useEffect, useRef } from 'react';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import { supabase } from '@/app/lib/supabase';
+import { compressImage } from '@/app/lib/compress-image';
 
-interface Request { id: number; title: string; description: string; status: string; created_at: string; }
+interface Request {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  created_at: string;
+  // Оршин суугчийн хавсаргасан зураг. `image_url` нь ганц зурагтай ХУУЧИН
+  // мөрүүдэд үлдсэн; шинэ мөрүүд `photos` массивыг хэрэглэнэ.
+  image_url: string | null;
+  photos: string[] | null;
+}
 interface Work {
   id: number;
   title: string;
@@ -23,36 +34,6 @@ const statusOptions = [
 ];
 
 const MAX_PHOTOS = 6;
-
-/**
- * Утасны камерын зураг 4-8MB хүрдэг. 6 ширхгийг тэр чигээр нь хуулбал
- * даргын дата дуусаж, оршин суугчийн утсанд удаан ачаална. Тиймээс
- * илгээхийн өмнө урт талыг 1600px болгож жижигрүүлээд JPEG болгоно.
- */
-async function compressImage(file: File): Promise<Blob> {
-  try {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
-    const w = Math.round(bitmap.width * scale);
-    const h = Math.round(bitmap.height * scale);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return file;
-
-    ctx.drawImage(bitmap, 0, 0, w, h);
-    bitmap.close();
-
-    const blob = await new Promise<Blob | null>(resolve =>
-      canvas.toBlob(resolve, 'image/jpeg', 0.8)
-    );
-    return blob || file;
-  } catch {
-    return file; // хөтөч дэмжихгүй бол эх зургаар нь илгээнэ
-  }
-}
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -75,6 +56,9 @@ export default function AdminMaintenance() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Зураг томруулж харах (хүсэлт болон хийсэн засварын аль алинд)
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   const fetchRequests = async () => {
     const sokhId = await getAdminSokhId();
@@ -255,6 +239,27 @@ export default function AdminMaintenance() {
                       </div>
                       <button onClick={() => deleteRequest(r.id)} className="text-red-400 text-xs hover:underline">Устгах</button>
                     </div>
+
+                    {/* Хавсаргасан зураг — товшиж томруулна */}
+                    {(() => {
+                      const imgs = r.photos?.length ? r.photos : r.image_url ? [r.image_url] : [];
+                      if (!imgs.length) return null;
+                      return (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {imgs.map((url, i) => (
+                            <button key={url} onClick={() => setExpandedImage(url)} title="Томруулж харах">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={url}
+                                alt={`Хавсралт ${i + 1}`}
+                                className="w-24 h-24 object-cover rounded-lg border hover:opacity-80 transition"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs text-gray-500">Төлөв:</span>
                       {statusOptions.map(s => (
@@ -409,6 +414,17 @@ export default function AdminMaintenance() {
             </div>
           )}
         </>
+      )}
+
+      {/* Зураг томруулж харах */}
+      {expandedImage && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6"
+          onClick={() => setExpandedImage(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={expandedImage} alt="Зураг" className="max-w-full max-h-full rounded-xl" />
+        </div>
       )}
     </div>
   );
