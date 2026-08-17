@@ -1,7 +1,17 @@
--- Засвар хүсэлтэд зураг хавсаргах column нэмэх
-ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS image_url TEXT;
-
--- Supabase Storage bucket (uploads):
--- ⚠️ Энэ тайлбар нь хийгдээгүй өнгөрч, /admin/maintenance дээр «Bucket not found»
---    алдаа гаргаж байсан. Одоо бүрэн миграц болгосон:
---    → supabase-uploads-bucket-migration.sql (bucket үүссэн, policy-г нь ажиллуулна уу)
+-- ⚠️ ХҮЧИНГҮЙ БОЛСОН — ажиллуулах ХЭРЭГГҮЙ.
+--
+-- Энэ файл `maintenance_requests.image_url` (ганц зураг) нэмэх ба `uploads`
+-- bucket үүсгэх зориулалттай байсан. 2026-08-17-нд шалгахад ХОЁУЛАА
+-- ажиллаагүй байсныг тогтоов — багана ч, bucket ч огт үүсээгүй байв.
+--
+-- Үр дагавар нь чимээгүй байсан: хуучин код хүсэлт үүсгэхдээ `image_url`-ыг
+-- үргэлж дамжуулдаг (зураггүй үед ч `null`) байсан тул PostgREST «column
+-- does not exist» гэж татгалзаж, код нь алдааг шалгадаггүй байсан →
+-- **оршин суугчийн засварын хүсэлт бүр чимээгүй алга болдог байв.**
+--
+-- Оронд нь дараах 2 файл хэрэглэгдэнэ:
+--   supabase-uploads-bucket-migration.sql   — bucket + policy
+--   supabase-request-photos-migration.sql   — maintenance_requests.photos TEXT[]
+--
+-- `image_url` баганыг сэргээх шаардлагагүй: хэзээ ч үүсээгүй тул хадгалах
+-- өгөгдөл байхгүй. Апп зөвхөн `photos` массивыг хэрэглэнэ.

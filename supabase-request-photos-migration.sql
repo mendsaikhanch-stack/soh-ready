@@ -5,10 +5,8 @@
 --
 -- `maintenance_works.photos`-той ижил хэлбэр (TEXT[]) — 2 хүснэгт нэг загвартай.
 --
--- image_url-ыг УСТГАХГҮЙ: одоо байгаа хүсэлтүүдийн зураг тэнд байгаа.
--- Апп хоёуланг нь уншина: `photos` хоосон бол `image_url`-ыг харуулна
--- (app/(mobile)/sokh/[id]/maintenance/page.tsx ба app/admin/maintenance/page.tsx).
--- Шинэ хүсэлт зөвхөн `photos`-д бичнэ.
+-- ЖИЧ: `image_url` багана DB-д ХЭЗЭЭ Ч үүсээгүй байсан (supabase-maintenance-image.sql
+-- ажиллаагүй) тул хадгалах хуучин зураг байхгүй. Апп зөвхөн `photos`-ыг уншина.
 
 ALTER TABLE maintenance_requests
   ADD COLUMN IF NOT EXISTS photos TEXT[] NOT NULL DEFAULT '{}';

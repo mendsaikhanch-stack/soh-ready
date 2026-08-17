@@ -12,10 +12,7 @@ interface Request {
   description: string;
   status: string;
   created_at: string;
-  // Оршин суугчийн хавсаргасан зураг. `image_url` нь ганц зурагтай ХУУЧИН
-  // мөрүүдэд үлдсэн; шинэ мөрүүд `photos` массивыг хэрэглэнэ.
-  image_url: string | null;
-  photos: string[] | null;
+  photos: string[] | null;   // оршин суугчийн хавсаргасан зураг
 }
 interface Work {
   id: number;
@@ -242,7 +239,7 @@ export default function AdminMaintenance() {
 
                     {/* Хавсаргасан зураг — товшиж томруулна */}
                     {(() => {
-                      const imgs = r.photos?.length ? r.photos : r.image_url ? [r.image_url] : [];
+                      const imgs = r.photos || [];
                       if (!imgs.length) return null;
                       return (
                         <div className="flex flex-wrap gap-2 mb-2">

@@ -12,8 +12,6 @@ interface Request {
   title: string;
   description: string;
   status: string;
-  // Ганц зурагтай ХУУЧИН мөрүүдэд үлдсэн багана. Шинэ мөр `photos`-ыг хэрэглэнэ.
-  image_url: string | null;
   photos: string[] | null;
   created_at: string;
 }
@@ -305,8 +303,7 @@ export default function MaintenancePage() {
                       <p className="text-xs text-gray-500 mt-1">{r.description}</p>
                     )}
                     {(() => {
-                      // Шинэ мөр `photos`-той, хуучин нь ганц `image_url`-тэй
-                      const imgs = r.photos?.length ? r.photos : r.image_url ? [r.image_url] : [];
+                      const imgs = r.photos || [];
                       if (!imgs.length) return null;
                       return (
                         <div className={`mt-2 grid gap-1.5 ${imgs.length === 1 ? 'grid-cols-1' : 'grid-cols-3'}`}>
