@@ -33,6 +33,12 @@ interface Invoice {
   paid_amount: number | null;
 }
 
+interface ContractState {
+  number: string | null;
+  unlocked_at: string | null;
+  downloaded_at: string | null;
+}
+
 interface NextPeriod {
   year: number;
   month: number;
@@ -65,6 +71,7 @@ interface Customer {
   free_months: number;
   billing_starts_at: string | null;
   billing_active: boolean;
+  contract: ContractState | null;
   setup_invoice: Invoice | null;
   next_period: NextPeriod | null;
   invoices: Invoice[];
@@ -116,6 +123,7 @@ export default function CustomersPage() {
   const [totals, setTotals] = useState<Totals | null>(null);
   const [tariff, setTariff] = useState<Tariff | null>(null);
   const [migrated, setMigrated] = useState(true);
+  const [contractMigrated, setContractMigrated] = useState(true);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -131,6 +139,7 @@ export default function CustomersPage() {
       setTotals(data.totals || null);
       setTariff(data.tariff || null);
       setMigrated(data.migrated !== false);
+      setContractMigrated(data.contract_migrated !== false);
     }
     setLoading(false);
   };
@@ -166,6 +175,28 @@ export default function CustomersPage() {
         period_month: month,
         mark_paid: markPaid,
       }),
+    });
+    const data = await res.json();
+    setBusy(null);
+    if (data.error) { alert(data.error); return; }
+    await load();
+  };
+
+  // Гэрээ татах эрх — нээмэгц тухайн СӨХ-ийн дарга /admin/contract дээрээсээ
+  // өөрийн дүнгээр бодогдсон гэрээгээ татна.
+  const toggleContract = async (c: Customer) => {
+    const unlocked = !!c.contract?.unlocked_at;
+    const msg = unlocked
+      ? `${c.name}\n\nГэрээ татах эрхийг хаах уу? Дарга гэрээгээ харахаа болино.`
+      : `${c.name}\n\n${c.apartments} айл · суурилуулалт ${money(c.setup_fee)} · сарын ${money(c.monthly_fee)}\n\n` +
+        'Гэрээ татах эрхийг нээх үү? Дарга энэ дүнгээр бодогдсон гэрээгээ татаж авна.';
+    if (!confirm(msg)) return;
+
+    setBusy(`contract-${c.id}`);
+    const res = await fetch('/api/superadmin/customers/contract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sokh_id: c.id, action: unlocked ? 'lock' : 'unlock' }),
     });
     const data = await res.json();
     setBusy(null);
@@ -282,6 +313,8 @@ export default function CustomersPage() {
               busy={busy}
               createInvoice={createInvoice}
               markPaid={markPaid}
+              toggleContract={toggleContract}
+              contractMigrated={contractMigrated}
             />
           ))}
 
@@ -317,6 +350,8 @@ export default function CustomersPage() {
                   busy={busy}
                   createInvoice={createInvoice}
                   markPaid={markPaid}
+                  toggleContract={toggleContract}
+                  contractMigrated={contractMigrated}
                 />
               ))}
             </>
@@ -328,7 +363,7 @@ export default function CustomersPage() {
 }
 
 function CustomerRow({
-  c, isOpen, onToggle, busy, createInvoice, markPaid,
+  c, isOpen, onToggle, busy, createInvoice, markPaid, toggleContract, contractMigrated,
 }: {
   c: Customer;
   isOpen: boolean;
@@ -336,6 +371,8 @@ function CustomerRow({
   busy: string | null;
   createInvoice: (c: Customer, kind: 'setup' | 'monthly', y: number, m: number, paid: boolean) => void;
   markPaid: (inv: Invoice) => void;
+  toggleContract: (c: Customer) => void;
+  contractMigrated: boolean;
 }) {
   const isActive = c.claim_status === 'active';
 
@@ -573,6 +610,55 @@ function CustomerRow({
                 )}
               </div>
             )}
+
+            {/* Үйлчилгээний гэрээ — эрх нээснээр дарга өөрөө татна */}
+            <div className="mt-4 pt-3 border-t border-white/10">
+              <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">Үйлчилгээний гэрээ</p>
+              {!contractMigrated ? (
+                <p className="text-xs text-amber-300">
+                  ⚠ <code className="bg-black/30 px-1 rounded">supabase-service-contract-migration.sql</code> ажиллаагүй
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm">
+                    {c.contract?.unlocked_at ? (
+                      <span className="text-green-400">
+                        ✓ Нээгдсэн {mnDate(c.contract.unlocked_at)}
+                        {c.contract.number ? ` · ${c.contract.number}` : ''}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Хаалттай — дарга гэрээгээ харахгүй</span>
+                    )}
+                  </p>
+                  {c.contract?.downloaded_at && (
+                    <p className="text-[11px] text-gray-500">
+                      дарга сүүлд татсан {mnDate(c.contract.downloaded_at)}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <button
+                      onClick={() => toggleContract(c)}
+                      disabled={busy === `contract-${c.id}`}
+                      className={`text-xs px-3 py-1.5 rounded-lg disabled:opacity-50 ${
+                        c.contract?.unlocked_at
+                          ? 'bg-white/10 text-white'
+                          : 'bg-green-600 text-white'
+                      }`}
+                    >
+                      {c.contract?.unlocked_at ? 'Эрхийг хаах' : 'Гэрээ татах эрх нээх'}
+                    </button>
+                    <a
+                      href={`/api/superadmin/customers/contract?sokh_id=${c.id}&format=preview`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs px-3 py-1.5 rounded-lg bg-white/5 text-gray-200 hover:bg-white/10"
+                    >
+                      Гэрээг харах
+                    </a>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Нэхэмжлэлийн түүх */}
             {c.invoices.length > 0 && (

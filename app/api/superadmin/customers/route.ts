@@ -58,6 +58,12 @@ interface CustomerInvoice {
   paid_amount: number | null;
 }
 
+interface ContractState {
+  number: string | null;
+  unlocked_at: string | null;
+  downloaded_at: string | null;
+}
+
 interface OrgRow {
   id: number;
   name: string;
@@ -261,6 +267,23 @@ export async function GET() {
     invByOrg.get(id)!.push(inv as CustomerInvoice);
   }
 
+  // Гэрээ татах эрхийн төлөв. Миграц ажиллаагүй бол багана байхгүй тул
+  // алдаа буцна — тэр тохиолдолд хуудас унахгүй, зүгээр л «гэрээ» хэсэг
+  // нээгдээгүй байдлаар харагдана.
+  const contractByOrg = new Map<number, ContractState>();
+  const { data: contractRows, error: contractErr } = await supabaseAdmin
+    .from('sokh_organizations')
+    .select('id, contract_number, contract_unlocked_at, contract_downloaded_at')
+    .in('id', orgIds);
+  const contractMigrated = !contractErr;
+  for (const r of contractRows || []) {
+    contractByOrg.set(Number(r.id), {
+      number: (r.contract_number as string) ?? null,
+      unlocked_at: (r.contract_unlocked_at as string) ?? null,
+      downloaded_at: (r.contract_downloaded_at as string) ?? null,
+    });
+  }
+
   const now = new Date();
 
   const customers = orgs.map(o => {
@@ -322,6 +345,9 @@ export async function GET() {
       billing_starts_at: start ? start.toISOString() : null,
       billing_active: start ? now >= start : false,
 
+      // Үйлчилгээний гэрээ — нээгдсэн эсэх, дугаар, сүүлд татсан
+      contract: contractByOrg.get(o.id) || null,
+
       setup_invoice: setupInvoice,
       next_period: next,
       invoices: orgInvoices,
@@ -380,7 +406,11 @@ export async function GET() {
     .slice(0, 10)
     .map(r => ({ sokh_id: Number(r.sokh_id), name: r.name as string | null, created_at: r.created_at as string }));
 
-  return NextResponse.json({ tariff, migrated, customers, totals, recent_residents: recentResidents });
+  return NextResponse.json({
+    tariff, migrated, customers, totals,
+    contract_migrated: contractMigrated,
+    recent_residents: recentResidents,
+  });
 }
 
 function emptyTotals(directoryTotal: number) {
