@@ -4,27 +4,49 @@ import { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 
-const navItems = [
-  { icon: '📊', label: 'Хянах самбар', href: '/mng-ctrl' },
-  { icon: '🤝', label: 'Хэрэглэгч СӨХ', href: '/mng-ctrl/customers' },
-  { icon: '🏢', label: 'СӨХ-үүд', href: '/mng-ctrl/organizations' },
-  { icon: '📋', label: 'Бүртгэлийн явц', href: '/mng-ctrl/onboarding' },
-  { icon: '📦', label: 'Багц & Зэрэглэл', href: '/mng-ctrl/plans' },
-  { icon: '🏦', label: 'Данс', href: '/mng-ctrl/bank-accounts' },
-  { icon: '🧾', label: 'eBarimt', href: '/mng-ctrl/ebarimt' },
-  { icon: '💵', label: 'Платформ орлого', href: '/mng-ctrl/revenue' },
-  { icon: '🏗️', label: 'ОСНАА орлого', href: '/mng-ctrl/osnaa-revenue' },
-  { icon: '⚡', label: 'Цахилгаан орлого', href: '/mng-ctrl/tsah-revenue' },
-  { icon: '👥', label: 'Хэрэглэгчид', href: '/mng-ctrl/users' },
-  { icon: '📈', label: 'Аналитик', href: '/mng-ctrl/analytics' },
-  { icon: '🔑', label: 'Админ эрх', href: '/mng-ctrl/admins' },
-  { icon: '📞', label: 'Холбоо хүсэлтүүд', href: '/mng-ctrl/leads' },
-  { icon: '🖥', label: 'Demo хүсэлтүүд', href: '/mng-ctrl/demo-requests' },
-  { icon: '📣', label: 'Маркетинг', href: '/mng-ctrl/marketing' },
-  { icon: '🩺', label: 'Системийн эрүүл мэнд', href: '/mng-ctrl/system-health' },
-  { icon: '🛠', label: 'Дэмжлэг', href: '/mng-ctrl/support' },
-  { icon: '📍', label: 'Дүүрэг & Хороо', href: '/mng-ctrl/locations' },
-  { icon: '⚙️', label: 'Тохиргоо', href: '/mng-ctrl/settings' },
+// Цэс бүлгээр. 20 холбоос нэг урсгалаар жагсахад юу хаана байгаа нь
+// олдохгүй байсан тул ажлын төрлөөр нь бүлэглэв. Хуудас нэг ч хасаагүй.
+const navGroups = [
+  {
+    title: 'СӨХ',
+    items: [
+      { icon: '📊', label: 'Хянах самбар', href: '/mng-ctrl' },
+      { icon: '🤝', label: 'Хэрэглэгч СӨХ', href: '/mng-ctrl/customers' },
+      { icon: '🏢', label: 'Лавлах (бүх СӨХ)', href: '/mng-ctrl/organizations' },
+      { icon: '📋', label: 'Бүртгэлийн явц', href: '/mng-ctrl/onboarding' },
+      { icon: '👥', label: 'Хэрэглэгчид', href: '/mng-ctrl/users' },
+    ],
+  },
+  {
+    title: 'Төлбөр',
+    items: [
+      { icon: '📦', label: 'Багц & Зэрэглэл', href: '/mng-ctrl/plans' },
+      { icon: '🏦', label: 'Данс', href: '/mng-ctrl/bank-accounts' },
+      { icon: '🧾', label: 'eBarimt', href: '/mng-ctrl/ebarimt' },
+      { icon: '💵', label: 'Платформ орлого', href: '/mng-ctrl/revenue' },
+      { icon: '🏗️', label: 'ОСНАА орлого', href: '/mng-ctrl/osnaa-revenue' },
+      { icon: '⚡', label: 'Цахилгаан орлого', href: '/mng-ctrl/tsah-revenue' },
+    ],
+  },
+  {
+    title: 'Шинэ хэрэглэгч татах',
+    items: [
+      { icon: '📞', label: 'Холбоо хүсэлтүүд', href: '/mng-ctrl/leads' },
+      { icon: '🖥', label: 'Demo хүсэлтүүд', href: '/mng-ctrl/demo-requests' },
+      { icon: '📣', label: 'Маркетинг', href: '/mng-ctrl/marketing' },
+    ],
+  },
+  {
+    title: 'Систем',
+    items: [
+      { icon: '📈', label: 'Аналитик', href: '/mng-ctrl/analytics' },
+      { icon: '🔑', label: 'Админ эрх', href: '/mng-ctrl/admins' },
+      { icon: '🩺', label: 'Системийн эрүүл мэнд', href: '/mng-ctrl/system-health' },
+      { icon: '🛠', label: 'Дэмжлэг', href: '/mng-ctrl/support' },
+      { icon: '📍', label: 'Дүүрэг & Хороо', href: '/mng-ctrl/locations' },
+      { icon: '⚙️', label: 'Тохиргоо', href: '/mng-ctrl/settings' },
+    ],
+  },
 ];
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
@@ -428,31 +450,38 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             </div>
           </div>
         </div>
-        <nav className="p-2 flex-1">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            const badge = item.href === '/mng-ctrl/marketing' ? marketingQueued : 0;
-            return (
-              <button
-                key={item.href}
-                onClick={() => router.push(item.href)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-left mb-0.5 transition ${
-                  isActive ? 'bg-blue-600/20 text-blue-400' : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
-                }`}
-              >
-                <span className="text-base">{item.icon}</span>
-                <span className="flex-1">{item.label}</span>
-                {badge > 0 && (
-                  <span
-                    className="bg-red-500 text-white text-[11px] font-semibold rounded-full px-1.5 min-w-[20px] text-center"
-                    title="Өнөөдөр тавихыг хүлээж буй пост"
+        <nav className="p-2 flex-1 overflow-y-auto">
+          {navGroups.map((group, gi) => (
+            <div key={group.title} className={gi > 0 ? 'mt-3' : ''}>
+              <p className="px-3 pt-1 pb-1.5 text-[10px] uppercase tracking-wider text-gray-600">
+                {group.title}
+              </p>
+              {group.items.map((item) => {
+                const isActive = pathname === item.href;
+                const badge = item.href === '/mng-ctrl/marketing' ? marketingQueued : 0;
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => router.push(item.href)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-left mb-0.5 transition ${
+                      isActive ? 'bg-blue-600/20 text-blue-400' : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
+                    }`}
                   >
-                    {badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                    <span className="text-base">{item.icon}</span>
+                    <span className="flex-1">{item.label}</span>
+                    {badge > 0 && (
+                      <span
+                        className="bg-red-500 text-white text-[11px] font-semibold rounded-full px-1.5 min-w-[20px] text-center"
+                        title="Өнөөдөр тавихыг хүлээж буй пост"
+                      >
+                        {badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="p-4 border-t border-gray-800 space-y-1">
           <button

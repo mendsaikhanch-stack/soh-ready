@@ -1,70 +1,100 @@
 'use client';
 
+// Суперадмины хянах самбар.
+//
+// Бүх тоог `/api/superadmin/customers`-аас авна — тэр нэг эх сурвалж нь
+// «Хэрэглэгч СӨХ» хуудсыг ч тэжээдэг тул хоёр дэлгэц дээр өөр тоо гарахгүй.
+// (Өмнө нь энэ хуудас anon холболтоор 1000+ мөр residents татаад дүнг өөрөө
+// бодож, лавлахын хог мөрүүдийг СӨХ-ийн жагсаалтдаа оруулдаг байв.)
+
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 
-interface SokhOrg {
+interface Customer {
   id: number;
   name: string;
-  address: string;
-  phone: string;
-  created_at: string;
-  claim_status: string | null;
+  address: string | null;
+  claim_status: string;
   activated_at: string | null;
+  created_at: string | null;
+  is_demo: boolean;
+  apartments: number;
+  debt_total: number;
+  debtors: number;
+  monthly_fee: number;
+  setup_fee: number;
+  billing_active: boolean;
+  free_months: number;
+  unpaid_total: number;
+  accounts: number;
+  signed_in: number;
+  active_30d: number;
+  last_login_at: string | null;
 }
 
-interface ResidentRow {
-  id: number;
-  name: string | null;
-  sokh_id: number | null;
-  debt: number | null;
-  created_at: string | null;
+interface Totals {
+  customers: number;
+  active: number;
+  apartments: number;
+  residents: number;
+  resident_debt: number;
+  debtors: number;
+  new_residents_this_month: number;
+  new_customers_this_month: number;
+  monthly_billable: number;
+  monthly_when_all_billing: number;
+  setup_expected: number;
+  paid_total: number;
+  unpaid_total: number;
+  directory_total: number;
+  accounts: number;
+  signed_in: number;
+  active_7d: number;
+  active_30d: number;
+  admin_accounts: number;
+  admins_signed_in: number;
+  admins_active_30d: number;
 }
+
+interface RecentResident {
+  sokh_id: number;
+  name: string | null;
+  created_at: string;
+}
+
+interface ErrorRow {
+  created_at: string;
+  level: string;
+  message: string;
+  source?: string;
+  route?: string;
+}
+
+const money = (n: number) => `${Math.round(n).toLocaleString()}₮`;
 
 export default function SuperAdminDashboard() {
-  const [sokhs, setSokhs] = useState<SokhOrg[]>([]);
-  const [residents, setResidents] = useState<ResidentRow[]>([]);
-  const [totalOrgs, setTotalOrgs] = useState(0);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [totals, setTotals] = useState<Totals | null>(null);
+  const [recent, setRecent] = useState<RecentResident[]>([]);
   const [loading, setLoading] = useState(true);
-  const [errorStats, setErrorStats] = useState({ today: 0, fatal: 0, recentErrors: [] as any[] });
+  // Ачаалсан агшин. «N цагийн өмнө» гэдгийг үүнээс тоолно — render бүрд
+  // Date.now() дуудвал ижил өгөгдөл дээр өөр үр дүн гарна.
+  const [loadedAt, setLoadedAt] = useState(0);
+  const [errorStats, setErrorStats] = useState({ today: 0, fatal: 0, recentErrors: [] as ErrorRow[] });
 
   useEffect(() => {
-    const fetch = async () => {
-      // Supabase нэг хүсэлтэд 1000 мөр л буцаана. Лавлахад 1200+ СӨХ байгаа тул
-      // бүгдийг татахгүй — нийт тоог count-аар, дэлгэрэнгүйг зөвхөн хэрэгтэйг нь.
-      const PAGE = 1000;
-
-      const resData: ResidentRow[] = [];
-      for (let from = 0; ; from += PAGE) {
-        const { data } = await supabase.from('residents').select('*').range(from, from + PAGE - 1);
-        if (!data || data.length === 0) break;
-        resData.push(...data);
-        if (data.length < PAGE) break;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/superadmin/customers');
+        const data = await res.json();
+        setCustomers(data.customers || []);
+        setTotals(data.totals || null);
+        setRecent(data.recent_residents || []);
+      } catch {
+        // сүлжээний алдаа — доор хоосон харагдана
       }
-      setResidents(resData);
 
-      const { count: orgCount } = await supabase
-        .from('sokh_organizations')
-        .select('id', { count: 'exact', head: true });
-      setTotalOrgs(orgCount || 0);
-
-      const residentOrgIds = Array.from(
-        new Set(resData.map(r => r.sokh_id).filter((v): v is number => v != null))
-      );
-
-      const [{ data: activeData }, { data: residentOrgData }] = await Promise.all([
-        supabase.from('sokh_organizations').select('*').eq('claim_status', 'active'),
-        residentOrgIds.length
-          ? supabase.from('sokh_organizations').select('*').in('id', residentOrgIds)
-          : Promise.resolve({ data: [] as SokhOrg[] }),
-      ]);
-
-      const merged = new Map<number, SokhOrg>();
-      [...(activeData || []), ...(residentOrgData || [])].forEach((o: SokhOrg) => merged.set(o.id, o));
-      setSokhs(Array.from(merged.values()));
-
-      // Алдааны статистик татах
+      // Алдааны статистик
       try {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
@@ -74,90 +104,84 @@ export default function SuperAdminDashboard() {
           .order('created_at', { ascending: false })
           .limit(10);
 
-        const allErrors = (Array.isArray(recentErrors) ? recentErrors : []) as { created_at: string; level: string; message: string }[];
-        const todayErrors = allErrors.filter(e => new Date(e.created_at) >= todayStart);
-        const fatalErrors = allErrors.filter(e => e.level === 'fatal');
-
+        const allErrors = (Array.isArray(recentErrors) ? recentErrors : []) as unknown as ErrorRow[];
         setErrorStats({
-          today: todayErrors.length,
-          fatal: fatalErrors.length,
+          today: allErrors.filter(e => new Date(e.created_at) >= todayStart).length,
+          fatal: allErrors.filter(e => e.level === 'fatal').length,
           recentErrors: allErrors.slice(0, 5),
         });
       } catch {
         // error_logs хүснэгт үүсээгүй бол алгасах
       }
 
+      setLoadedAt(Date.now());
       setLoading(false);
     };
-    fetch();
+    load();
   }, []);
 
   if (loading) return <div className="p-8 text-gray-500">Ачаалж байна...</div>;
 
-  const totalDebt = residents.reduce((s, r) => s + Number(r.debt || 0), 0);
-  const totalResidents = residents.length;
-
-  // Сарын эхлэл — "энэ сард" гэсэн өсөлтийг бодитоор тооцоход хэрэглэнэ
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
-
-  // СӨХ тус бүрийн статус
-  const orgStats = sokhs.map(s => {
-    const orgResidents = residents.filter(r => r.sokh_id === s.id);
-    const orgDebt = orgResidents.reduce((sum, r) => sum + Number(r.debt || 0), 0);
-    const debtors = orgResidents.filter(r => Number(r.debt || 0) > 0).length;
-    return { ...s, residentCount: orgResidents.length, totalDebt: orgDebt, debtorCount: debtors };
-  });
-
-  // sokh_organizations-ийн ихэнх нь бөөнөөр импортолсон ЛАВЛАХ бүртгэл.
-  // Жинхэнэ хэрэглэгч = идэвхжсэн эсвэл оршин суугчтай.
-  const liveOrgs = orgStats
-    .filter(o => o.claim_status === 'active' || o.activated_at || o.residentCount > 0)
-    .sort((a, b) => b.residentCount - a.residentCount);
-
-  const activeOrgs = sokhs.filter(s => s.claim_status === 'active').length;
-  const newOrgsThisMonth = sokhs.filter(
-    s => new Date(s.activated_at || s.created_at) >= monthStart && (s.claim_status === 'active' || s.activated_at)
-  ).length;
-  const newResidentsThisMonth = residents.filter(r => r.created_at && new Date(r.created_at) >= monthStart).length;
-  const debtorCount = residents.filter(r => Number(r.debt || 0) > 0).length;
-
+  const real = customers.filter(c => !c.is_demo);
   const plusLabel = (n: number) => (n > 0 ? `+${n} энэ сард` : 'энэ сард 0');
 
-  const statCards = [
-    { label: 'Идэвхжсэн СӨХ', value: activeOrgs, icon: '🏢', change: plusLabel(newOrgsThisMonth), color: 'from-blue-600 to-blue-700' },
-    { label: 'Нийт оршин суугч', value: totalResidents.toLocaleString(), icon: '👥', change: plusLabel(newResidentsThisMonth), color: 'from-purple-600 to-purple-700' },
-    { label: 'Нийт өр', value: `${(totalDebt / 1000).toFixed(0)}к₮`, icon: '💵', change: `${debtorCount} өртэй`, color: 'from-green-600 to-green-700' },
-    { label: 'Лавлахад', value: totalOrgs.toLocaleString(), icon: '📇', change: 'хэрэглэгч биш', color: 'from-yellow-600 to-yellow-700' },
-  ];
+  const statCards = totals
+    ? [
+        {
+          label: 'Хэрэглэгч СӨХ',
+          value: totals.active,
+          icon: '🏢',
+          change: plusLabel(totals.new_customers_this_month),
+          color: 'from-blue-600 to-blue-700',
+        },
+        {
+          label: 'Нийт айл',
+          value: totals.apartments.toLocaleString(),
+          icon: '👥',
+          change: plusLabel(totals.new_residents_this_month),
+          color: 'from-purple-600 to-purple-700',
+        },
+        {
+          label: 'Сард орох төлбөр',
+          value: money(totals.monthly_billable),
+          icon: '💵',
+          change:
+            totals.monthly_billable < totals.monthly_when_all_billing
+              ? `бүрэн: ${money(totals.monthly_when_all_billing)}`
+              : 'бүрэн',
+          color: 'from-green-600 to-green-700',
+        },
+        {
+          label: 'Лавлахад',
+          value: totals.directory_total.toLocaleString(),
+          icon: '📇',
+          change: 'хэрэглэгч биш',
+          color: 'from-yellow-600 to-yellow-700',
+        },
+      ]
+    : [];
 
-  // Сүүлийн үйл ажиллагаа — бодит бүртгэлээс
+  // Сүүлийн үйл ажиллагаа — СӨХ идэвхжсэн + айл бүртгүүлсэн
   const ago = (iso: string) => {
-    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    const mins = Math.floor((loadedAt - new Date(iso).getTime()) / 60000);
     if (mins < 60) return `${Math.max(1, mins)} мин`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours} цаг`;
     return `${Math.floor(hours / 24)} хоног`;
   };
 
-  const orgName = new Map<number, string>(sokhs.map(s => [s.id, s.name]));
+  const orgName = new Map<number, string>(customers.map(c => [c.id, c.name]));
 
   const activity = [
-    ...liveOrgs
-      .filter(o => o.activated_at || o.claim_status === 'active')
-      .map(o => ({ at: o.activated_at || o.created_at, icon: '🏢', text: `${o.name} идэвхжсэн` })),
-    ...residents
-      .filter(r => r.created_at)
-      .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
-      .slice(0, 30)
-      .map(r => ({
-        at: r.created_at as string,
-        icon: '👥',
-        text: `${(r.sokh_id != null ? orgName.get(r.sokh_id) : null) || 'СӨХ'} — ${r.name || 'оршин суугч'} бүртгүүлсэн`,
-      })),
+    ...customers
+      .filter(c => c.activated_at)
+      .map(c => ({ at: c.activated_at as string, icon: '🏢', text: `${c.name} идэвхжсэн` })),
+    ...recent.map(r => ({
+      at: r.created_at,
+      icon: '👥',
+      text: `${orgName.get(r.sokh_id) || 'СӨХ'} — ${r.name || 'оршин суугч'} бүртгүүлсэн`,
+    })),
   ]
-    .filter(a => a.at)
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     .slice(0, 5);
 
@@ -194,83 +218,208 @@ export default function SuperAdminDashboard() {
         <div className="col-span-2 bg-gray-800/50 rounded-2xl border border-gray-800 p-5">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h2 className="font-semibold">СӨХ-үүдийн байдал</h2>
-              <p className="text-xs text-gray-500">Идэвхжсэн эсвэл оршин суугчтай СӨХ</p>
+              <h2 className="font-semibold">Системд орсон СӨХ</h2>
+              <p className="text-xs text-gray-500">Айлын тоо ба Хотолд төлөх төлбөр</p>
             </div>
-            <span className="text-xs text-gray-500">{liveOrgs.length} / {totalOrgs.toLocaleString()} бүртгэл</span>
+            <a href="/mng-ctrl/customers" className="text-xs text-blue-400 hover:underline">
+              Дэлгэрэнгүй →
+            </a>
           </div>
           <table className="w-full">
             <thead>
               <tr className="text-xs text-gray-500 border-b border-gray-800">
                 <th className="text-left pb-3">СӨХ</th>
                 <th className="text-center pb-3">Айл</th>
-                <th className="text-center pb-3">Өртэй</th>
-                <th className="text-right pb-3">Нийт өр</th>
+                <th className="text-center pb-3">Нэвтэрсэн</th>
+                <th className="text-right pb-3">Суурилуулалт</th>
+                <th className="text-right pb-3">Сарын төлбөр</th>
+                <th className="text-right pb-3">Айлын өр</th>
                 <th className="text-center pb-3">Төлөв</th>
               </tr>
             </thead>
             <tbody>
-              {liveOrgs.map(o => (
+              {customers.map(o => (
                 <tr key={o.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
                   <td className="py-3">
-                    <p className="text-sm font-medium">{o.name}</p>
-                    <p className="text-xs text-gray-500">{o.address}</p>
+                    <p className="text-sm font-medium">
+                      {o.name}
+                      {o.is_demo && <span className="ml-2 text-[10px] text-gray-600">туршилт</span>}
+                    </p>
+                    <p className="text-xs text-gray-500">{o.address || '—'}</p>
                   </td>
-                  <td className="text-center text-sm">{o.residentCount}</td>
-                  <td className="text-center text-sm text-red-400">{o.debtorCount}</td>
-                  <td className="text-right text-sm">{o.totalDebt > 0 ? `${o.totalDebt.toLocaleString()}₮` : '0₮'}</td>
+                  <td className="text-center text-sm">{o.apartments || '—'}</td>
+                  <td className="text-center text-sm">
+                    {o.accounts ? (
+                      <>
+                        <span className={o.signed_in ? 'text-white' : 'text-gray-500'}>
+                          {o.signed_in}
+                        </span>
+                        <span className="text-gray-600"> / {o.accounts}</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-600">бүртгэлгүй</span>
+                    )}
+                  </td>
+                  <td className="text-right text-sm">{o.apartments ? money(o.setup_fee) : '—'}</td>
+                  <td className="text-right text-sm">{o.apartments ? money(o.monthly_fee) : '—'}</td>
+                  <td className="text-right text-sm text-gray-400">
+                    {o.debt_total > 0 ? money(o.debt_total) : '0₮'}
+                  </td>
                   <td className="text-center">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${o.residentCount > 0 ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-500'}`}>
-                      {o.residentCount > 0 ? 'Идэвхтэй' : 'Шинэ'}
-                    </span>
+                    {o.claim_status !== 'active' ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-500">Идэвхжээгүй</span>
+                    ) : o.apartments === 0 ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-900/50 text-red-400">Өгөгдөл алга</span>
+                    ) : !o.billing_active ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-900/50 text-blue-400">
+                        Үнэгүй {o.free_months} сар
+                      </span>
+                    ) : o.unpaid_total > 0 ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/50 text-amber-400">
+                        {money(o.unpaid_total)} авах
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/50 text-green-400">Төлсөн</span>
+                    )}
                   </td>
                 </tr>
               ))}
+              {totals && (
+                <tr className="font-semibold">
+                  <td className="py-3 text-sm text-gray-400">Нийт (туршилтыг оруулаагүй)</td>
+                  <td className="text-center text-sm">{totals.apartments.toLocaleString()}</td>
+                  <td className="text-center text-sm">
+                    {totals.signed_in} <span className="text-gray-600 font-normal">/ {totals.accounts}</span>
+                  </td>
+                  <td className="text-right text-sm">{money(totals.setup_expected)}</td>
+                  <td className="text-right text-sm">{money(totals.monthly_when_all_billing)}</td>
+                  <td className="text-right text-sm text-gray-400">{money(totals.resident_debt)}</td>
+                  <td />
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Quick Stats */}
         <div className="space-y-4">
-          {/* Revenue breakdown */}
-          <div className="bg-gray-800/50 rounded-2xl border border-gray-800 p-5">
-            <h2 className="font-semibold mb-4">Бүртгэлийн задаргаа</h2>
-            <div className="space-y-3">
-              {[
-                { label: 'Идэвхжсэн', count: activeOrgs, color: 'bg-blue-500' },
-                { label: 'Оршин суугчтай', count: orgStats.filter(o => o.residentCount > 0).length, color: 'bg-emerald-500' },
-                { label: 'Лавлах (хүлээгдэж буй)', count: Math.max(0, totalOrgs - liveOrgs.length), color: 'bg-gray-500' },
-              ].map(b => (
-                <div key={b.label}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-400">{b.label}</span>
-                    <span>{b.count.toLocaleString()} СӨХ</span>
-                  </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div
-                      className={`${b.color} h-2 rounded-full`}
-                      style={{ width: `${totalOrgs > 0 ? (b.count / totalOrgs) * 100 : 0}%` }}
-                    />
-                  </div>
+          {/* Апп ашиглалт — хэдэн айл жинхэнэ хэрэглэж байна */}
+          {totals && (
+            <div className="bg-gray-800/50 rounded-2xl border border-gray-800 p-5">
+              <h2 className="font-semibold mb-1">Апп ашиглалт</h2>
+              <p className="text-xs text-gray-500 mb-4">Оршин суугчид үнэхээр нэвтэрч байна уу</p>
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-gray-400">Бүртгэлтэй айл</dt>
+                  <dd>{totals.residents.toLocaleString()}</dd>
                 </div>
-              ))}
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-700">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Дундаж бүрдэлт</span>
-                <span className="font-semibold">
-                  {liveOrgs.length > 0
-                    ? Math.round(liveOrgs.reduce((s, o) => s + o.residentCount, 0) / liveOrgs.length)
-                    : 0}{' '}
-                  оршин суугч/СӨХ
-                </span>
+                <div className="flex justify-between">
+                  <dt className="text-gray-400">Нэвтрэх эрхтэй</dt>
+                  <dd>{totals.accounts.toLocaleString()}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-400">Нэвтэрч үзсэн</dt>
+                  <dd className={totals.signed_in > 0 ? 'text-green-400 font-semibold' : 'text-amber-400'}>
+                    {totals.signed_in.toLocaleString()}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-400">Сүүлийн 30 хоногт</dt>
+                  <dd>{totals.active_30d.toLocaleString()}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-400">Сүүлийн 7 хоногт</dt>
+                  <dd>{totals.active_7d.toLocaleString()}</dd>
+                </div>
+              </dl>
+              <div className="mt-4 pt-4 border-t border-gray-700 space-y-1.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">СӨХ-ийн дарга</span>
+                  <span>
+                    {totals.admins_signed_in} / {totals.admin_accounts}
+                    <span className="text-gray-600"> нэвтэрсэн</span>
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Дарга — 30 хоногт</span>
+                  <span>{totals.admins_active_30d}</span>
+                </div>
               </div>
-              <p className="text-[11px] text-gray-500 mt-2">
-                Орлогын тооцоог <span className="text-gray-400">Платформ орлого</span> хэсгээс үзнэ үү — төлбөрийн
-                интеграц идэвхжээгүй тул энд харуулахгүй.
+              <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">
+                Апп нээлттэй хэвээр байгаа хүн дахин нэвтэрдэггүй тул «7 хоногт»
+                тоо бодит хэрэглээнээс бага гарч болно.
               </p>
             </div>
+          )}
+
+          {/* Төлбөрийн байдал */}
+          <div className="bg-gray-800/50 rounded-2xl border border-gray-800 p-5">
+            <h2 className="font-semibold mb-4">Хотолын орлого</h2>
+            {totals && (
+              <>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <dt className="text-gray-400">Төлөгдсөн</dt>
+                    <dd className="text-green-400 font-semibold">{money(totals.paid_total)}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-gray-400">Төлөгдөөгүй</dt>
+                    <dd className={totals.unpaid_total > 0 ? 'text-amber-400 font-semibold' : ''}>
+                      {money(totals.unpaid_total)}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-gray-400">Сард орох (одоо)</dt>
+                    <dd>{money(totals.monthly_billable)}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-gray-400">Үнэгүй хугацаа дуусахад</dt>
+                    <dd>{money(totals.monthly_when_all_billing)}</dd>
+                  </div>
+                </dl>
+                <div className="mt-4 pt-4 border-t border-gray-700 space-y-1.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Идэвхтэй СӨХ</span>
+                    <span>{totals.active} / {totals.customers}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Дундаж хэмжээ</span>
+                    <span>
+                      {totals.active > 0 ? Math.round(totals.apartments / totals.active) : 0} айл/СӨХ
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Өртэй айл</span>
+                    <span>{totals.debtors} / {totals.residents}</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
+
+          {/* Анхаарах зүйл */}
+          {(() => {
+            const noData = real.filter(c => c.claim_status === 'active' && c.apartments === 0);
+            const unpaid = real.filter(c => c.unpaid_total > 0);
+            if (!noData.length && !unpaid.length) return null;
+            return (
+              <div className="bg-gray-800/50 rounded-2xl border border-gray-800 p-5">
+                <h2 className="font-semibold mb-3">Анхаарах</h2>
+                <ul className="space-y-2 text-sm">
+                  {noData.map(c => (
+                    <li key={`n-${c.id}`} className="text-gray-300">
+                      <span className="text-red-400">●</span> {c.name} — идэвхжсэн ч айл ороогүй
+                    </li>
+                  ))}
+                  {unpaid.map(c => (
+                    <li key={`u-${c.id}`} className="text-gray-300">
+                      <span className="text-amber-400">●</span> {c.name} — {money(c.unpaid_total)} төлөгдөөгүй
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
 
           {/* System health — бодит алдааны мэдээлэл */}
           <div className="bg-gray-800/50 rounded-2xl border border-gray-800 p-5">
@@ -297,7 +446,7 @@ export default function SuperAdminDashboard() {
               <div className="mt-4 pt-4 border-t border-gray-700">
                 <p className="text-xs text-gray-500 mb-2">Сүүлийн алдаанууд:</p>
                 <div className="space-y-2">
-                  {errorStats.recentErrors.map((e: any, i: number) => (
+                  {errorStats.recentErrors.map((e, i) => (
                     <div key={i} className="text-xs">
                       <div className="flex items-center gap-1.5">
                         <span className={e.level === 'fatal' ? 'text-red-400' : 'text-yellow-400'}>

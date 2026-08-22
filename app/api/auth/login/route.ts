@@ -80,6 +80,17 @@ export async function POST(request: Request) {
 
     // Амжилттай — token-д sokh_id, user_id оруулах
     attempts.delete(ip);
+
+    // Сүүлд нэвтэрсэн огноог тэмдэглэнэ — суперадмин «аль СӨХ-ийн дарга
+    // системээ хэрэглэж байна вэ» гэдгийг үүгээр хардаг. Багана үүсээгүй
+    // (миграц ажиллаагүй) бол нэвтрэлт унахгүй, зүгээр алгасна.
+    void sb
+      .from('admin_users')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', adminUser.id)
+      .then(({ error }) => {
+        if (error) console.error('[login] last_login_at', error.message);
+      });
     const sokhId = adminUser.sokh_id || 0;
     const token = createSessionToken({ userId: adminUser.id, sokhId });
     const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : 'admin-session';
