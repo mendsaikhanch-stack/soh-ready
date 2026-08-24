@@ -66,6 +66,10 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   // Маркетингийн өдрийн дараалалд хүлээгдэж буй постын тоо (цэсэн дээрх сануулга)
   const [marketingQueued, setMarketingQueued] = useState(0);
 
+  // Үнэгүй ашиглах хугацаа дуусах гэж буй СӨХ-ийн тоо (цэсэн дээрх сануулга).
+  // Дэлгэрэнгүй нь «Хянах самбар» дээр — тиймээс энд зөвхөн тоо.
+  const [trialEnding, setTrialEnding] = useState(0);
+
   // OTP state
   const [step, setStep] = useState<'login' | 'otp'>('login');
   const [otpCode, setOtpCode] = useState('');
@@ -122,10 +126,23 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     }
   }, []);
 
+  // Үнэгүй хугацаа дуусах СӨХ-ийн тоо
+  const loadTrialBadge = useCallback(async () => {
+    try {
+      const res = await fetch('/api/superadmin/trial-alerts');
+      if (!res.ok) return;
+      const data = await res.json();
+      setTrialEnding(data?.counts?.total || 0);
+    } catch {
+      // сануулга бол нэмэлт зүйл — алдаа гарвал чимээгүй өнгөрнө
+    }
+  }, []);
+
   useEffect(() => {
     if (!authed || !otpVerified) return;
     loadMarketingBadge();
-  }, [authed, otpVerified, pathname, loadMarketingBadge]);
+    loadTrialBadge();
+  }, [authed, otpVerified, pathname, loadMarketingBadge, loadTrialBadge]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -458,7 +475,16 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
               </p>
               {group.items.map((item) => {
                 const isActive = pathname === item.href;
-                const badge = item.href === '/mng-ctrl/marketing' ? marketingQueued : 0;
+                const badge =
+                  item.href === '/mng-ctrl/marketing'
+                    ? marketingQueued
+                    : item.href === '/mng-ctrl/customers'
+                      ? trialEnding
+                      : 0;
+                const badgeTitle =
+                  item.href === '/mng-ctrl/marketing'
+                    ? 'Өнөөдөр тавихыг хүлээж буй пост'
+                    : 'Үнэгүй хугацаа нь дуусах гэж буй СӨХ';
                 return (
                   <button
                     key={item.href}
@@ -472,7 +498,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                     {badge > 0 && (
                       <span
                         className="bg-red-500 text-white text-[11px] font-semibold rounded-full px-1.5 min-w-[20px] text-center"
-                        title="Өнөөдөр тавихыг хүлээж буй пост"
+                        title={badgeTitle}
                       >
                         {badge}
                       </span>

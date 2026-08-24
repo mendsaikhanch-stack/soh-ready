@@ -148,3 +148,51 @@ export function periodKey(year: number, month: number): string {
 export function formatPeriod(year: number, month: number): string {
   return `${year} оны ${month} сар`;
 }
+
+// ---------------------------------------------------------------------------
+// Үнэгүй хугацаа дуусах сануулга
+// ---------------------------------------------------------------------------
+
+/** Хэдэн хоногийн өмнөөс сануулж эхлэх */
+export const TRIAL_ALERT_LEAD_DAYS = 7;
+
+/** Asia/Ulaanbaatar бүсийн огноо (YYYY-MM-DD).
+ *
+ *  Сервер UTC дээр ажилладаг тул Date-ийн өдрийг шууд авбал Монголд 08:00-аас
+ *  өмнө «өчигдөр», оройн 16:00-аас хойш «маргааш» гэж тоолж, «яг тэр өдөр»
+ *  гэсэн сануулга нэг хоногоор зөрнө. */
+export function ubDay(d: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ulaanbaatar',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
+/** Хоёр өдрийн хоорондох хоногийн зөрүү (UB огноогоор, цаг тооцохгүй).
+ *  0 = яг өнөөдөр, эерэг = ирээдүйд, сөрөг = аль хэдийн өнгөрсөн. */
+export function daysBetweenUb(target: Date, now: Date = new Date()): number {
+  const day = (d: Date) => Date.parse(`${ubDay(d)}T00:00:00Z`);
+  return Math.round((day(target) - day(now)) / 86_400_000);
+}
+
+export type TrialAlertLevel = 'today' | 'soon' | 'overdue';
+
+/**
+ * Үнэгүй хугацааны сануулгын зэрэг.
+ *
+ *   today   — яг өнөөдөр дуусч, маргаашаас төлбөр эхэлнэ
+ *   soon    — 7 хоногийн дотор дуусна (урьдчилж бэлдэх)
+ *   overdue — дууссан ч сарын нэхэмжлэх үүсээгүй (мартагдсан мөнгө)
+ *
+ * null = сануулах шаардлагагүй (хол байгаа, эсвэл дуусаад нэхэмжилчихсэн).
+ */
+export function trialAlertLevel(
+  daysLeft: number,
+  invoiced: boolean,
+): TrialAlertLevel | null {
+  if (daysLeft === 0) return 'today';
+  if (daysLeft > 0) return daysLeft <= TRIAL_ALERT_LEAD_DAYS ? 'soon' : null;
+  return invoiced ? null : 'overdue';
+}

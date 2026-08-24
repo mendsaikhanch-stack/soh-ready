@@ -62,6 +62,17 @@ interface RecentResident {
   created_at: string;
 }
 
+interface TrialAlert {
+  sokh_id: number;
+  name: string;
+  apartments: number;
+  free_months: number;
+  ends_on: string;
+  days_left: number;
+  monthly_fee: number;
+  level: 'today' | 'soon' | 'overdue';
+}
+
 interface ErrorRow {
   created_at: string;
   level: string;
@@ -81,6 +92,8 @@ export default function SuperAdminDashboard() {
   // Date.now() дуудвал ижил өгөгдөл дээр өөр үр дүн гарна.
   const [loadedAt, setLoadedAt] = useState(0);
   const [errorStats, setErrorStats] = useState({ today: 0, fatal: 0, recentErrors: [] as ErrorRow[] });
+  // Үнэгүй ашиглах хугацаа дуусах гэж буй СӨХ — тэр өдөр болоход энд гарна
+  const [trialAlerts, setTrialAlerts] = useState<TrialAlert[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -92,6 +105,15 @@ export default function SuperAdminDashboard() {
         setRecent(data.recent_residents || []);
       } catch {
         // сүлжээний алдаа — доор хоосон харагдана
+      }
+
+      // Үнэгүй хугацааны сануулга (тусдаа endpoint — цэсэн дээрх тоотой ижил эх сурвалж)
+      try {
+        const res = await fetch('/api/superadmin/trial-alerts');
+        const data = await res.json();
+        setTrialAlerts(data.alerts || []);
+      } catch {
+        // сануулга бол нэмэлт зүйл — алдаа гарвал хуудас хэвийн ажиллана
       }
 
       // Алдааны статистик
@@ -198,6 +220,56 @@ export default function SuperAdminDashboard() {
           <p className="text-gray-300 text-sm">{new Date().toLocaleDateString('mn-MN')}</p>
         </div>
       </div>
+
+      {/* Үнэгүй хугацаа дуусах сануулга.
+          Тэр өдөр болоход энд улаанаар гарна — самбар нээх бүрд шалгагдана. */}
+      {trialAlerts.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-amber-700/50 bg-amber-950/30 p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h2 className="font-semibold text-amber-300">⏰ Үнэгүй ашиглах хугацаа дуусаж байна</h2>
+              <p className="text-xs text-amber-200/60 mt-0.5">
+                Дуусмагц сарын төлбөр эхэлнэ — дарга руу нь мэдэгдэж, нэхэмжлэхээ үүсгэнэ
+              </p>
+            </div>
+            <a href="/mng-ctrl/customers" className="text-xs text-amber-300 hover:underline shrink-0">
+              Хэрэглэгч СӨХ →
+            </a>
+          </div>
+          <ul className="space-y-2">
+            {trialAlerts.map(a => {
+              const urgent = a.level !== 'soon';
+              const when =
+                a.level === 'today'
+                  ? 'Өнөөдөр дуусаж байна'
+                  : a.level === 'overdue'
+                    ? `${-a.days_left} хоногийн өмнө дууссан — нэхэмжлэх үүсгээгүй`
+                    : `${a.days_left} хоногийн дараа`;
+              return (
+                <li
+                  key={a.sokh_id}
+                  className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2 ${
+                    urgent ? 'bg-red-900/30 border border-red-800/50' : 'bg-gray-900/40'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{a.name}</p>
+                    <p className="text-xs text-gray-400">
+                      {a.apartments} айл · үнэгүй {a.free_months} сар · {a.ends_on.replace(/-/g, '.')}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={`text-xs font-semibold ${urgent ? 'text-red-300' : 'text-amber-300'}`}>
+                      {when}
+                    </p>
+                    <p className="text-xs text-gray-400">сард {money(a.monthly_fee)}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-4 gap-4 mb-8">
