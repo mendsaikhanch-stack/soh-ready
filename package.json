@@ -9,6 +9,8 @@
     "lint": "eslint",
     "auto-save": "bash scripts/auto-save.sh",
     "squash-wip": "bash scripts/squash-wip.sh",
+    "contract:pdf": "node --import ./scripts/lib/alias-register.mjs scripts/make-contract-pdf.mjs",
+    "seal:extract": "node scripts/extract-seal.mjs",
     "cap:sync": "cap sync android",
     "cap:open": "cap open android",
     "cap:assets": "capacitor-assets generate --android --iconBackgroundColor #ffffff --iconBackgroundColorDark #ffffff --splashBackgroundColor #ffffff --splashBackgroundColorDark #ffffff"

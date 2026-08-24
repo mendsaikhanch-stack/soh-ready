@@ -63,3 +63,8 @@ bzd-target-50.csv
 
 .vercel
 .env*
+
+# Гэрээний тамга, гарын үсэг, гарын үсэгтэй PDF — репо public!
+# Нийтэд тарвал хэн ч хуурамч баримт үйлдэж чадна. README-г нь л оруулна.
+/docs/contracts/*
+!/docs/contracts/README.md

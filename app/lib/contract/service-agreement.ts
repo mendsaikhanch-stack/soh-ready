@@ -220,9 +220,17 @@ function esc(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
+export interface RenderOptions {
+  /** Гүйцэтгэгчийн тамга, гарын үсгийг урьдчилан буулгана — data: URI хэлбэрээр
+   *  ГАДНААС дамжуулна. Энэ репо public тул бэхний зургийг код дотор БҮҮ хадгал
+   *  (`docs/contracts/assets/` нь .gitignore-д). Дамжуулаагүй бол өнөөгийнх
+   *  шигээ цэгтэй мөр гарч, гараар тамгална. */
+  seal?: { stamp: string; signature: string };
+}
+
 /** Гэрээний бүтэн HTML — хөтчид хэвлэхэд ч, Word-т нээхэд ч ижил гарна.
  *  Гадны файл (font, зураг) татдаггүй тул офлайн ч зөв харагдана. */
-export function renderContractHtml(input: ContractInput): string {
+export function renderContractHtml(input: ContractInput, opts: RenderOptions = {}): string {
   const { org } = input;
   const sections = contractSections(input);
 
@@ -238,6 +246,20 @@ ${s.clauses
 
   const line = (label: string, value: string) =>
     `<p class="rq"><span class="lb">${esc(label)}:</span> ${esc(value)}</p>`;
+
+  // Гүйцэтгэгчийн гарын үсгийн хэсэг. Тамгалсан хувилбарт бэхний зураг
+  // урьдчилан суусан байх тул СӨХ зөвхөн өөрийнхөө талыг бөглөнө.
+  const signLine = `<p class="rq sg">${esc(PROVIDER.representativeTitle)}: ..............................</p>
+      <p class="rq">/${esc(blank(PROVIDER.representative, 20))}/</p>`;
+
+  const providerSign = opts.seal
+    ? `<div class="ink">
+        <img class="sig" src="${opts.seal.signature}" alt="">
+        <img class="stamp" src="${opts.seal.stamp}" alt="">
+        ${signLine}
+      </div>`
+    : `${signLine}
+      <p class="rq">Тамга</p>`;
 
   return `<!DOCTYPE html>
 <html lang="mn">
@@ -261,6 +283,11 @@ ${s.clauses
   .rq { margin: 0 0 3pt; }
   .lb { color: #444; }
   .sg { margin-top: 16pt; }
+  /* Урьдчилан тамгалсан хувилбар — бэхийг гарын үсгийн мөрийн дээгүүр байрлуулна */
+  .ink { position: relative; margin-top: 14pt; padding-top: 62pt; }
+  .ink .sig { position: absolute; left: 60pt; top: 0; width: 112pt; }
+  .ink .stamp { position: absolute; left: 2pt; top: 4pt; width: 58pt; }
+  .ink .sg { margin-top: 0; }
   @media print { body { padding: 0; } }
 </style>
 </head>
@@ -291,9 +318,7 @@ ${body}
       ${line('Хаяг', PROVIDER.address)}
       ${line('Утас', PROVIDER.phone)}
       ${line('И-мэйл', PROVIDER.email)}
-      <p class="rq sg">${esc(PROVIDER.representativeTitle)}: ..............................</p>
-      <p class="rq">/${esc(blank(PROVIDER.representative, 20))}/</p>
-      <p class="rq">Тамга</p>
+      ${providerSign}
     </td>
     <td>
       ${line('Байгууллага', orgLegalName(org.name))}
