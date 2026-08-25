@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
     monthly_fee: monthlyFee(state.tariff, state.apartments),
     free_months: freeMonths(state.tariff, state.apartments),
     billing_starts_at: (
-      billingStartDate(state.org.activated_at || input.date.toISOString(), state.tariff, state.apartments) || null
+      billingStartDate(state.org.activated_at || (input.date ?? new Date()).toISOString(), state.tariff, state.apartments) || null
     )?.toISOString() ?? null,
     section_titles: contractSections(input).map(s => `${s.no}. ${s.title}`),
     html,

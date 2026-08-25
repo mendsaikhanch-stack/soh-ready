@@ -9,9 +9,13 @@
 // Байхгүй бол PDF нь тамгагүй, цэгтэй мөртэй гарна — гараар тамгална.
 //
 // Ажиллуулах:
-//   node --import ./scripts/lib/alias-register.mjs scripts/make-contract-pdf.mjs <sokh_id>
+//   npm run contract:pdf -- <sokh_id>     # тухайн СӨХ-ийн дүнтэй гэрээ
+//   npm run contract:pdf -- --blank       # НЭГ ЕРӨНХИЙ ЗАГВАР (доор үз)
 //
-// Товчлол (package.json-д): npm run contract:pdf -- <sokh_id>
+// «--blank» нь СӨХ бүрд дахин үүсгэх шаардлагагүй нэг ерөнхий гэрээ гаргана:
+// айлын тоо, төлбөрийн дүн, Захиалагчийн мэдээлэл, огноо, дугаар нь цэгтэй
+// мөр — СӨХ өөрөө бөглөнө. Гүйцэтгэгчийн тал (тамга, гарын үсэг оруулаад)
+// бүрэн хэвлэгдэнэ. Нэгж тариф (айл тутмын үнэ) нь бүх СӨХ-д ижил тул үлдэнэ.
 //
 // Сонголт:
 //   --out=<фолдер>        # анхдагч: docs/contracts
@@ -40,27 +44,48 @@ const arg = (name) => {
   return hit ? hit.slice(name.length + 3) : null;
 };
 
+const BLANK = process.argv.includes('--blank');
 const sokhId = Number(process.argv.find((a) => /^\d+$/.test(a)));
-if (!sokhId) {
-  console.error('Ашиглах нь: node --import ./scripts/lib/alias-register.mjs scripts/make-contract-pdf.mjs <sokh_id>');
+if (!BLANK && !sokhId) {
+  console.error('Ашиглах нь: npm run contract:pdf -- <sokh_id>   эсвэл   npm run contract:pdf -- --blank');
   process.exit(1);
 }
 
 const { loadContractState, buildContractInput } = await import('../app/lib/contract/load.ts');
-const { renderContractHtml, contractFileName } = await import('../app/lib/contract/service-agreement.ts');
+const { renderContractHtml, contractFileName, blankContractInput } =
+  await import('../app/lib/contract/service-agreement.ts');
+const { DEFAULT_TARIFF } = await import('../app/lib/platform-pricing.ts');
 
-const state = await loadContractState(sokhId);
-if (!state) {
-  console.error(`❌ СӨХ #${sokhId} олдсонгүй`);
-  process.exit(1);
+let input;
+let title;
+
+if (BLANK) {
+  // Нэгж тарифыг амьд утгаар нь авна — гэрээн дээрх айл тутмын үнэ
+  // /mng-ctrl-д тохируулсантай үргэлж таарч байх ёстой.
+  const { createClient } = await import('@supabase/supabase-js');
+  const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+  const { data } = await sb.from('platform_tariff').select('*').eq('id', 1).maybeSingle();
+  const tariff = data ? { ...DEFAULT_TARIFF, ...data } : DEFAULT_TARIFF;
+  if (!data) console.warn('⚠️  platform_tariff уншигдсангүй — үндсэн тарифаар гаргана.');
+
+  input = blankContractInput(tariff);
+  title = 'Үйлчилгээний гэрээ - ЗАГВАР';
+} else {
+  const state = await loadContractState(sokhId);
+  if (!state) {
+    console.error(`❌ СӨХ #${sokhId} олдсонгүй`);
+    process.exit(1);
+  }
+  const dateArg = arg('date');
+  input = buildContractInput(state, {
+    chairman: arg('chairman'),
+    register: arg('register'),
+    date: dateArg ? new Date(dateArg) : undefined,
+  });
+  title = contractFileName(input, 'html').replace(/\.html$/, '');
 }
-
-const dateArg = arg('date');
-const input = buildContractInput(state, {
-  chairman: arg('chairman'),
-  register: arg('register'),
-  date: dateArg ? new Date(dateArg) : undefined,
-});
 
 // Бэхний зургийг data: URI болгож дамжуулна — гэрээ ганц файл болж хаана ч
 // зөв нээгдэнэ. Аппын код дотор ХАДГАЛАХГҮЙ (репо public).
@@ -84,7 +109,7 @@ const html = renderContractHtml(input, {
 
 const outDir = path.resolve(ROOT, arg('out') || 'docs/contracts');
 fs.mkdirSync(outDir, { recursive: true });
-const file = path.join(outDir, contractFileName(input, 'html').replace(/\.html$/, '.pdf'));
+const file = path.join(outDir, `${title}.pdf`);
 
 const browser = await puppeteer.launch();
 const page = await browser.newPage();
@@ -100,8 +125,11 @@ await page.pdf({
 await browser.close();
 
 const kb = Math.round(fs.statSync(file).size / 1024);
-console.log(`\n✅ ${state.org.name} (#${sokhId}) — ${state.apartments} айл`);
-console.log(`   Гэрээний дугаар: ${input.number}`);
+console.log(BLANK
+  ? '\n✅ Хоосон загвар — айлын тоо, дүн, огноо, Захиалагчийн мэдээлэл цэгтэй мөр'
+  : `\n✅ ${input.org.name} (#${sokhId}) — ${input.apartments} айл · ${input.number}`);
 console.log(`   ${path.relative(ROOT, file)}   ${kb} KB`);
-console.log('\n   Гүйцэтгэгчийн тамга, гарын үсэг суусан. СӨХ нь өөрийн талын');
-console.log('   улсын бүртгэл, хаяг, утас, даргын нэрийг бөглөж, тамгалаад буцаана.\n');
+console.log('\n   Гүйцэтгэгчийн тамга, гарын үсэг суусан.');
+console.log(BLANK
+  ? '   СӨХ нь айлын тоо, дүн, өөрийн мэдээллээ бөглөж, тамгалаад буцаана.\n'
+  : '   СӨХ нь улсын бүртгэл, и-мэйл, даргын нэрээ бөглөж, тамгалаад буцаана.\n');

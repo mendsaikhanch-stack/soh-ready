@@ -49,10 +49,12 @@ export interface ContractOrg {
 }
 
 export interface ContractInput {
+  /** Хоосон загварт цэгтэй мөр — `blankContractInput` үүнийг хоослоно */
   number: string;
-  date: Date;
+  date: Date | null;
   org: ContractOrg;
-  apartments: number;
+  /** null = хоосон загвар: айлын тоо, дүн, эхлэх огноо цэгтэй мөр болно */
+  apartments: number | null;
   tariff: PlatformTariff;
   /** Идэвхжсэн огноо — үнэгүй хугацаа эндээс тоологдоно */
   activatedAt?: string | null;
@@ -69,6 +71,20 @@ export function contractNumberFor(orgId: number, date: Date = new Date()): strin
   return `ХОТ-${date.getFullYear()}-${orgId}`;
 }
 
+/** Хоосон загвар — нэг ерөнхий гэрээ, СӨХ бүрд дахин үүсгэхгүй.
+ *  Айлын тоо, дүн, огноо, дугаар, Захиалагчийн мэдээлэл цэгтэй мөр болно;
+ *  Гүйцэтгэгчийн тал (тамга, гарын үсэг оруулаад) бүрэн хэвлэгдэнэ. */
+export function blankContractInput(tariff: PlatformTariff): ContractInput {
+  return {
+    number: '',
+    date: null,
+    org: { id: 0, name: '', address: null, phone: null, email: null, register: null, chairman: null },
+    apartments: null,
+    tariff,
+    activatedAt: null,
+  };
+}
+
 const money = (n: number) => `${Math.round(n).toLocaleString('en-US')}₮`;
 
 export function mnDate(d: Date | null | undefined): string {
@@ -83,15 +99,26 @@ const blank = (v: string | null | undefined, len = 24) =>
 
 /** Гэрээний бүх заалт. Дараалал = хэвлэгдэх дараалал. */
 export function contractSections(input: ContractInput): ContractSection[] {
-  const { apartments, tariff } = input;
-  const setup = setupFee(tariff, apartments);
-  const monthly = monthlyFee(tariff, apartments);
-  const free = freeMonths(tariff, apartments);
-  const start = billingStartDate(
-    input.activatedAt || input.date.toISOString(),
-    tariff,
-    apartments,
-  );
+  const { tariff } = input;
+
+  // Хоосон загвар (apartments = null) — айлын тоо, дүн, эхлэх огноог цэгтэй
+  // мөр болгоно. Нэгж тариф нь бүх СӨХ-д ижил тул хэвээр үлдэнэ.
+  const apartments = input.apartments;
+  const isBlank = apartments == null;
+  const num = (n: number, len: number) => (isBlank ? blank(null, len) : money(n));
+
+  const setup = setupFee(tariff, apartments ?? 0);
+  const monthly = monthlyFee(tariff, apartments ?? 0);
+  const free = freeMonths(tariff, apartments ?? 0);
+  const start = isBlank
+    ? null
+    : billingStartDate(
+        input.activatedAt || (input.date ?? new Date()).toISOString(),
+        tariff,
+        apartments,
+      );
+
+  const units = isBlank ? blank(null, 6) : String(apartments);
 
   return [
     {
@@ -117,10 +144,10 @@ export function contractSections(input: ContractInput): ContractSection[] {
       no: 3,
       title: 'Төлбөр, тооцоо',
       clauses: [
-        `Гэрээ байгуулах үеийн айлын тоо: ${apartments}. Төлбөрийг айлын тоогоор тооцно.`,
-        `Суурилуулалтын нэг удаагийн төлбөр: ${apartments} айл × ${money(tariff.setup_per_unit)} = ${money(setup)}.`,
-        `Сарын хураамж: ${apartments} айл × ${money(tariff.monthly_per_unit)} = ${money(monthly)}.`,
-        `Үйлчилгээ эхэлснээс хойш ${free} сарын хугацаанд сарын хураамж тооцогдохгүй. Сарын хураамж ${mnDate(start)}-ний өдрөөс эхэлнэ.`,
+        `Гэрээ байгуулах үеийн айлын тоо: ${units}. Төлбөрийг айлын тоогоор тооцно.`,
+        `Суурилуулалтын нэг удаагийн төлбөр: ${units} айл × ${money(tariff.setup_per_unit)} = ${num(setup, 12)}.`,
+        `Сарын хураамж: ${units} айл × ${money(tariff.monthly_per_unit)} = ${num(monthly, 12)}.`,
+        `Үйлчилгээ эхэлснээс хойш ${isBlank ? blank(null, 4) : free} сарын хугацаанд сарын хураамж тооцогдохгүй. Сарын хураамж ${mnDate(start)}-ний өдрөөс эхэлнэ.`,
         'Гүйцэтгэгч сар бүрийн эхний 5 хоногт нэхэмжлэх илгээх ба Захиалагч тухайн сарын 15-ны дотор төлнө.',
         'Айлын тоо өөрчлөгдвөл дараагийн сарын хураамжийг шинэ тоогоор тооцно. Суурилуулалтын төлбөр дахин тооцогдохгүй.',
         `Төлбөрийг Гүйцэтгэгчийн ${blank(PROVIDER.bank, 14)} банкны ${blank(PROVIDER.bankAccount, 16)} тоот${PROVIDER.bankAccountHolder ? ` (данс эзэмшигч: ${PROVIDER.bankAccountHolder})` : ''} дансаар төлнө. Гүйцэтгэгч төлбөрт и-баримт олгоно.`,
@@ -211,6 +238,7 @@ export function contractSections(input: ContractInput): ContractSection[] {
  *  бичихээс сэргийлж шалгана. */
 function orgLegalName(name: string): string {
   const n = name.trim();
+  if (!n) return blank(null, 28); // хоосон загвар — СӨХ өөрөө бичнэ
   return /СӨХ|холбоо/i.test(n) ? n : `«${n}» СӨХ`;
 }
 
@@ -295,7 +323,7 @@ ${s.clauses
 </head>
 <body>
 <h1>Үйлчилгээний гэрээ</h1>
-<p class="num">Дугаар: ${esc(input.number)}</p>
+<p class="num">Дугаар: ${esc(blank(input.number, 14))}</p>
 <div class="head">
   <span>${esc(mnDate(input.date))}-ны өдөр</span>
   <span>${esc(PROVIDER.address)}</span>
