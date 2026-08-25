@@ -17,6 +17,7 @@ import {
   contractFileName,
   contractNumberFor,
 } from '@/app/lib/contract/service-agreement';
+import { loadSeal } from '@/app/lib/contract/seal';
 
 const MIGRATION_HINT =
   'supabase-service-contract-migration.sql ажиллаагүй байна — Supabase SQL Editor-т ажиллуулна уу.';
@@ -36,8 +37,10 @@ export async function GET(req: NextRequest) {
     register: url.searchParams.get('register'),
     chairman: url.searchParams.get('chairman'),
   });
-  const html = renderContractHtml(input);
   const format = url.searchParams.get('format');
+  // Word нь data: URI зураг харуулдаггүй тул тамгыг зөвхөн дэлгэц/HTML-д буулгана
+  const seal = format === 'doc' ? undefined : await loadSeal();
+  const html = renderContractHtml(input, { seal });
 
   if (format === 'doc' || format === 'html') {
     return contractFileResponse(html, contractFileName(input, format), format === 'doc');

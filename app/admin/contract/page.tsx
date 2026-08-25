@@ -210,6 +210,7 @@ export default function AdminContractPage() {
           </a>
           <span className="text-xs text-gray-400">
             Хоосон үлдээсэн талбар гэрээн дээр цэгтэй мөр болж, гараар бөглөх боломжтой.
+            Хотолын тамга, гарын үсэг PDF хувилбарт суусан байна — Word-т гарахгүй.
           </span>
         </div>
       </div>

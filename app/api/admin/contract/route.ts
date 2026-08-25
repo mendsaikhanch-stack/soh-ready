@@ -20,6 +20,7 @@ import {
   contractFileName,
   contractSections,
 } from '@/app/lib/contract/service-agreement';
+import { loadSeal } from '@/app/lib/contract/seal';
 import { setupFee, monthlyFee, freeMonths, billingStartDate } from '@/app/lib/platform-pricing';
 
 export async function GET(req: NextRequest) {
@@ -53,7 +54,12 @@ export async function GET(req: NextRequest) {
   }
 
   const input = buildContractInput(state, fill);
-  const html = renderContractHtml(input);
+
+  // Хотолын тамга, гарын үсэг урьдчилан суусан байна — СӨХ зөвхөн өөрийн
+  // талаа бөглөж, тамгалаад буцаана. Word нь data: URI зураг харуулдаггүй
+  // тул зөвхөн дэлгэц/PDF-д буулгана.
+  const seal = format === 'doc' ? undefined : await loadSeal();
+  const html = renderContractHtml(input, { seal });
 
   if (format === 'doc' || format === 'html') {
     // Татсан гэдгийг тэмдэглэнэ — супер админ талд «татсан эсэх» харагдана.
