@@ -80,34 +80,50 @@ export default function AdminMessages() {
       return;
     }
 
+    // Цагийн талбарыг хоосон болгож болдог тул огноо+цаг зөв эсэхийг ЭХЛЭЭД
+    // шалгана. Хоосон үед "2026-08-27T:00" гэсэн утга үүсч, toISOString алдаа
+    // өгөөд товч «Хадгалж байна...» төлөвт гацдаг байсан.
+    if (!scheduledTime) {
+      setSendResult('Илгээх цагаа сонгоно уу');
+      return;
+    }
+    const when = new Date(`${scheduledDate}T${scheduledTime}:00`);
+    if (isNaN(when.getTime())) {
+      setSendResult('Огноо эсвэл цаг буруу байна. Дахин сонгоно уу.');
+      return;
+    }
+
     setSending(true);
     setSendResult(null);
 
-    const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+    try {
+      const sokhId = await getAdminSokhId();
+      const { error } = await adminFrom('scheduled_notifications').insert({
+        sokh_id: sokhId,
+        title: defaults.title,
+        message: defaults.message,
+        type: msgType,
+        scheduled_at: when.toISOString(),
+        status: 'pending',
+        target: msgType === 'debt' ? 'debtors' : target,
+      });
 
-    const sokhId = await getAdminSokhId();
-    const { error } = await adminFrom('scheduled_notifications').insert({
-      sokh_id: sokhId,
-      title: defaults.title,
-      message: defaults.message,
-      type: msgType,
-      scheduled_at: scheduledAt,
-      status: 'pending',
-      target: msgType === 'debt' ? 'debtors' : target,
-    });
-
-    if (error) {
-      setSendResult('Алдаа: ' + error);
-    } else {
-      setSendResult('Мэдэгдэл амжилттай товлогдлоо!');
-      setTitle('');
-      setCustomText('');
-      setScheduledDate('');
-      setScheduledTime('09:00');
-      fetchData();
+      if (error) {
+        setSendResult('Алдаа: ' + error);
+      } else {
+        setSendResult('Мэдэгдэл амжилттай товлогдлоо!');
+        setTitle('');
+        setCustomText('');
+        setScheduledDate('');
+        setScheduledTime('09:00');
+        fetchData();
+      }
+    } catch {
+      setSendResult('Хадгалж чадсангүй. Дахин оролдоно уу.');
+    } finally {
+      // Ямар ч тохиолдолд товчийг чөлөөлнө — эс бөгөөс дахин дарж боломжгүй болно.
+      setSending(false);
     }
-
-    setSending(false);
   };
 
   // Шууд илгээх (одоо)
