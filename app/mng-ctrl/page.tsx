@@ -73,6 +73,17 @@ interface TrialAlert {
   level: 'today' | 'soon' | 'overdue';
 }
 
+interface OverdueAlert {
+  invoice_id: number;
+  sokh_id: number;
+  name: string;
+  kind: string;
+  amount: number;
+  due_on: string;
+  days_left: number;
+  level: 'soon' | 'overdue' | 'critical';
+}
+
 interface ErrorRow {
   created_at: string;
   level: string;
@@ -94,6 +105,9 @@ export default function SuperAdminDashboard() {
   const [errorStats, setErrorStats] = useState({ today: 0, fatal: 0, recentErrors: [] as ErrorRow[] });
   // Үнэгүй ашиглах хугацаа дуусах гэж буй СӨХ — тэр өдөр болоход энд гарна
   const [trialAlerts, setTrialAlerts] = useState<TrialAlert[]>([]);
+  // Төлөгдөөгүй нэхэмжлэх — хугацаа нь ойртсон эсвэл хэтэрсэн
+  const [overdueAlerts, setOverdueAlerts] = useState<OverdueAlert[]>([]);
+  const [noticeDays, setNoticeDays] = useState(30);
 
   useEffect(() => {
     const load = async () => {
@@ -114,6 +128,16 @@ export default function SuperAdminDashboard() {
         setTrialAlerts(data.alerts || []);
       } catch {
         // сануулга бол нэмэлт зүйл — алдаа гарвал хуудас хэвийн ажиллана
+      }
+
+      // Төлөгдөөгүй нэхэмжлэхийн сануулга
+      try {
+        const res = await fetch('/api/superadmin/overdue-invoices');
+        const data = await res.json();
+        setOverdueAlerts(data.alerts || []);
+        if (data.notice_days) setNoticeDays(data.notice_days);
+      } catch {
+        // мөн адил — байхгүй бол хуудас хэвийн ажиллана
       }
 
       // Алдааны статистик
@@ -270,6 +294,85 @@ export default function SuperAdminDashboard() {
           </ul>
         </div>
       )}
+
+      {/* Төлөгдөөгүй нэхэмжлэх. Хугацааг нь due_date-ээс тоолно — нийт дүн
+          дангаараа харагдвал нүд дасдаг тул хэдэн хоног болсныг харуулна. */}
+      {overdueAlerts.length > 0 && (() => {
+        const worst = overdueAlerts[0].level;
+        const hot = worst === 'critical';
+        return (
+          <div
+            className={`mb-6 rounded-2xl border p-5 ${
+              hot ? 'border-red-700/50 bg-red-950/30' : 'border-amber-700/50 bg-amber-950/30'
+            }`}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h2 className={`font-semibold ${hot ? 'text-red-300' : 'text-amber-300'}`}>
+                  💸 Төлөгдөөгүй нэхэмжлэх
+                </h2>
+                <p className={`text-xs mt-0.5 ${hot ? 'text-red-200/60' : 'text-amber-200/60'}`}>
+                  {noticeDays} хоногоос дээш хэтэрвэл гэрээний дагуу бичгээр мэдэгдэнэ
+                </p>
+              </div>
+              <a href="/mng-ctrl/customers" className="text-xs text-amber-300 hover:underline shrink-0">
+                Хэрэглэгч СӨХ →
+              </a>
+            </div>
+            <ul className="space-y-2">
+              {overdueAlerts.map(a => {
+                const late = -a.days_left;
+                const when =
+                  a.level === 'critical'
+                    ? `${late} хоног хэтэрсэн`
+                    : a.level === 'overdue'
+                      ? `${late} хоног хэтэрсэн`
+                      : a.days_left === 0
+                        ? 'Өнөөдөр төлөгдөх ёстой'
+                        : `${a.days_left} хоногийн дараа`;
+                return (
+                  <li
+                    key={a.invoice_id}
+                    className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2 ${
+                      a.level === 'critical'
+                        ? 'bg-red-900/30 border border-red-800/50'
+                        : 'bg-gray-900/40'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{a.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {a.kind === 'setup' ? 'Суурилуулалт' : 'Сарын хураамж'} ·{' '}
+                        {a.due_on.replace(/-/g, '.')} хүртэл
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p
+                        className={`text-xs font-semibold ${
+                          a.level === 'critical'
+                            ? 'text-red-300'
+                            : a.level === 'overdue'
+                              ? 'text-amber-300'
+                              : 'text-gray-300'
+                        }`}
+                      >
+                        {when}
+                      </p>
+                      <p className="text-xs text-gray-400">{money(a.amount)}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            {overdueAlerts.some(a => a.level === 'critical') && (
+              <p className="mt-3 text-xs text-red-200/70">
+                Улаанаар тэмдэглэгдсэн нь гэрээний босгыг давсан байна. Утсаар хэлэх нь
+                тооцогдохгүй — бичгээр мэдэгдэх ёстой.
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-4 gap-4 mb-8">

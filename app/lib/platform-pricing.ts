@@ -196,3 +196,32 @@ export function trialAlertLevel(
   if (daysLeft > 0) return daysLeft <= TRIAL_ALERT_LEAD_DAYS ? 'soon' : null;
   return invoiced ? null : 'overdue';
 }
+
+/** Төлбөр хэтэрсэн нэхэмжлэхийг хэдэн хоногийн өмнөөс самбарт гаргах. */
+export const OVERDUE_ALERT_LEAD_DAYS = 7;
+
+/** Гэрээгээр бичгээр мэдэгдэх босго. Үйлчилгээний гэрээний «Талуудын эрх,
+ *  үүрэг» хэсэгт: төлбөр 30 хоногоос дээш хэтэрвэл Гүйцэтгэгч бичгээр
+ *  мэдэгдэн үйлчилгээг түр зогсоох эрхтэй. */
+export const OVERDUE_NOTICE_DAYS = 30;
+
+export type OverdueAlertLevel = 'soon' | 'overdue' | 'critical';
+
+/**
+ * Төлөгдөөгүй нэхэмжлэхийн сануулгын зэрэг.
+ *
+ *   soon     — төлөх хугацаа 7 хоногийн дотор болно (өнөөдөр багтана)
+ *   overdue  — хугацаа хэтэрсэн, гэхдээ 30 хоногт хүрээгүй
+ *   critical — 30-аас дээш хоног хэтэрсэн → гэрээгээр бичгээр мэдэгдэх босго
+ *
+ * null = сануулах шаардлагагүй (төлөх хугацаа хол байна).
+ *
+ * `daysLeft` нь ЗААВАЛ `due_date`-ээс тоологдоно, нэхэмжлэх үүсгэсэн өдрөөс
+ * БИШ. Хоёр огноо сар зөрж болдог тул үүсгэсэн өдрөөр тоолвол хугацаа
+ * хэтрээгүй нэхэмжлэхийг хэтэрсэн мэт харуулна.
+ */
+export function overdueAlertLevel(daysLeft: number): OverdueAlertLevel | null {
+  if (daysLeft > OVERDUE_ALERT_LEAD_DAYS) return null;
+  if (daysLeft >= 0) return 'soon';
+  return -daysLeft >= OVERDUE_NOTICE_DAYS ? 'critical' : 'overdue';
+}
