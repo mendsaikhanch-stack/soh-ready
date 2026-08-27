@@ -60,11 +60,27 @@ const num = (v: unknown) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+// Төрийн банкны и-биллингийн 16 оронт «Хэрэглэгчийн №»-г задална.
+// Бүтэц: угтвар(4) + хороо(2) + байр(4) + корпус(1) + хаалга/тоот(4) + өрх(1)
+// Жишээ: 2005180067301010 = 18-р хороо, 67-р байр, 3-р корпус, 101 тоот.
+// Банкны нэхэмжлэхийн файлд эдгээрийг тус тусад нь багана болгож өгдөг тул
+// айл бүрд нь тусад нь хадгалахын оронд кодоос нь буцааж задалж авна.
+const decodeBankCode = (code: string | null) => {
+  const c = String(code ?? '').trim();
+  if (!/^\d{16}$/.test(c)) return null;
+  return {
+    horoo: String(+c.slice(4, 6)),
+    bair: String(+c.slice(6, 10)),
+    korpus: String(+c.slice(10, 11)),
+    haalga: String(+c.slice(11, 15)),
+    orh: String(+c.slice(15, 16)),
+  };
+};
+
 export default function AdminEBilling() {
   const [tab, setTab] = useState<'export' | 'import'>('export');
   const [residents, setResidents] = useState<Resident[]>([]);
   const [orgFee, setOrgFee] = useState(0);
-  const [orgName, setOrgName] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Экспорт
@@ -90,15 +106,14 @@ export default function AdminEBilling() {
     const sokhId = await getAdminSokhId();
     const [{ data: res }, { data: org }] = await Promise.all([
       adminFrom('residents').select('*').eq('sokh_id', sokhId),
-      adminFrom('sokh_organizations').select('name, monthly_fee').eq('id', sokhId).single(),
+      adminFrom('sokh_organizations').select('monthly_fee').eq('id', sokhId).single(),
     ]);
     const rows = ((res as unknown as Resident[]) || [])
       .slice()
       .sort((a, b) => (a.apartment || '').localeCompare(b.apartment || '', undefined, { numeric: true }));
     setResidents(rows);
-    const o = org as unknown as { name?: string; monthly_fee?: number } | null;
+    const o = org as unknown as { monthly_fee?: number } | null;
     setOrgFee(Number(o?.monthly_fee) || 0);
-    setOrgName(o?.name || 'СӨХ');
 
     // Импортод давхардал шалгахад ашиглана
     const ids = rows.map(r => r.id);
@@ -124,22 +139,30 @@ export default function AdminEBilling() {
 
   const exportTotal = exportRows.reduce((s, r) => s + billOf(r), 0);
 
+  // Кодгүй айл — банк таних боломжгүй тул анхааруулна
+  const missingCode = exportRows.filter(r => !decodeBankCode(r.bank_customer_code)).length;
+
+  // Багана нь Төрийн банкны и-биллингийн файлын бүтэцтэй яг ижил байна
+  // (нэр, дараалал, хуудасны нэр «invoices» хүртэл).
   const downloadInvoices = () => {
     const period = `${year}.${String(month).padStart(2, '0')}`;
-    const data = exportRows.map(r => ({
-      'Хэрэглэгчийн код': r.bank_customer_code || r.apartment,
-      'Нэр': r.name,
-      'Тоот': r.apartment,
-      'Дүн': billOf(r),
-      'Он': year,
-      'Сар': month,
-      'Гүйлгээний утга': `${orgName} ${period} — ${r.apartment} тоот`,
-      'Сарын хураамж': feeOf(r),
-      'Өмнөх өр': Number(r.debt) || 0,
-      'Төрөл': r.unit_kind === 'business' ? 'ААН' : 'Айл',
-    }));
+    const data = exportRows.map(r => {
+      const d = decodeBankCode(r.bank_customer_code);
+      return {
+        'Хэрэглэгчийн №': r.bank_customer_code || r.apartment,
+        'Хороо': d?.horoo ?? '',
+        'Байр': d?.bair ?? '',
+        'Корпус': d?.korpus ?? '',
+        'Хаалга': d?.haalga ?? r.apartment,
+        'Өрх': d?.orh ?? '',
+        'Нэх/Он': year,
+        'Нэх/Сар': month,
+        'Харилцагчийн нэр': r.name,
+        'Нэхэмжилсэн дүн': billOf(r),
+      };
+    });
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Нэхэмжлэх');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'invoices');
     XLSX.writeFile(wb, `нэхэмжлэх-${period}.xlsx`);
   };
 
@@ -373,16 +396,23 @@ export default function AdminEBilling() {
             📥 Excel татах
           </button>
 
+          {missingCode > 0 && (
+            <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              ⚠️ {missingCode} айлд банкны хэрэглэгчийн дугаар алга. Тэднийг банк таних
+              боломжгүй тул төлбөр нь бүртгэгдэхгүй. Оршин суугчид хэсгээс дугаарыг нь оруулна уу.
+            </p>
+          )}
+
           <div className="mt-5 pt-4 border-t text-xs text-gray-500 leading-relaxed space-y-1">
             <p className="font-medium text-gray-600">Файлын багана</p>
-            <p>Хэрэглэгчийн код · Нэр · Тоот · Дүн · Он · Сар · Гүйлгээний утга · Сарын хураамж · Өмнөх өр · Төрөл</p>
+            <p>Хэрэглэгчийн № · Хороо · Байр · Корпус · Хаалга · Өрх · Нэх/Он · Нэх/Сар · Харилцагчийн нэр · Нэхэмжилсэн дүн</p>
             <p>
-              Банк өөр загвар шаардвал шаардлагатай баганыг нь үлдээж, бусдыг нь Excel дээрээ
-              устгаад өгч болно. Банкны загварыг ирүүлбэл яг тэр хэлбэрээр нь гаргадаг болгоно.
+              Энэ нь <b>Төрийн банкны и-биллингийн файлтай яг ижил</b> бүтэц — багананы нэр,
+              дараалал хүртэл адилхан. Татаад шууд банк руу өгнө.
             </p>
             <p>
-              Хэрэглэгчийн код нь одоогоор <b>тоот</b>. Банк өөр код олговол Оршин суугчид
-              хэсгээс тухайн айл бүрд нь оруулна.
+              Хороо, байр, корпус, тоот нь хэрэглэгчийн дугаараас автоматаар гарна
+              (жишээ нь <b>2005180067301010</b> = 18-р хороо, 67-р байр, 3-р корпус, 101 тоот).
             </p>
           </div>
         </div>
