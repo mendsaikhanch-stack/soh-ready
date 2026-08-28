@@ -5,6 +5,8 @@ import { isDemoSokh } from '@/app/lib/demo-orgs';
 import { loadSignIns } from '@/app/lib/auth-signins';
 import {
   DEFAULT_TARIFF,
+  orgTariff,
+  billableMonths,
   setupFee,
   monthlyFee,
   freeMonths,
@@ -57,6 +59,30 @@ interface CustomerInvoice {
   due_date: string;
   paid_at: string | null;
   paid_amount: number | null;
+}
+
+// Төлбөрийн гар удирдлагын талбарууд (supabase-billing-control-migration.sql).
+// Миграц ажиллаагүй бол баганууд байхгүй тул select унана — тэр үед бүх утга
+// null болж, дэлгэц дээр «миграц ажиллуулна уу» гэж гарна.
+interface BillingState {
+  free_months_override: number | null;
+  billing_note: string | null;
+  settled_at: string | null;
+  settled_note: string | null;
+  settled_by: string | null;
+}
+
+/** Тухайн сарын тооцооны төлөв */
+type MonthStatus = 'paid' | 'pending' | 'missing';
+
+interface MonthRow {
+  year: number;
+  month: number;
+  amount: number;
+  status: MonthStatus;
+  invoice_id: number | null;
+  due_date: string | null;
+  paid_at: string | null;
 }
 
 interface ContractState {
@@ -261,18 +287,60 @@ export async function GET() {
     });
   }
 
+  // Төлбөрийн гар удирдлага (үнэгүй сарын сунгалт, тооцооны тэмдэглэгээ)
+  const billingByOrg = new Map<number, BillingState>();
+  const { data: billRows, error: billErr } = await supabaseAdmin
+    .from('sokh_organizations')
+    .select('id, free_months_override, billing_note, settled_at, settled_note, settled_by')
+    .in('id', orgIds);
+  const billingMigrated = !billErr;
+  for (const r of billRows || []) {
+    billingByOrg.set(Number(r.id), {
+      free_months_override: (r.free_months_override as number) ?? null,
+      billing_note: (r.billing_note as string) ?? null,
+      settled_at: (r.settled_at as string) ?? null,
+      settled_note: (r.settled_note as string) ?? null,
+      settled_by: (r.settled_by as string) ?? null,
+    });
+  }
+
   const now = new Date();
 
   const customers = orgs.map(o => {
     const apartments = aptCount.get(o.id) || 0;
     const orgInvoices = invByOrg.get(o.id) || [];
+    const billing = billingByOrg.get(o.id) || null;
+
+    // Үнэгүй сарыг тухайн СӨХ-д сунгасан бол тарифыг нь тэрүүгээр солино
+    const t = orgTariff(tariff, billing?.free_months_override);
 
     const setupInvoice = orgInvoices.find(i => i.kind === 'setup') || null;
     const monthlyInvoices = orgInvoices.filter(i => i.kind !== 'setup');
     const billed = new Set(monthlyInvoices.map(i => periodKey(i.period_year, i.period_month)));
 
-    const start = billingStartDate(o.activated_at, tariff, apartments);
-    const next = nextBillingPeriod(o.activated_at, tariff, apartments, billed, now);
+    const start = billingStartDate(o.activated_at, t, apartments);
+    const next = nextBillingPeriod(o.activated_at, t, apartments, billed, now);
+
+    // Тооцооны хуанли: төлбөр эхэлснээс хойшхи сар бүр нэхэмжлэгдсэн үү,
+    // төлөгдсөн үү. «missing» = тухайн сарын тооцоо огт хийгдээгүй.
+    const invByPeriod = new Map<string, CustomerInvoice>();
+    for (const inv of monthlyInvoices) {
+      invByPeriod.set(periodKey(inv.period_year, inv.period_month), inv);
+    }
+    const months: MonthRow[] = billableMonths(o.activated_at, t, apartments, now).map(m => {
+      const inv = invByPeriod.get(periodKey(m.year, m.month)) || null;
+      return {
+        year: m.year,
+        month: m.month,
+        amount: inv ? Number(inv.amount) : monthlyFee(t, apartments),
+        status: !inv ? 'missing' : inv.status === 'paid' ? 'paid' : 'pending',
+        invoice_id: inv ? inv.id : null,
+        due_date: inv ? inv.due_date : null,
+        paid_at: inv ? inv.paid_at : null,
+      };
+    });
+    const unbilledMonths = months.filter(m => m.status === 'missing').length;
+    const unpaidMonths = months.filter(m => m.status === 'pending').length;
 
     const unpaid = orgInvoices
       .filter(i => i.status !== 'paid' && i.status !== 'cancelled')
@@ -316,11 +384,22 @@ export async function GET() {
         : null,
 
       // Тарифаар тооцсон дүн (нэхэмжлэх үүсгэхээс өмнө ч харагдана)
-      setup_fee: setupFee(tariff, apartments),
-      monthly_fee: monthlyFee(tariff, apartments),
-      free_months: freeMonths(tariff, apartments),
+      setup_fee: setupFee(t, apartments),
+      monthly_fee: monthlyFee(t, apartments),
+      free_months: freeMonths(t, apartments),
+      free_months_default: freeMonths(tariff, apartments),
+      free_months_override: billing?.free_months_override ?? null,
       billing_starts_at: start ? start.toISOString() : null,
       billing_active: start ? now >= start : false,
+
+      // Тооцоо
+      months,
+      unbilled_months: unbilledMonths,
+      unpaid_months: unpaidMonths,
+      settled_at: billing?.settled_at ?? null,
+      settled_note: billing?.settled_note ?? null,
+      settled_by: billing?.settled_by ?? null,
+      billing_note: billing?.billing_note ?? null,
 
       // Үйлчилгээний гэрээ — нээгдсэн эсэх, дугаар, сүүлд татсан
       contract: contractByOrg.get(o.id) || null,
@@ -373,6 +452,10 @@ export async function GET() {
     setup_expected: activeReal.reduce((s, c) => s + c.setup_fee, 0),
     paid_total: real.reduce((s, c) => s + c.paid_total, 0),
     unpaid_total: real.reduce((s, c) => s + c.unpaid_total, 0),
+    // Тооцоо — нэхэмжлээгүй өнгөрсөн сар, тооцоо хийгээгүй СӨХ
+    unbilled_months: real.reduce((s, c) => s + c.unbilled_months, 0),
+    orgs_unbilled: real.filter(c => c.unbilled_months > 0).length,
+    orgs_unsettled: activeReal.filter(c => !c.settled_at).length,
     directory_total: directoryTotal || 0,
   };
 
@@ -386,6 +469,7 @@ export async function GET() {
   return NextResponse.json({
     tariff, migrated, customers, totals,
     contract_migrated: contractMigrated,
+    billing_migrated: billingMigrated,
     recent_residents: recentResidents,
   });
 }
@@ -395,6 +479,7 @@ function emptyTotals(directoryTotal: number) {
     customers: 0, active: 0, apartments: 0, residents: 0,
     resident_debt: 0, debtors: 0,
     accounts: 0, signed_in: 0, active_7d: 0, active_30d: 0,
+    unbilled_months: 0, orgs_unbilled: 0, orgs_unsettled: 0,
     admin_accounts: 0, admins_signed_in: 0, admins_active_30d: 0,
     new_residents_this_month: 0, new_customers_this_month: 0,
     monthly_billable: 0, monthly_when_all_billing: 0, setup_expected: 0,

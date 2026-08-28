@@ -23,6 +23,23 @@ export const DEFAULT_TARIFF: PlatformTariff = {
   free_months_above: 2,
 };
 
+/**
+ * Тухайн СӨХ-д үйлчлэх тариф.
+ *
+ * Үнэгүй сарыг СӨХ тус бүрээр сунгаж болдог (`free_months_override`) —
+ * жишээ нь өгөгдлөө удаан оруулсан, эсвэл гэрээ хожуу байгуулсан үед.
+ * Дүн бодох бүх функц ерөнхий тарифыг хүлээж авдаг тул шинэ параметр
+ * нэмэхийн оронд тарифыг нь энд «хувийн болгож» өгнө.
+ */
+export function orgTariff(
+  tariff: PlatformTariff,
+  freeMonthsOverride: number | null | undefined,
+): PlatformTariff {
+  if (freeMonthsOverride == null) return tariff;
+  const n = Math.max(0, Math.round(freeMonthsOverride));
+  return { ...tariff, free_months_below: n, free_months_above: n };
+}
+
 /** Нэг удаагийн суурилуулалтын төлбөр */
 export function setupFee(tariff: PlatformTariff, apartments: number): number {
   return Math.round(apartments * tariff.setup_per_unit);
@@ -139,6 +156,33 @@ export function nextBillingPeriod(
     amount: monthlyFee(tariff, apartments),
     startsOn: next,
   };
+}
+
+/**
+ * Төлбөр эхэлснээс хойш өнөөдрийг хүртэлх БҮХ тооцоот сар.
+ *
+ * «Тооцоо хийсэн эсэх»-ийг харахад хэрэгтэй: сар бүрд нэхэмжлэх үүссэн үү,
+ * төлөгдсөн үү гэдгийг энэ жагсаалттай тулгана. Ирээдүйн сар ОРОХГҮЙ —
+ * болоогүй сарыг «тооцоо хийгээгүй» гэж харуулбал төөрөгдөнө.
+ */
+export function billableMonths(
+  activatedAt: string | null | undefined,
+  tariff: PlatformTariff,
+  apartments: number,
+  now: Date = new Date(),
+): { year: number; month: number }[] {
+  const first = firstBillableMonth(activatedAt, tariff, apartments);
+  if (!first) return [];
+
+  const months: { year: number; month: number }[] = [];
+  const cursor = new Date(first);
+  const limit = new Date(now.getFullYear(), now.getMonth(), 1);
+  // 120 сар = 10 жил. Огноо буруу бичигдсэн үед мөчлөг тасрахгүй байхаас сэргийлнэ.
+  for (let i = 0; i < 120 && cursor <= limit; i++) {
+    months.push({ year: cursor.getFullYear(), month: cursor.getMonth() + 1 });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return months;
 }
 
 export function periodKey(year: number, month: number): string {

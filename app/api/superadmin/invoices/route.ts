@@ -45,16 +45,40 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
 
-  // Нэг нэхэмжлэл төлсөнд тэмдэглэх
+  // Нэг нэхэмжлэл төлсөнд тэмдэглэх.
+  // paid_at-ыг илгээж болно — мөнгө өчигдөр орсныг өнөөдөр бүртгэх нь элбэг.
   if (body.action === 'mark_paid') {
-    const { id, paid_amount } = body;
+    const { id, paid_amount, paid_at } = body;
+    let paidAt = new Date().toISOString();
+    if (paid_at) {
+      const d = new Date(paid_at);
+      if (isNaN(d.getTime())) {
+        return NextResponse.json({ error: 'Төлсөн огноо буруу байна' }, { status: 400 });
+      }
+      paidAt = d.toISOString();
+    }
     const { data, error } = await supabaseAdmin
       .from('platform_invoices')
       .update({
         status: 'paid',
-        paid_at: new Date().toISOString(),
+        paid_at: paidAt,
         paid_amount: paid_amount || 0,
       })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  }
+
+  // Төлсөн тэмдэглэгээг буцаах — андуурч дарсан, эсвэл мөнгө буцаагдсан үед
+  if (body.action === 'unmark_paid') {
+    const { id } = body;
+    if (!id) return NextResponse.json({ error: 'id шаардлагатай' }, { status: 400 });
+    const { data, error } = await supabaseAdmin
+      .from('platform_invoices')
+      .update({ status: 'pending', paid_at: null, paid_amount: null })
       .eq('id', id)
       .select()
       .single();

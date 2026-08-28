@@ -39,6 +39,16 @@ interface ContractState {
   downloaded_at: string | null;
 }
 
+interface MonthRow {
+  year: number;
+  month: number;
+  amount: number;
+  status: 'paid' | 'pending' | 'missing';
+  invoice_id: number | null;
+  due_date: string | null;
+  paid_at: string | null;
+}
+
 interface NextPeriod {
   year: number;
   month: number;
@@ -69,6 +79,15 @@ interface Customer {
   setup_fee: number;
   monthly_fee: number;
   free_months: number;
+  free_months_default: number;
+  free_months_override: number | null;
+  months: MonthRow[];
+  unbilled_months: number;
+  unpaid_months: number;
+  settled_at: string | null;
+  settled_note: string | null;
+  settled_by: string | null;
+  billing_note: string | null;
   billing_starts_at: string | null;
   billing_active: boolean;
   contract: ContractState | null;
@@ -96,6 +115,9 @@ interface Totals {
   active_30d: number;
   admin_accounts: number;
   admins_signed_in: number;
+  unbilled_months: number;
+  orgs_unbilled: number;
+  orgs_unsettled: number;
 }
 
 interface Tariff {
@@ -124,6 +146,7 @@ export default function CustomersPage() {
   const [tariff, setTariff] = useState<Tariff | null>(null);
   const [migrated, setMigrated] = useState(true);
   const [contractMigrated, setContractMigrated] = useState(true);
+  const [billingMigrated, setBillingMigrated] = useState(true);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -140,6 +163,7 @@ export default function CustomersPage() {
       setTariff(data.tariff || null);
       setMigrated(data.migrated !== false);
       setContractMigrated(data.contract_migrated !== false);
+      setBillingMigrated(data.billing_migrated !== false);
     }
     setLoading(false);
   };
@@ -204,13 +228,61 @@ export default function CustomersPage() {
     await load();
   };
 
-  const markPaid = async (inv: Invoice) => {
-    if (!confirm(`${money(inv.amount)} төлөгдсөн гэж тэмдэглэх үү?`)) return;
-    setBusy(`inv-${inv.id}`);
+  // Төлбөр орсныг бүртгэх. Мөнгө өчигдөр орсныг өнөөдөр тэмдэглэх нь элбэг
+  // тул огноог асууна — хоосон орхивол өнөөдрөөр бичнэ.
+  const markPaid = async (id: number, amount: number) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const when = prompt(
+      `${money(amount)} хэзээ орсон бэ?
+
+Огноог ЖЖЖЖ-СС-ӨӨ хэлбэрээр бичнэ үү.`,
+      today,
+    );
+    if (when === null) return;
+    const paidAt = when.trim() || today;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(paidAt)) {
+      alert('Огноог 2026-08-28 хэлбэрээр бичнэ үү.');
+      return;
+    }
+
+    setBusy(`inv-${id}`);
     const res = await fetch('/api/superadmin/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'mark_paid', id: inv.id, paid_amount: inv.amount }),
+      body: JSON.stringify({ action: 'mark_paid', id, paid_amount: amount, paid_at: paidAt }),
+    });
+    const data = await res.json();
+    setBusy(null);
+    if (data.error) { alert(data.error); return; }
+    await load();
+  };
+
+  // Андуурч тэмдэглэсэн, эсвэл мөнгө буцаагдсан үед
+  const unmarkPaid = async (id: number, amount: number) => {
+    if (!confirm(`${money(amount)} төлөгдсөн тэмдэглэгээг буцаах уу?`)) return;
+    setBusy(`inv-${id}`);
+    const res = await fetch('/api/superadmin/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'unmark_paid', id }),
+    });
+    const data = await res.json();
+    setBusy(null);
+    if (data.error) { alert(data.error); return; }
+    await load();
+  };
+
+  // Нээсэн огноо, үнэгүй сар, тооцооны тэмдэглэгээ — бүгд нэг API-аар
+  const saveBilling = async (
+    sokhId: number,
+    action: 'set_activated_at' | 'set_free_months' | 'set_note' | 'settle' | 'unsettle',
+    payload: Record<string, unknown> = {},
+  ) => {
+    setBusy(`billing-${sokhId}`);
+    const res = await fetch('/api/superadmin/customers/billing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sokh_id: sokhId, action, ...payload }),
     });
     const data = await res.json();
     setBusy(null);
@@ -243,11 +315,22 @@ export default function CustomersPage() {
         </div>
       )}
 
+      {migrated && !billingMigrated && (
+        <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl p-4 mb-6">
+          <p className="text-sm font-semibold text-amber-300">⚠️ Төлбөрийн гар удирдлага асаагүй байна</p>
+          <p className="text-xs text-amber-200/80 mt-1">
+            Нээсэн огноог засах, үнэгүй сар сунгах, тооцоо хийсэн гэж тэмдэглэх боломж
+            ажиллахгүй. <code className="bg-black/30 px-1 rounded">supabase-billing-control-migration.sql</code>-ийг
+            Supabase → SQL Editor дээр ажиллуулна уу.
+          </p>
+        </div>
+      )}
+
       {error && <p className="text-sm text-red-400 bg-red-500/10 rounded-lg p-3 mb-6">{error}</p>}
 
       {/* Нийт үзүүлэлт */}
       {totals && (
-        <div className="grid grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-6 gap-4 mb-6">
           <div className="bg-blue-600/15 border border-blue-500/30 rounded-2xl p-4">
             <p className="text-xs text-blue-300">Идэвхтэй СӨХ</p>
             <p className="text-2xl font-bold text-blue-200">{totals.active}</p>
@@ -274,6 +357,21 @@ export default function CustomersPage() {
             <p className="text-xs text-amber-300">Төлөгдөөгүй</p>
             <p className="text-2xl font-bold text-amber-200">{money(totals.unpaid_total)}</p>
             <p className="text-[10px] text-gray-400 mt-0.5">төлөгдсөн {money(totals.paid_total)}</p>
+          </div>
+          <div className={`rounded-2xl p-4 border ${
+            totals.unbilled_months > 0
+              ? 'bg-red-600/15 border-red-500/30'
+              : 'bg-white/5 border-white/10'
+          }`}>
+            <p className={`text-xs ${totals.unbilled_months > 0 ? 'text-red-300' : 'text-gray-400'}`}>
+              Тооцоо хийгээгүй
+            </p>
+            <p className={`text-2xl font-bold ${totals.unbilled_months > 0 ? 'text-red-200' : 'text-gray-300'}`}>
+              {totals.unbilled_months} сар
+            </p>
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              {totals.orgs_unbilled} СӨХ-д · тооцоо тэмдэглээгүй {totals.orgs_unsettled}
+            </p>
           </div>
         </div>
       )}
@@ -313,8 +411,11 @@ export default function CustomersPage() {
               busy={busy}
               createInvoice={createInvoice}
               markPaid={markPaid}
+              unmarkPaid={unmarkPaid}
+              saveBilling={saveBilling}
               toggleContract={toggleContract}
               contractMigrated={contractMigrated}
+              billingMigrated={billingMigrated}
             />
           ))}
 
@@ -350,8 +451,11 @@ export default function CustomersPage() {
                   busy={busy}
                   createInvoice={createInvoice}
                   markPaid={markPaid}
+                  unmarkPaid={unmarkPaid}
+                  saveBilling={saveBilling}
                   toggleContract={toggleContract}
                   contractMigrated={contractMigrated}
+                  billingMigrated={billingMigrated}
                 />
               ))}
             </>
@@ -363,16 +467,24 @@ export default function CustomersPage() {
 }
 
 function CustomerRow({
-  c, isOpen, onToggle, busy, createInvoice, markPaid, toggleContract, contractMigrated,
+  c, isOpen, onToggle, busy, createInvoice, markPaid, unmarkPaid, saveBilling,
+  toggleContract, contractMigrated, billingMigrated,
 }: {
   c: Customer;
   isOpen: boolean;
   onToggle: () => void;
   busy: string | null;
   createInvoice: (c: Customer, kind: 'setup' | 'monthly', y: number, m: number, paid: boolean) => void;
-  markPaid: (inv: Invoice) => void;
+  markPaid: (id: number, amount: number) => void;
+  unmarkPaid: (id: number, amount: number) => void;
+  saveBilling: (
+    sokhId: number,
+    action: 'set_activated_at' | 'set_free_months' | 'set_note' | 'settle' | 'unsettle',
+    payload?: Record<string, unknown>,
+  ) => void;
   toggleContract: (c: Customer) => void;
   contractMigrated: boolean;
+  billingMigrated: boolean;
 }) {
   const isActive = c.claim_status === 'active';
 
@@ -443,6 +555,10 @@ function CustomerRow({
           ) : !c.billing_active ? (
             <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-300">
               Үнэгүй {c.free_months} сар
+            </span>
+          ) : c.unbilled_months > 0 ? (
+            <span className="text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-300">
+              {c.unbilled_months} сар тооцоогүй
             </span>
           ) : c.unpaid_total > 0 ? (
             <span className="text-xs px-2 py-1 rounded-full bg-amber-500/20 text-amber-300">
@@ -585,6 +701,16 @@ function CustomerRow({
               )}
             </dl>
 
+            {billingMigrated && (
+              <BillingControls
+                // Хадгалсны дараа шинэ утгаар дахин үүснэ
+                key={`${c.activated_at}|${c.free_months_override}|${c.billing_note}`}
+                c={c}
+                busy={busy}
+                saveBilling={saveBilling}
+              />
+            )}
+
             {isActive && (
               <div className="flex flex-wrap gap-2 mt-3">
                 {!c.setup_invoice && c.apartments > 0 && (
@@ -660,6 +786,77 @@ function CustomerRow({
               )}
             </div>
 
+            {/* Тооцооны хуанли — сар бүр тооцоо хийгдсэн үү */}
+            {isActive && c.apartments > 0 && (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">
+                  Сар бүрийн тооцоо
+                  {c.unbilled_months > 0 && (
+                    <span className="ml-2 text-red-400 normal-case tracking-normal">
+                      {c.unbilled_months} сар хийгдээгүй
+                    </span>
+                  )}
+                </p>
+                {c.months.length === 0 ? (
+                  <p className="text-xs text-gray-500">
+                    Төлбөр хараахан эхлээгүй — {mnDate(c.billing_starts_at)}-наас тоологдоно.
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {c.months.map(m => (
+                      <div key={`${m.year}-${m.month}`} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-gray-400 w-16 shrink-0">
+                          {m.year}/{String(m.month).padStart(2, '0')}
+                        </span>
+                        <span className="text-white">{money(m.amount)}</span>
+                        {m.status === 'paid' ? (
+                          <span className="shrink-0">
+                            <span className="text-green-400">✓ төлсөн {mnDate(m.paid_at)}</span>
+                            <button
+                              onClick={() => unmarkPaid(m.invoice_id!, m.amount)}
+                              disabled={busy === `inv-${m.invoice_id}`}
+                              className="ml-2 text-gray-500 hover:text-gray-300 disabled:opacity-50"
+                            >
+                              буцаах
+                            </button>
+                          </span>
+                        ) : m.status === 'pending' ? (
+                          <span className="shrink-0">
+                            <span className="text-amber-400">нэхэмжилсэн</span>
+                            <button
+                              onClick={() => markPaid(m.invoice_id!, m.amount)}
+                              disabled={busy === `inv-${m.invoice_id}`}
+                              className="ml-2 text-blue-400 hover:underline disabled:opacity-50"
+                            >
+                              төлсөн
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="shrink-0">
+                            <span className="text-red-400">тооцоо хийгээгүй</span>
+                            <button
+                              onClick={() => createInvoice(c, 'monthly', m.year, m.month, false)}
+                              disabled={!!busy}
+                              className="ml-2 text-blue-400 hover:underline disabled:opacity-50"
+                            >
+                              нэхэмжлэх
+                            </button>
+                            <button
+                              onClick={() => createInvoice(c, 'monthly', m.year, m.month, true)}
+                              disabled={!!busy}
+                              className="ml-2 text-green-400 hover:underline disabled:opacity-50"
+                            >
+                              төлсөн
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Нэхэмжлэлийн түүх */}
             {c.invoices.length > 0 && (
               <div className="mt-3 space-y-1">
@@ -672,10 +869,20 @@ function CustomerRow({
                     </span>
                     <span className="text-white">{money(inv.amount)}</span>
                     {inv.status === 'paid' ? (
-                      <span className="text-green-400 shrink-0">✓ {mnDate(inv.paid_at)}</span>
+                      <span className="shrink-0">
+                        <span className="text-green-400">✓ {mnDate(inv.paid_at)}</span>
+                        <button
+                          onClick={() => unmarkPaid(inv.id, inv.amount)}
+                          disabled={busy === `inv-${inv.id}`}
+                          className="ml-2 text-gray-500 hover:text-gray-300 disabled:opacity-50"
+                          title="Төлсөн тэмдэглэгээг буцаах"
+                        >
+                          буцаах
+                        </button>
+                      </span>
                     ) : (
                       <button
-                        onClick={() => markPaid(inv)}
+                        onClick={() => markPaid(inv.id, inv.amount)}
                         disabled={busy === `inv-${inv.id}`}
                         className="text-blue-400 hover:underline shrink-0 disabled:opacity-50"
                       >
@@ -689,6 +896,177 @@ function CustomerRow({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Супер админы гар удирдлага: нээсэн огноо, үнэгүй сарын сунгалт,
+// «тооцоо хийсэн» тэмдэглэгээ, чөлөөт тэмдэглэл.
+//
+// Нээсэн огноо нь бүх тооцооны эх — үнэгүй хугацаа, төлбөр эхлэх өдөр,
+// тооцоот сарууд бүгд түүнээс тоологдоно. Тиймээс засварыг баталгаажуулж
+// авна.
+function BillingControls({
+  c, busy, saveBilling,
+}: {
+  c: Customer;
+  busy: string | null;
+  saveBilling: (
+    sokhId: number,
+    action: 'set_activated_at' | 'set_free_months' | 'set_note' | 'settle' | 'unsettle',
+    payload?: Record<string, unknown>,
+  ) => void;
+}) {
+  const dayValue = (iso: string | null) => (iso ? iso.slice(0, 10) : '');
+  const [day, setDay] = useState(dayValue(c.activated_at));
+  const [free, setFree] = useState(c.free_months_override == null ? '' : String(c.free_months_override));
+  const [note, setNote] = useState(c.billing_note || '');
+  const working = busy === `billing-${c.id}`;
+
+  // Серверээс шинэ утга ирэхэд талбарууд шинэчлэгдэх ёстой. Үүнийг effect дотор
+  // setState хийж биш, дуудаж буй тал нь `key`-г солиод бүрэлдэхүүнийг дахин
+  // үүсгэснээр шийднэ (доорх BillingControls-ийн key-г үз).
+
+  const saveDay = () => {
+    if (day === dayValue(c.activated_at)) return;
+    if (!confirm(
+      `${c.name}
+
+Нээсэн өдрийг ${day || '(хоосон)'} болгох уу?
+
+` +
+      'Үнэгүй хугацаа, төлбөр эхлэх өдөр, сар бүрийн тооцоо бүгд шинээр бодогдоно.'
+    )) return;
+    saveBilling(c.id, 'set_activated_at', { activated_at: day || null });
+  };
+
+  const saveFree = () => {
+    const current = c.free_months_override == null ? '' : String(c.free_months_override);
+    if (free === current) return;
+    saveBilling(c.id, 'set_free_months', { free_months: free === '' ? null : Number(free) });
+  };
+
+  const settle = () => {
+    const text = prompt(
+      `${c.name} — тооцоо хийсэн гэж тэмдэглэх.
+
+Тэмдэглэл (заавал биш):`,
+      c.settled_note || '',
+    );
+    if (text === null) return;
+    saveBilling(c.id, 'settle', { note: text });
+  };
+
+  return (
+    <div className="mt-4 pt-3 border-t border-white/10 space-y-3">
+      <p className="text-[11px] uppercase tracking-wide text-gray-500">Гар удирдлага</p>
+
+      {/* Нээсэн өдөр */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-400 w-24 shrink-0">Нээсэн өдөр</span>
+        <input
+          type="date"
+          value={day}
+          onChange={e => setDay(e.target.value)}
+          className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs text-white"
+        />
+        <button
+          onClick={saveDay}
+          disabled={working || day === dayValue(c.activated_at)}
+          className="text-xs px-2.5 py-1 rounded-lg bg-blue-600 text-white disabled:opacity-40"
+        >
+          Хадгалах
+        </button>
+      </div>
+
+      {/* Үнэгүй сар */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-400 w-24 shrink-0">Үнэгүй сар</span>
+        <input
+          type="number"
+          min={0}
+          max={24}
+          value={free}
+          placeholder={String(c.free_months_default)}
+          onChange={e => setFree(e.target.value)}
+          className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs text-white w-20"
+        />
+        <button
+          onClick={saveFree}
+          disabled={working || free === (c.free_months_override == null ? '' : String(c.free_months_override))}
+          className="text-xs px-2.5 py-1 rounded-lg bg-blue-600 text-white disabled:opacity-40"
+        >
+          Хадгалах
+        </button>
+        {c.free_months_override != null && (
+          <button
+            onClick={() => saveBilling(c.id, 'set_free_months', { free_months: null })}
+            disabled={working}
+            className="text-xs text-gray-400 hover:text-white disabled:opacity-40"
+          >
+            ерөнхий дүрэм рүү буцаах ({c.free_months_default} сар)
+          </button>
+        )}
+      </div>
+      <p className="text-[11px] text-gray-500 -mt-1.5 ml-26">
+        {c.free_months_override != null
+          ? `Сунгасан: ${c.free_months} сар (ерөнхий дүрмээр ${c.free_months_default})`
+          : `Ерөнхий дүрмээр ${c.free_months_default} сар. Сунгах бол тоо бичнэ.`}
+      </p>
+
+      {/* Тооцоо хийсэн эсэх */}
+      <div className="flex items-start gap-2">
+        <span className="text-xs text-gray-400 w-24 shrink-0 pt-1">Тооцоо</span>
+        <div className="min-w-0">
+          {c.settled_at ? (
+            <p className="text-xs text-green-400">
+              ✓ хийсэн {mnDate(c.settled_at)}
+              {c.settled_note && <span className="text-gray-400"> · {c.settled_note}</span>}
+            </p>
+          ) : (
+            <p className="text-xs text-amber-400">Хараахан тэмдэглээгүй</p>
+          )}
+          <div className="flex gap-2 mt-1">
+            <button
+              onClick={settle}
+              disabled={working}
+              className="text-xs px-2.5 py-1 rounded-lg bg-green-600 text-white disabled:opacity-40"
+            >
+              {c.settled_at ? 'Дахин тэмдэглэх' : 'Тооцоо хийсэн'}
+            </button>
+            {c.settled_at && (
+              <button
+                onClick={() => saveBilling(c.id, 'unsettle')}
+                disabled={working}
+                className="text-xs text-gray-400 hover:text-white disabled:opacity-40"
+              >
+                арилгах
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Тэмдэглэл */}
+      <div className="flex items-start gap-2">
+        <span className="text-xs text-gray-400 w-24 shrink-0 pt-1">Тэмдэглэл</span>
+        <div className="flex-1 min-w-0">
+          <textarea
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            rows={2}
+            placeholder="жнь: 9 сарын төлбөрийг 10 сард нийлүүлж төлнө гэсэн"
+            className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs text-white"
+          />
+          <button
+            onClick={() => saveBilling(c.id, 'set_note', { note })}
+            disabled={working || note === (c.billing_note || '')}
+            className="text-xs px-2.5 py-1 rounded-lg bg-white/10 text-white mt-1 disabled:opacity-40"
+          >
+            Тэмдэглэл хадгалах
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
