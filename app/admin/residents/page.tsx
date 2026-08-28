@@ -5,6 +5,7 @@ import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import Field from '@/app/components/Field';
 import CreateDebtAgreementModal from '@/app/components/admin/CreateDebtAgreementModal';
+import { fetchAppUsage, fmtDate, type AppUsageResident } from '@/app/components/admin/AppUsagePanel';
 
 interface Resident {
   id: number;
@@ -46,6 +47,8 @@ export default function AdminResidents() {
   const [orgFee, setOrgFee] = useState(0);                                  // СӨХ-ийн ерөнхий тариф
   const [platesByApt, setPlatesByApt] = useState<Record<string, string[]>>({}); // тоот → улсын дугаарууд
   const [agreementFor, setAgreementFor] = useState<number | null>(null);    // өрийн гэрээ байгуулах айл
+  const [appById, setAppById] = useState<Record<number, AppUsageResident>>({}); // айл → апп-д нэвтэрсэн эсэх
+  const [onlyNoApp, setOnlyNoApp] = useState(false);                        // зөвхөн апп-д ороогүй айлыг харуулах
   const [showAgreement, setShowAgreement] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -54,6 +57,10 @@ export default function AdminResidents() {
 
   // Тоотын доор зөвхөн байрны нэрийг харуулна (талбай нь өөрийн баганатай)
   const locationOf = (r: Resident) => (r.building || '').trim();
+
+  // Апп: тухайн айл нэвтэрч үзсэн эсэх (auth-ийн өгөгдөл тул тусдаа API-аас)
+  const appOf = (r: Resident) => appById[r.id] || null;
+  const signedIn = (r: Resident) => !!appOf(r)?.last_sign_in_at;
 
   // Аж ахуйн нэгж үү, айл өрх үү (unit_kind багана хоосон бол айл гэж үзнэ)
   const isBusiness = (r: Resident) => r.unit_kind === 'business';
@@ -90,6 +97,16 @@ export default function AdminResidents() {
 
   useEffect(() => { fetchResidents(); }, []);
 
+  // Апп-д нэвтэрсэн эсэх нь Supabase-ийн auth хүснэгтээс уншигддаг тул жагсаалтаас
+  // удаан ирдэг. Тусад нь ачаалж, хүснэгтийг хүлээлгэхгүй.
+  useEffect(() => {
+    fetchAppUsage().then(usage => {
+      const map: Record<number, AppUsageResident> = {};
+      for (const u of usage?.residents || []) map[u.id] = u;
+      setAppById(map);
+    });
+  }, []);
+
   const fetchResidents = async () => {
     const sokhId = await getAdminSokhId();
     // adminFrom proxy (service_role + tenant-scope) ашиглана — admin нь Supabase auth биш тул
@@ -121,6 +138,7 @@ export default function AdminResidents() {
   };
 
   const filtered = residents.filter(r => {
+    if (onlyNoApp && signedIn(r)) return false;
     const q = search.toLowerCase();
     return r.name.toLowerCase().includes(q) ||
       r.apartment.toLowerCase().includes(q) ||
@@ -327,6 +345,9 @@ export default function AdminResidents() {
   const totalFee = filtered.filter(r => !r.pending_claim).reduce((s, r) => s + feeOf(r), 0);
   const completedCount = confirmed.filter(isComplete).length;
   const completedPct = confirmed.length ? Math.round((completedCount / confirmed.length) * 100) : 0;
+  // Апп татаж нэвтэрсэн айл (бүх мөрөөр — өөрөө бүртгүүлсэн нь ч аппаараа орсон)
+  const appCount = residents.filter(signedIn).length;
+  const appPct = residents.length ? Math.round((appCount / residents.length) * 100) : 0;
 
   return (
     <div className="p-6">
@@ -341,6 +362,9 @@ export default function AdminResidents() {
             &middot; Нийт: <b>{(totalDebt + totalFee).toLocaleString()}₮</b>
             &middot; <span className={completedPct >= 80 ? 'text-green-600' : completedPct >= 40 ? 'text-amber-600' : 'text-red-500'}>
               Бүрдэлт: {completedCount}/{confirmed.length} ({completedPct}%)
+            </span>
+            &middot; <span className={appPct >= 60 ? 'text-green-600' : appPct >= 25 ? 'text-amber-600' : 'text-gray-500'}>
+              📱 Апп: {appCount}/{residents.length} ({appPct}%)
             </span>
             {pendingCount > 0 && (
               <> &middot; <span className="text-orange-600 font-semibold">
@@ -365,12 +389,18 @@ export default function AdminResidents() {
         </div>
       </div>
 
-      <input
-        placeholder="Нэр, тоот, утас, байраар хайх..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full border rounded-lg px-4 py-2 mb-4 text-sm"
-      />
+      <div className="flex items-center gap-3 mb-4">
+        <input
+          placeholder="Нэр, тоот, утас, байраар хайх..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 border rounded-lg px-4 py-2 text-sm"
+        />
+        <label className="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap cursor-pointer">
+          <input type="checkbox" checked={onlyNoApp} onChange={e => setOnlyNoApp(e.target.checked)} />
+          Зөвхөн апп татаагүй айл
+        </label>
+      </div>
 
       {/* Form */}
       {showForm && (
@@ -454,6 +484,7 @@ export default function AdminResidents() {
                   <th className="px-3 py-3">Хэлбэр</th>
                   <th className="px-3 py-3">Эзэмшлийн төрөл</th>
                   <th className="px-3 py-3">Утас</th>
+                  <th className="px-3 py-3">Апп</th>
                   <th className="px-3 py-3">Машины бүртгэл</th>
                   <th className="px-3 py-3 text-right">Өмнөх үлдэгдэл</th>
                   <th className="px-3 py-3 text-right">Сарын төлбөр</th>
@@ -487,6 +518,21 @@ export default function AdminResidents() {
                       {r.resident_type ? TYPE_LABELS[r.resident_type] || r.resident_type : <span className="text-gray-300">-</span>}
                     </td>
                     <td className="px-3 py-2.5 text-gray-500">{r.phone || '-'}</td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      {signedIn(r) ? (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-700"
+                              title={`Сүүлд нэвтэрсэн: ${fmtDate(appOf(r)!.last_sign_in_at)}`}>
+                          ✅ Нэвтэрсэн
+                        </span>
+                      ) : (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500"
+                              title={(r.phone || '').trim()
+                                ? 'Энэ айл аппаар хараахан нэвтрээгүй байна'
+                                : 'Утасны дугаар бүртгэгдээгүй тул нэвтэрч чадахгүй'}>
+                          {(r.phone || '').trim() ? '⬜ Ороогүй' : '⚠️ Утасгүй'}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2.5 text-gray-500">
                       {(platesByApt[String(r.apartment).trim()] || []).length
                         ? platesByApt[String(r.apartment).trim()].join(', ')

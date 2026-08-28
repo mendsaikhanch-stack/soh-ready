@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
+import AppUsagePanel, { fetchAppUsage, type AppUsage } from '@/app/components/admin/AppUsagePanel';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -17,6 +18,8 @@ export default function AdminDashboard() {
     unreadMessages: 0,
   });
   const [loading, setLoading] = useState(true);
+  // Апп татаж нэвтэрсэн айлууд — auth-ийн өгөгдөл тул тусдаа API-аар ирнэ
+  const [usage, setUsage] = useState<AppUsage | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -62,10 +65,23 @@ export default function AdminDashboard() {
     fetchStats();
   }, []);
 
+  // Апп ашиглалт нь Supabase-ийн auth хүснэгтээс уншигддаг тул бусад тооноос
+  // удаан ирдэг. Тусад нь ачаалж, самбарын үлдсэн хэсгийг хүлээлгэхгүй.
+  useEffect(() => {
+    fetchAppUsage().then(setUsage);
+  }, []);
+
   if (loading) return <div className="p-8 text-gray-400">Ачаалж байна...</div>;
 
   const cards = [
     { label: 'Нийт айл өрх', value: stats.residents, icon: '👥', color: 'bg-blue-50 border-blue-200 text-blue-700' },
+    // Апп татаж нэвтэрсэн айл — бүртгэсэн айл БҮГД аппаа ашиглаж эхэлдэггүй
+    {
+      label: 'Апп татаж нэвтэрсэн айл',
+      value: usage ? `${usage.summary.signed_in}/${usage.summary.total}` : '—',
+      icon: '📱',
+      color: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+    },
     { label: 'Өртэй айл', value: stats.debtResidents, icon: '⚠️', color: 'bg-red-50 border-red-200 text-red-700' },
     { label: 'Нийт өр', value: `${stats.totalDebt.toLocaleString()}₮`, icon: '💸', color: 'bg-red-50 border-red-200 text-red-700' },
     { label: 'Нийт төлбөр цуглуулсан', value: `${stats.totalPaid.toLocaleString()}₮`, icon: '💰', color: 'bg-green-50 border-green-200 text-green-700' },
@@ -91,6 +107,12 @@ export default function AdminDashboard() {
           </div>
         ))}
       </div>
+
+      {usage
+        ? <AppUsagePanel usage={usage} />
+        : <div className="bg-white border rounded-xl p-5 text-sm text-gray-400">
+            📱 Апп татаж нэвтэрсэн айлуудыг ачаалж байна...
+          </div>}
     </div>
   );
 }

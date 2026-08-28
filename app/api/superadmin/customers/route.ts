@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { getAuthRole } from '@/app/lib/session-token';
 import { isDemoSokh } from '@/app/lib/demo-orgs';
+import { loadSignIns } from '@/app/lib/auth-signins';
 import {
   DEFAULT_TARIFF,
   setupFee,
@@ -74,30 +75,6 @@ interface OrgRow {
   activated_at: string | null;
   created_at: string | null;
   unit_count: number | null;
-}
-
-// Оршин суугч Supabase Auth-аар нэвтэрдэг тул «аппаа нээж үзсэн үү» гэдгийн
-// цорын ганц бодит ул мөр нь auth.users.last_sign_in_at. Энэ хүснэгтийг
-// PostgREST-ээр уншиж болдоггүй учир admin API-аар хуудаслан татна.
-//
-// Анхаар: last_sign_in_at нь ШИНЭ нэвтрэлт бүрд шинэчлэгддэг. Апп нээлттэй
-// хэвээр байгаа хүн дахин нэвтрэхгүй тул «сүүлийн 7 хоногт» тоо бодит
-// хэрэглээнээс бага гарч болно. «Нэвтэрч үзсэн» тоо л бүрэн найдвартай.
-async function loadSignIns(): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  try {
-    for (let page = 1; page <= 20; page++) {
-      const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
-      if (error || !data) break;
-      for (const u of data.users) {
-        if (u.last_sign_in_at) map.set(u.id, u.last_sign_in_at);
-      }
-      if (data.users.length < 1000) break;
-    }
-  } catch (e) {
-    console.error('[superadmin/customers] listUsers', e);
-  }
-  return map;
 }
 
 export async function GET() {
@@ -182,7 +159,7 @@ export async function GET() {
     .in('sokh_id', orgIds);
 
   // Апп ашиглалт — нэвтрэх бүртгэлтэй айл, тэдгээрийн сүүлийн нэвтрэлт
-  const signIns = await loadSignIns();
+  const signIns = await loadSignIns('superadmin/customers');
 
   const aptCount = new Map<number, number>();
   const debtSum = new Map<number, number>();
