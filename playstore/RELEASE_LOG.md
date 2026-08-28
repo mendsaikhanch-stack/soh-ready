@@ -18,8 +18,15 @@
 
 ## Хүлээгдэж буй — Release 3 (v1.0.1, versionCode 3)
 
-Товлосон огноо: **2026-09-01** · Төлөв: ⏳ `.aab` гараагүй
+Төлөв: ✅ **`.aab` бэлэн (2026-08-28)** · ⏳ Play Console-д upload хийгээгүй
 Хамрах хугацаа: versionCode 2 (2026-08-02) байршуулснаас хойш.
+
+| | |
+|---|---|
+| Файл | `android/app/build/outputs/bundle/release/app-release.aab` (4.7 MB) |
+| Хуулбар | `C:\Users\MNG\Desktop\khotol-v1.0.1-vc3.aab` |
+| Гарын үсэг | `android/khotol-release.jks` (гэрчилгээ 2053-11-02 хүртэл) |
+| Шалгасан | versionName `1.0.1`, package `mn.khotol.app` |
 
 ### Сүүлийн 14 хоног (2026-08-14 → 2026-08-28)
 
@@ -89,6 +96,14 @@
 • Засварын хүсэлтэд зураг хавсаргахад унадаг байсныг зассан
 • Мэдэгдэл товлоход алдаа гардаг байсныг зассан
 ```
+
+### Upload хийхэд үлдсэн алхам
+
+1. Play Console ▸ Testing ▸ **Closed testing** ▸ Create new release
+2. `khotol-v1.0.1-vc3.aab` upload
+3. Release notes — дээрх төслийг буулгах
+4. **Start rollout to Closed testing** ▸ Send for review
+5. Энэ файлд Release 3-ыг «Гаргасан хувилбарууд» руу зөө
 
 > ⚠️ Release notes нь 500 тэмдэгтэд багтана. Дээрх 6 мөр хангалттай — бусдыг
 > Release 4, 5-д хуваан бич (жагсаалт энд хэвээр үлдэнэ).

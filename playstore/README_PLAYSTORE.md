@@ -23,8 +23,8 @@ App-ийн үндсэн параметр:
 |---|---|
 | App name | Хотол |
 | Application ID / namespace | `mn.khotol.app` |
-| versionCode | `1` |
-| versionName | `1.0.0` |
+| versionCode | `3` (сүүлд гаргасан .aab — 2026-08-28) |
+| versionName | `1.0.1` |
 | minSdkVersion | `24` (Android 7.0) |
 | targetSdkVersion / compileSdk | `36` (Play-ийн 35+ шаардлагыг хангана) |
 | Permissions | Зөвхөн `INTERNET` |
