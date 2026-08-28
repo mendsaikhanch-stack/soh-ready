@@ -177,6 +177,9 @@ https://play.google.com/apps/testing/mn.khotol.app
 
 ## 5. Release notes загвар (Play Console дээр бичих)
 
+> 📋 Хийгдсэн бодит өөрчлөлтийн жагсаалт: **[RELEASE_LOG.md](RELEASE_LOG.md)** —
+> засвар хийх бүрдээ тэнд бүртгэж, release notes-оо түүнээс бичнэ.
+
 > ❗ Release notes нь Google-ийн шалгагч уншдаг хэсэг. «Bug fixes» гэж бичвэл
 > ямар ч ач холбогдолгүй. **Тестерийн саналыг дурдаж бич.**
 

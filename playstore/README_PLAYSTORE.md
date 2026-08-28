@@ -57,6 +57,9 @@ $env:ANDROID_HOME="C:\Users\MNG\android-build\sdk"
 
 ## 2. Veb өөрчлөгдөхөд Android-ыг шинэчлэх
 
+> 📋 Вэбд хийсэн өөрчлөлт бүрийг **[RELEASE_LOG.md](RELEASE_LOG.md)**-д бүртгэнэ.
+> Дараагийн `.aab`-ийн release notes тэндээс гарна.
+
 `capacitor.config.ts` доторх `server.url` нь production вебийг ачаалдаг тул
 **веб контент өөрчлөгдөхөд Android-ыг дахин build хийх шаардлагагүй**.
 
