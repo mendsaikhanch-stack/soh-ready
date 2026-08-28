@@ -156,11 +156,19 @@ and Jargalan Apartment (99 households).
 
 I invited residents and board members from these associations, plus
 personal acquaintances who live in apartment buildings managed by an
-association, via a Google Group and direct Messenger messages. No paid
-tester service or tester-exchange group was used — every tester is a
-real person who either lives in a building we manage or works in
-property management.
+association. Each person was contacted individually by email or over
+Messenger, and their address was added to the closed-testing email
+list in Play Console. No paid tester service or tester-exchange group
+was used — every tester is a real person who either lives in a
+building we manage or works in property management.
 ```
+
+> ⚠️ **2026-08-24-ний өргөдөлд «via a Google Group» гэж бичсэн нь БУРУУ байсан.**
+> Бодит байдал дээр Google Group ашиглаагүй — Play Console доторх
+> **email list** («Хотол — пилот тестерүүд») ашигласан. Дахин өргөдөл
+> гаргахдаа заавал дээрх зөв хувилбарыг ашигла. Google-д хоёулаа адил
+> хүлээн зөвшөөрөгддөг тул худал бичих ямар ч давуу тал байхгүй,
+> харин шалгагдвал л хохирно.
 
 ### Q: What feedback did you receive, and what did you change?
 ```
