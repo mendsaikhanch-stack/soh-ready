@@ -16,9 +16,10 @@
 
 ---
 
-## Хүлээгдэж буй — Release 3 (v1.0.1, versionCode 3)
+## Release 3 (v1.0.1, versionCode 3) — ✅ ГАРСАН
 
-Төлөв: ✅ **Play Console-д илгээгдсэн (2026-08-28)** — «Changes in review», Google-ийн шалгалт ихэвчлэн 7 хоногт дуусна
+Төлөв: ✅ **2026-08-28 14:32-т закрытый тестэд нийтлэгдсэн** — Google шалгалтыг тэр өдрөө нь давсан.
+Console: «Latest release: 3 (1.0.1) · Available to selected testers», мэдэгдэл: «App update published».
 Хамрах хугацаа: versionCode 2 (2026-08-02) байршуулснаас хойш.
 
 | | |
@@ -107,7 +108,7 @@
 2. ✅ `app-release.aab` upload — Console `3 (1.0.1)`, API 24+, target SDK 36 гэж таньсан
 3. ✅ Release name `3 (1.0.1)`, release notes mn-MN хэлээр
 4. ✅ Save ▸ Publishing overview ▸ **Send changes for review** → «Changes in review»
-5. ⏳ Батлагдсаны дараа энэ файлд Release 3-ыг «Гаргасан хувилбарууд» руу зөө
+5. ✅ Google шалгалтыг ~2 цагийн дотор давж, тестерүүдэд нийтлэгдсэн (14:32)
 
 > Анхааруулга: «There is no deobfuscation file associated with this App Bundle»
 > — код нуулгүй (`minifyEnabled false`) build хийдэг тул ач холбогдолгүй.
@@ -125,7 +126,18 @@
 
 | Хувилбар | versionCode | Огноо | Track | Тэмдэглэл |
 |---|---|---|---|---|
+| v1.0.1 | 3 | 2026-08-28 | Closed testing | 08-02-оос хойшхи 36 өөрчлөлт. Илгээснээс хойш ~2 цагт батлагдсан. Release notes нь зөвхөн нэмэгдсэн боломж. |
 | v1.0.0 | 2 | 2026-08-02 | Closed testing | Анхны байршуулалт. 08-24-ний production өргөдөл татгалзсан — тест хугацаанд шинэ release гараагүй нь гол шалтгаан. |
+
+---
+
+## Хүлээгдэж буй — Release 4 (v1.0.2, versionCode 4)
+
+Товлосон огноо: **2026-09-05** · Төлөв: ⏳ өөрчлөлт цуглуулж байна
+
+| Огноо | Commit | Өөрчлөлт | Хэнд | RN |
+|---|---|---|---|---|
+| | | *(09-02..04-нд тестерүүдээс ирсэн саналын дагуу нэмэгдэх боломжуудыг энд бич)* | | |
 
 ---
 
