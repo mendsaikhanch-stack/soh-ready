@@ -68,11 +68,20 @@ export function validateSessionToken(token: string, maxAgeMs: number, expectedRo
 
 export type AuthRole = 'admin' | 'superadmin' | 'osnaa' | 'inspector';
 
+// Серверийн баталгаажуулалтын дээд хугацаа. Нэвтрэлтийн БОДИТ хугацааг
+// cookie-гийн maxAge (login дахь "Намайг сана" сонголт) удирдана:
+//   • "Намайг сана" ✓ → cookie 30 хоног
+//   • тэмдэглээгүй    → cookie 12ц (superadmin) / 24ц (бусад), хөтөч өөрөө устгана
+// Тиймээс энэ утгыг cookie-гийн дээд хугацаатай (30 хоног) тэнцүү болгов —
+// эс бол богино server cap нь 30 хоногийн cookie-г 12 цагийн дараа хүчингүй
+// болгож, идэвхтэй засвар үйлчилгээний үед байнга гаргаж байв.
+// (Хэрэглэгч цөөн, байнга ажиллаж буй үеийн зөөлрүүлсэн горим — OTP_DISABLED-тэй адил.)
+const SESSION_TTL = 30 * 24 * 60 * 60 * 1000; // 30 хоног
 const ROLE_MAX_AGE: Record<AuthRole, number> = {
-  admin: 24 * 60 * 60 * 1000,
-  superadmin: 12 * 60 * 60 * 1000,
-  osnaa: 24 * 60 * 60 * 1000,
-  inspector: 24 * 60 * 60 * 1000,
+  admin: SESSION_TTL,
+  superadmin: SESSION_TTL,
+  osnaa: SESSION_TTL,
+  inspector: SESSION_TTL,
 };
 
 // Нэг role-ийн session шалгах — token доторх role мөн таарах ёстой

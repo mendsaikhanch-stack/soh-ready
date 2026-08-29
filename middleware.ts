@@ -48,11 +48,15 @@ export function middleware(request: NextRequest) {
 
   // Admin/SuperAdmin/OSNAA/Inspector — layout нь login form харуулдаг (client-side auth gate)
   // Middleware зөвхөн хугацаа дууссан cookie цэвэрлэнэ
+  // 30 хоног — session-token.ts дахь ROLE_MAX_AGE-тэй тэнцүү. Нэвтрэлтийн
+  // бодит хугацааг cookie-гийн maxAge ("Намайг сана") удирдана; middleware
+  // зөвхөн үнэхээр хугацаа дууссаныг цэвэрлэнэ, эрт биш.
+  const SESSION_TTL = 30 * 24 * 60 * 60 * 1000;
   const routeConfig: Record<string, { cookie: string; maxAge: number }> = {
-    '/admin': { cookie: 'admin-session', maxAge: 24 * 60 * 60 * 1000 },
-    '/superadmin': { cookie: 'superadmin-session', maxAge: 12 * 60 * 60 * 1000 },
-    '/osnaa': { cookie: 'osnaa-session', maxAge: 24 * 60 * 60 * 1000 },
-    '/inspector': { cookie: 'inspector-session', maxAge: 24 * 60 * 60 * 1000 },
+    '/admin': { cookie: 'admin-session', maxAge: SESSION_TTL },
+    '/superadmin': { cookie: 'superadmin-session', maxAge: SESSION_TTL },
+    '/osnaa': { cookie: 'osnaa-session', maxAge: SESSION_TTL },
+    '/inspector': { cookie: 'inspector-session', maxAge: SESSION_TTL },
   };
 
   for (const [prefix, config] of Object.entries(routeConfig)) {

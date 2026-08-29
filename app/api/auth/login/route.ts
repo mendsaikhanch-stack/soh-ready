@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       });
       response.cookies.set('inspector-session', token, {
         httpOnly: true, secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict', maxAge: 86400, path: '/',
+        sameSite: 'strict', maxAge: 60 * 60 * 24 * 30, path: '/',
       });
       return response;
     }
@@ -95,7 +95,9 @@ export async function POST(request: Request) {
     const token = createSessionToken({ userId: adminUser.id, sokhId, role: expectedRole });
     const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : 'admin-session';
     // "Намайг сана" → 30 хоног, эс бол стандарт (superadmin 12ц, бусад 24ц)
-    const maxAge = remember ? 60 * 60 * 24 * 30 : type === 'superadmin' ? 43200 : 86400;
+    // Зөөлрүүлсэн горим: default 30 хоног (байнга гарахгүй). Зөвхөн remember-ийг
+    // ил `false` болгож илгээвэл богино (superadmin 12ц / бусад 24ц) болно.
+    const maxAge = remember === false ? (type === 'superadmin' ? 43200 : 86400) : 60 * 60 * 24 * 30;
 
     // Суперадмин дээр мэйл код (OTP) ТҮР хаалттай бол 2-р шатыг шууд баталгаажуулна
     const skipOtp = type === 'superadmin' && OTP_DISABLED;

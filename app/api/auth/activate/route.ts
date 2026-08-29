@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { activationConsumeLimiter } from '@/app/lib/rate-limit';
 import { createSessionToken } from '@/app/lib/session-token';
 
-const ADMIN_SESSION_MAX_AGE = 24 * 60 * 60; // 24 цаг (login route-ийн цаг)
+const ADMIN_SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 хоног (зөөлрүүлсэн горим, login route-тэй ижил)
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
