@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     .eq('id', sokhId);
 
   // Шинэ админыг шууд login хийлгэх
-  const token = createSessionToken({ userId: newAdmin.id, sokhId });
+  const token = createSessionToken({ userId: newAdmin.id, sokhId, role: 'admin' });
   const response = NextResponse.json({
     success: true,
     role: 'admin',

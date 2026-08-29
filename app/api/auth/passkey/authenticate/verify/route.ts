@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     .eq('id', cred.id);
 
   // superadmin session олгох (remember → 30 хоног)
-  const token = createSessionToken({ userId: user.id, sokhId: 0 });
+  const token = createSessionToken({ userId: user.id, sokhId: 0, role: 'superadmin' });
   const maxAge = body.remember ? 60 * 60 * 24 * 30 : 43200;
 
   const res = NextResponse.json({ verified: true });

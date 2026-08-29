@@ -96,7 +96,7 @@ export async function POST(request: Request) {
   }
 
   // Session-ийг шинэчилж, дарга нэвтэрсэн хэвээр үлдэнэ (userId өөрчлөгдөхгүй)
-  const token = createSessionToken({ userId: admin.id, sokhId: admin.sokh_id || 0 });
+  const token = createSessionToken({ userId: admin.id, sokhId: admin.sokh_id || 0, role: 'admin' });
   const response = NextResponse.json({ success: true });
   response.cookies.set('admin-session', token, {
     httpOnly: true,

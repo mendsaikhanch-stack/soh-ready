@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       if (!inspector || !passwordMatch) return rateLimitFail(ip, now);
 
       attempts.delete(ip);
-      const token = createSessionToken({ userId: inspector.id });
+      const token = createSessionToken({ userId: inspector.id, role: 'inspector' });
       const response = NextResponse.json({
         success: true, role: 'inspector', inspectorId: inspector.id, name: inspector.name,
         kontorNumber: inspector.kontor_number || null,
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
         if (error) console.error('[login] last_login_at', error.message);
       });
     const sokhId = adminUser.sokh_id || 0;
-    const token = createSessionToken({ userId: adminUser.id, sokhId });
+    const token = createSessionToken({ userId: adminUser.id, sokhId, role: expectedRole });
     const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : 'admin-session';
     // "Намайг сана" → 30 хоног, эс бол стандарт (superadmin 12ц, бусад 24ц)
     const maxAge = remember ? 60 * 60 * 24 * 30 : type === 'superadmin' ? 43200 : 86400;

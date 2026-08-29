@@ -9,22 +9,28 @@ function sign(payload: string): string {
 }
 
 // Token үүсгэх: payload.signature
+// payload = timestamp:sokhId:userId:role:nonce  (role signature-т шингэнэ)
 export function createSessionToken(parts: {
   userId: string | number;
   sokhId?: string | number;
+  role: AuthRole;
 }): string {
   const timestamp = Date.now();
   const nonce = randomUUID();
-  const payload = `${timestamp}:${parts.sokhId || 0}:${parts.userId}:${nonce}`;
+  const payload = `${timestamp}:${parts.sokhId || 0}:${parts.userId}:${parts.role}:${nonce}`;
   const sig = sign(payload);
   return `${payload}.${sig}`;
 }
 
-// Token шалгах: signature + хугацаа
-export function validateSessionToken(token: string, maxAgeMs: number): {
+// Token шалгах: signature + хугацаа + (сонголтоор) role
+// expectedRole өгвөл token доторх role түүнтэй таарахгүй бол хүчингүй болно.
+// Ингэснээр нэг role-ийн cookie-г өөр role-ийн cookie нэрээр хуулж эрх
+// өсгөх боломжийг хаана (жишээ нь admin-session → superadmin-session).
+export function validateSessionToken(token: string, maxAgeMs: number, expectedRole?: AuthRole): {
   valid: boolean;
   userId?: string;
   sokhId?: string;
+  role?: AuthRole;
 } {
   if (!token) return { valid: false };
 
@@ -38,18 +44,23 @@ export function validateSessionToken(token: string, maxAgeMs: number): {
   const expectedSig = sign(payload);
   if (sig !== expectedSig) return { valid: false };
 
-  // Timestamp шалгах
+  // Формат: timestamp:sokhId:userId:role:nonce (5 хэсэг заавал)
   const parts = payload.split(':');
-  if (parts.length < 4) return { valid: false };
+  if (parts.length < 5) return { valid: false };
 
   const timestamp = parseInt(parts[0], 10);
   if (isNaN(timestamp)) return { valid: false };
   if (Date.now() - timestamp > maxAgeMs) return { valid: false };
 
+  const role = parts[3] as AuthRole;
+  // Role тулгах — cookie нэр биш, token доторх гарын үсэгтэй role-оор шийднэ
+  if (expectedRole && role !== expectedRole) return { valid: false };
+
   return {
     valid: true,
     sokhId: parts[1],
     userId: parts[2],
+    role,
   };
 }
 
@@ -64,12 +75,12 @@ const ROLE_MAX_AGE: Record<AuthRole, number> = {
   inspector: 24 * 60 * 60 * 1000,
 };
 
-// Нэг role-ийн session шалгах
-export async function checkAuth(role: AuthRole): Promise<{ valid: boolean; userId?: string; sokhId?: string }> {
+// Нэг role-ийн session шалгах — token доторх role мөн таарах ёстой
+export async function checkAuth(role: AuthRole): Promise<{ valid: boolean; userId?: string; sokhId?: string; role?: AuthRole }> {
   const cookieStore = await cookies();
   const token = cookieStore.get(`${role}-session`)?.value;
   if (!token) return { valid: false };
-  return validateSessionToken(token, ROLE_MAX_AGE[role]);
+  return validateSessionToken(token, ROLE_MAX_AGE[role], role);
 }
 
 // Олон role-ийн аль нэгийг шалгах (admin || superadmin гэх мэт)
