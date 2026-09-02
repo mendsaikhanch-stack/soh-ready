@@ -166,8 +166,9 @@ Console: «Latest release: 3 (1.0.1) · Available to selected testers», мэд�
 > ⏳ Гараар ажиллуулах миграц: `supabase-billing-control-migration.sql`
 > (2026-08-28-нд бичигдсэн, Supabase SQL Editor дээр ажиллуулах шаардлагатай)
 >
-> ⏳ Гараар ажиллуулах миграц: `supabase-payables-migration.sql`
-> (2026-09-02, өглөгийн хүснэгт — ажиллуулаагүй бол «Өглөг» таб хоосон харагдана)
+> ✅ Ажиллуулсан миграц: `supabase-payables-migration.sql` (2026-09-02,
+> өглөгийн хүснэгт). Шалгав: service_role бичиж/уншиж чадаж байна, anon-д
+> «permission denied» — оршин суугчийн апп өглөгийг харахгүй.
 >
 > ✅ Ажиллуулсан миграц: `supabase-rls-safe-fix.sql` (2026-08-29, RLS цоорхой
 > хаав — anon уншилт 9/9 хүснэгтэд 0 болсныг амьдаар баталгаажуулав)
