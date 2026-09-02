@@ -38,20 +38,25 @@ export default function FinancePage() {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  // Сарын задаргаа хэрэгтэй хүн бий, жилийн нийт дүн хэрэгтэй хүн бий —
+  // хурал дээр «жилдээ юунд хэдийг зарцуулсан бэ» гэдэг асуулт хамгийн их гардаг
+  const [mode, setMode] = useState<'month' | 'year'>('month');
   const [monthlyFee, setMonthlyFee] = useState(0);
 
   useEffect(() => {
     fetchItems();
-  }, [params.id, selectedMonth, selectedYear]);
+  }, [params.id, selectedMonth, selectedYear, mode]);
 
   const fetchItems = async () => {
-    const { data } = await supabase
+    let q = supabase
       .from('budget_items')
       .select('*')
       .eq('sokh_id', params.id)
-      .eq('month', selectedMonth)
-      .eq('year', selectedYear)
-      .order('amount', { ascending: false });
+      // 'income' мөрүүд нь СӨХ-ийн бусад орлого — зардлын задаргаанд орох ёсгүй
+      .eq('type', 'expense')
+      .eq('year', selectedYear);
+    if (mode === 'month') q = q.eq('month', selectedMonth);
+    const { data } = await q.order('amount', { ascending: false });
     setItems(data || []);
 
     const { data: org } = await supabase.from('sokh_organizations').select('monthly_fee').eq('id', params.id).single();
@@ -62,11 +67,34 @@ export default function FinancePage() {
   const total = items.reduce((s, i) => s + i.amount, 0);
   const getCat = (c: string) => categoryMap[c] || categoryMap.other;
 
+  // Жилийн горимд нэг ангилал 12 мөр болж задардаг тул нэгтгэж харуулна
+  const display: BudgetItem[] = mode === 'year'
+    ? Object.entries(items.reduce<Record<string, number>>((acc, i) => {
+        acc[i.category] = (acc[i.category] || 0) + Number(i.amount);
+        return acc;
+      }, {}))
+      .sort((a, b) => b[1] - a[1])
+      .map(([category, amount], idx) => ({
+        id: -(idx + 1), category, amount, month: 0, year: selectedYear, description: '',
+      }))
+    : items;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-cyan-700 text-white px-4 py-4">
         <button onClick={() => router.push(`/sokh/${params.id}`)} className="text-white/80 text-sm mb-1">← Буцах</button>
         <h1 className="text-lg font-bold">💰 Санхүүгийн ил тод тайлан</h1>
+        <div className="flex gap-1 mt-3 bg-white/15 rounded-lg p-0.5">
+          {(['month', 'year'] as const).map(m => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition ${mode === m ? 'bg-white text-cyan-700' : 'text-white/80'}`}
+            >
+              {m === 'month' ? 'Сараар' : 'Жилээр'}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="px-4 py-4">
@@ -78,9 +106,9 @@ export default function FinancePage() {
           {profile?.monthly_fee != null && Number(profile.monthly_fee) !== monthlyFee && (
             <p className="text-[10px] text-gray-400">{profile.apartment} тоотод тогтоосон тариф</p>
           )}
-          {items.length > 0 && (
+          {display.length > 0 && (
             <div className="mt-3 space-y-1.5">
-              {items.map(item => {
+              {display.map(item => {
                 const cat = getCat(item.category);
                 const pct = total > 0 ? (item.amount / total * 100) : 0;
                 return (
@@ -102,11 +130,13 @@ export default function FinancePage() {
         {/* Month selector */}
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => {
+            if (mode === 'year') { setSelectedYear(y => y - 1); return; }
             if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(y => y - 1); }
             else setSelectedMonth(m => m - 1);
           }} className="px-3 py-1.5 bg-white rounded-lg border text-sm">←</button>
-          <span className="font-bold">{selectedYear} · {months[selectedMonth - 1]}</span>
+          <span className="font-bold">{mode === 'year' ? `${selectedYear} он` : `${selectedYear} · ${months[selectedMonth - 1]}`}</span>
           <button onClick={() => {
+            if (mode === 'year') { setSelectedYear(y => y + 1); return; }
             if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear(y => y + 1); }
             else setSelectedMonth(m => m + 1);
           }} className="px-3 py-1.5 bg-white rounded-lg border text-sm">→</button>
@@ -115,16 +145,16 @@ export default function FinancePage() {
         {/* Pie-like summary */}
         <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-semibold text-gray-500">ЗАРДЛЫН ЗАДАРГАА</h3>
+            <h3 className="text-sm font-semibold text-gray-500">{mode === 'year' ? 'ЖИЛИЙН ЗАРДАЛ' : 'ЗАРДЛЫН ЗАДАРГАА'}</h3>
             <span className="font-bold text-cyan-700">{total.toLocaleString()}₮</span>
           </div>
           {loading ? (
             <p className="text-gray-400 text-center py-4">Ачаалж байна...</p>
-          ) : items.length === 0 ? (
+          ) : display.length === 0 ? (
             <p className="text-gray-400 text-center py-4">Мэдээлэл байхгүй</p>
           ) : (
             <div className="space-y-2">
-              {items.map(item => {
+              {display.map(item => {
                 const cat = getCat(item.category);
                 return (
                   <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">

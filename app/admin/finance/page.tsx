@@ -8,7 +8,7 @@ import * as XLSX from 'xlsx';
 
 type Tab = 'overview' | 'income' | 'expenses' | 'budget' | 'invoices' | 'reserve' | 'debts' | 'payables' | 'annual';
 
-interface BudgetItem { id: number; category: string; amount: number; month: number; year: number; description: string; }
+interface BudgetItem { id: number; category: string; amount: number; month: number; year: number; description: string; type?: string; name?: string; }
 interface BudgetPlan { id: number; category: string; planned_amount: number; month: number; year: number; notes: string; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
 interface Invoice { id: number; resident_id: number; year: number; month: number; amount: number; status: string; paid_amount: number; due_date: string; paid_at: string | null; description: string; }
@@ -71,6 +71,11 @@ export default function AdminFinanceHub() {
   const [expCat, setExpCat] = useState('cleaning');
   const [expAmount, setExpAmount] = useState('');
   const [expDesc, setExpDesc] = useState('');
+
+  const [showIncForm, setShowIncForm] = useState(false);
+  const [incName, setIncName] = useState('');
+  const [incCat, setIncCat] = useState('other');
+  const [incAmount, setIncAmount] = useState('');
 
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [planCat, setPlanCat] = useState('cleaning');
@@ -165,8 +170,35 @@ export default function AdminFinanceHub() {
   const addExpense = async () => {
     if (!expAmount) return;
     const sokhId = await getAdminSokhId();
-    await adminFrom('budget_items').insert([{ sokh_id: sokhId, category: expCat, amount: Number(expAmount), month, year, description: expDesc }]);
+    // budget_items.name нь NOT NULL. Өмнө нь энэ талбаргүй бичдэг байсан тул
+    // «Нэмэх» дарахад бичилт чимээгүй унаж, дарга нар зардлаа огт оруулж
+    // чаддаггүй байв. Тайлбар байхгүй бол ангиллын нэрийг тавина.
+    const res = await adminFrom('budget_items').insert([{
+      sokh_id: sokhId, type: 'expense', name: expDesc.trim() || getCat(expCat).label,
+      category: expCat, amount: Number(expAmount), month, year, description: expDesc,
+    }]);
+    if (res.error) { alert(`Зардал хадгалагдсангүй: ${res.error}`); return; }
     setExpAmount(''); setExpDesc(''); setShowExpForm(false);
+    await fetchAll();
+  };
+
+  // Хураамжаас БУСАД орлого — түрээс, зар сурталчилгаа, алданги гэх мэт.
+  // Татварын тайланд гишүүдийн хураамжаас эрс өөрөөр ордог тул тусад нь бүртгэнэ.
+  const addIncome = async () => {
+    if (!incAmount || !incName.trim()) return;
+    const sokhId = await getAdminSokhId();
+    const res = await adminFrom('budget_items').insert([{
+      sokh_id: sokhId, type: 'income', name: incName.trim(),
+      category: incCat, amount: Number(incAmount), month, year, description: incName.trim(),
+    }]);
+    if (res.error) { alert(`Орлого хадгалагдсангүй: ${res.error}`); return; }
+    setIncName(''); setIncAmount(''); setShowIncForm(false);
+    await fetchAll();
+  };
+
+  const delIncome = async (id: number) => {
+    if (!confirm('Орлогын бүртгэл устгах уу?')) return;
+    await adminFrom('budget_items').delete().eq('id', id);
     await fetchAll();
   };
 
@@ -208,10 +240,11 @@ export default function AdminFinanceHub() {
   const addPayable = async () => {
     if (!payVendor.trim() || !payAmount) return;
     const sokhId = await getAdminSokhId();
-    await adminFrom('payables').insert([{
+    const res = await adminFrom('payables').insert([{
       sokh_id: sokhId, vendor: payVendor.trim(), category: payCat,
       amount: Number(payAmount), due_date: payDue || null, description: payDesc,
     }]);
+    if (res.error) { alert(`Өглөг хадгалагдсангүй: ${res.error}`); return; }
     setPayVendor(''); setPayAmount(''); setPayDue(''); setPayDesc(''); setShowPayForm(false);
     await fetchAll();
   };
@@ -231,7 +264,8 @@ export default function AdminFinanceHub() {
       status: 'paid', paid_amount: Number(p.amount), paid_at: now.toISOString(),
     }).eq('id', p.id);
     await adminFrom('budget_items').insert([{
-      sokh_id: sokhId, category: p.category, amount: remain,
+      sokh_id: sokhId, type: 'expense', name: p.vendor,
+      category: p.category, amount: remain,
       month: now.getMonth() + 1, year: now.getFullYear(),
       description: `Өглөг төлсөн: ${p.vendor}${p.description ? ' — ' + p.description : ''}`,
     }]);
@@ -296,9 +330,13 @@ export default function AdminFinanceHub() {
 
   // ===== Тооцоо =====
   // Сарын зардал = жилийн жагсаалтаас тухайн сарынх (нэмэлт хүсэлт хийхгүй)
-  const budgetItems = yearBudgetItems
+  // budget_items нь одоо ЗАРДАЛ ба БУСАД ОРЛОГО хоёуланг агуулна — type-аар салгана
+  const yearExpenseItems = yearBudgetItems.filter(i => i.type !== 'income');
+  const yearIncomeItems = yearBudgetItems.filter(i => i.type === 'income');
+  const budgetItems = yearExpenseItems
     .filter(i => i.month === month)
     .sort((a, b) => Number(b.amount) - Number(a.amount));
+  const monthIncomeItems = yearIncomeItems.filter(i => i.month === month);
 
   const monthIncome = payments.reduce((s, p) => s + Number(p.amount), 0);
   const monthExpense = budgetItems.reduce((s, i) => s + i.amount, 0);
@@ -315,8 +353,11 @@ export default function AdminFinanceHub() {
       : `${residents.length} айл, ${feeVariants.length} янзын тариф (${feeVariants[0].toLocaleString()}–${feeVariants[feeVariants.length - 1].toLocaleString()}₮)`;
   const collectionRate = expectedMonthly > 0 ? (monthIncome / expectedMonthly * 100) : 0;
   const reserveBalance = reserveEntries.reduce((s, e) => s + (e.type === 'deposit' ? e.amount : -e.amount), 0);
-  const yearIncome = allPayments.filter(p => new Date(p.paid_at).getFullYear() === year).reduce((s, p) => s + Number(p.amount), 0);
+  const yearFeeIncome = allPayments.filter(p => new Date(p.paid_at).getFullYear() === year).reduce((s, p) => s + Number(p.amount), 0);
   const pendingInvoices = invoices.filter(i => i.status === 'pending' || i.status === 'overdue').length;
+
+  // Жилийн нийт орлого = гишүүдийн хураамж + бусад орлого
+  const yearIncome = yearFeeIncome + yearIncomeItems.reduce((s, i) => s + Number(i.amount), 0);
 
   // ===== Өглөг =====
   const payablesOpen = payables.filter(p => p.status !== 'paid');
@@ -327,13 +368,13 @@ export default function AdminFinanceHub() {
     .reduce((s, p) => s + Number(p.paid_amount), 0);
 
   // ===== Жилийн нэгтгэл =====
-  const yearExpense = yearBudgetItems.reduce((s, i) => s + Number(i.amount), 0);
+  const yearExpense = yearExpenseItems.reduce((s, i) => s + Number(i.amount), 0);
   const yearNet = yearIncome - yearExpense;
   // Жилд хүлээгдэх хураамж — одоогийн айлын бүрэлдэхүүнээр (айл нэмэгдвэл өөрчлөгдөнө)
   const yearExpected = expectedMonthly * 12;
   const yearCollectionRate = yearExpected > 0 ? (yearIncome / yearExpected * 100) : 0;
   const yearExpenseByCat = categoryOptions
-    .map(c => ({ ...c, total: yearBudgetItems.filter(i => i.category === c.value).reduce((s, i) => s + Number(i.amount), 0) }))
+    .map(c => ({ ...c, total: yearExpenseItems.filter(i => i.category === c.value).reduce((s, i) => s + Number(i.amount), 0) }))
     .filter(c => c.total > 0)
     .sort((a, b) => b.total - a.total);
 
@@ -344,8 +385,9 @@ export default function AdminFinanceHub() {
       const d = new Date(p.paid_at);
       return d.getFullYear() === year && d.getMonth() + 1 === m;
     }).reduce((s, p) => s + Number(p.amount), 0);
-    const exp = yearBudgetItems.filter(i => i.month === m).reduce((s, i) => s + Number(i.amount), 0);
-    return { month: m, income: inc, expense: exp };
+    const exp = yearExpenseItems.filter(i => i.month === m).reduce((s, i) => s + Number(i.amount), 0);
+    const other = yearIncomeItems.filter(i => i.month === m).reduce((s, i) => s + Number(i.amount), 0);
+    return { month: m, income: inc + other, expense: exp, fees: inc, other };
   });
   const maxMonthlyInc = Math.max(...monthlyHistory.map(h => h.income), 1);
 
@@ -362,7 +404,7 @@ export default function AdminFinanceHub() {
     XLSX.utils.book_append_sheet(wb, incomeSheet, `${year} - Орлого`);
 
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      yearBudgetItems.map(i => ({
+      yearExpenseItems.map(i => ({
         'Сар': months[i.month - 1],
         'Ангилал': getCat(i.category).label,
         'Дүн': Number(i.amount),
@@ -423,6 +465,7 @@ export default function AdminFinanceHub() {
           <span className="font-bold text-sm min-w-[120px] text-center">{year} · {months[month - 1]}</span>
           <button onClick={() => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); }} className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm">→</button>
           <Link href={`/admin/finance/report?year=${year}`} className="ml-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">📄 Жилийн тайлан</Link>
+          <Link href={`/admin/finance/statements?year=${year}`} className="px-3 py-1.5 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800">🏛 Албан ёсны тайлан</Link>
           <button onClick={exportYearReport} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">📥 Excel</button>
         </div>
       </div>
@@ -531,7 +574,7 @@ export default function AdminFinanceHub() {
                 <KpiCard label="Үлдэгдэл" value={`${Math.max(0, expectedMonthly - monthIncome).toLocaleString()}₮`} sub={`${(100 - collectionRate).toFixed(1)}%`} color="red" />
               </div>
 
-              <h3 className="font-semibold text-sm text-gray-500 mb-3">{months[month - 1]} {year} - ОРЛОГЫН ТҮҮХ</h3>
+              <h3 className="font-semibold text-sm text-gray-500 mb-3">{months[month - 1]} {year} - ГИШҮҮДИЙН ХУРААМЖ</h3>
               <div className="bg-white rounded-xl border overflow-hidden">
                 <table className="w-full">
                   <thead className="bg-gray-50">
@@ -553,6 +596,50 @@ export default function AdminFinanceHub() {
                         <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">+{Number(p.amount).toLocaleString()}₮</td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Хураамжаас бусад орлого — түрээс, зар сурталчилгаа, алданги */}
+              <div className="flex items-center justify-between mt-6 mb-3">
+                <div>
+                  <h3 className="font-semibold text-sm text-gray-500">БУСАД ОРЛОГО</h3>
+                  <p className="text-xs text-gray-400">Түрээс, зар сурталчилгаа, алданги — хураамжид ороогүй орлого. Татварын тайланд тусад нь ордог.</p>
+                </div>
+                <button onClick={() => setShowIncForm(!showIncForm)} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 whitespace-nowrap ml-4">+ Орлого нэмэх</button>
+              </div>
+
+              {showIncForm && (
+                <div className="bg-white border rounded-xl p-4 mb-4">
+                  <div className="grid grid-cols-4 gap-3">
+                    <input placeholder="Юуны орлого вэ (жнь: Подвалын түрээс)" value={incName} onChange={e => setIncName(e.target.value)} className="border rounded-lg px-3 py-2 text-sm col-span-2" />
+                    <input type="number" placeholder="Дүн (₮)" value={incAmount} onChange={e => setIncAmount(e.target.value)} className="border rounded-lg px-3 py-2 text-sm" />
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowIncForm(false)} className="flex-1 py-2 rounded-lg border text-sm">Цуцлах</button>
+                      <button onClick={addIncome} disabled={!incName.trim() || !incAmount} className="flex-1 py-2 rounded-lg bg-green-600 text-white text-sm disabled:opacity-50">Нэмэх</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-white border rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs text-gray-500">Нэр</th>
+                      <th className="px-4 py-3 text-right text-xs text-gray-500">Дүн</th>
+                      <th className="px-4 py-3 text-right text-xs text-gray-500"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthIncomeItems.map(i => (
+                      <tr key={i.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3">{i.name || i.description}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-green-600">+{Number(i.amount).toLocaleString()}₮</td>
+                        <td className="px-4 py-3 text-right"><button onClick={() => delIncome(i.id)} className="text-xs text-red-400 hover:underline">Устгах</button></td>
+                      </tr>
+                    ))}
+                    {monthIncomeItems.length === 0 && <tr><td colSpan={3} className="px-4 py-6 text-center text-gray-400">Бусад орлого бүртгээгүй</td></tr>}
                   </tbody>
                 </table>
               </div>

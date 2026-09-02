@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
-interface BudgetItem { id: number; category: string; amount: number; month: number; year: number; description: string; }
+interface BudgetItem { id: number; category: string; amount: number; month: number; year: number; description: string; type?: string; name?: string; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
 interface Resident { id: number; name: string; apartment: string; debt: number; monthly_fee: number | null; pending_claim: boolean; }
 interface ReserveEntry { id: number; type: string; amount: number; description: string; occurred_at: string; }
@@ -96,14 +96,19 @@ function ReportContent() {
   const feeOf = (r: Resident) => Number(r.monthly_fee ?? org?.monthly_fee ?? 0) || 0;
   const expectedMonthly = residents.reduce((s, r) => s + feeOf(r), 0);
 
+  // budget_items нь зардал ба бусад орлого хоёуланг агуулна — type-аар салгана
+  const expenseItems = budgetItems.filter(i => i.type !== 'income');
+  const incomeItems = budgetItems.filter(i => i.type === 'income');
+
   const rows = Array.from({ length: 12 }, (_, i) => {
     const m = i + 1;
-    const income = payments.filter(p => {
+    const fees = payments.filter(p => {
       const d = new Date(p.paid_at);
       return d.getFullYear() === year && d.getMonth() + 1 === m;
     }).reduce((s, p) => s + Number(p.amount), 0);
-    const expense = budgetItems.filter(b => b.month === m).reduce((s, b) => s + Number(b.amount), 0);
-    return { month: m, income, expense };
+    const other = incomeItems.filter(b => b.month === m).reduce((s, b) => s + Number(b.amount), 0);
+    const expense = expenseItems.filter(b => b.month === m).reduce((s, b) => s + Number(b.amount), 0);
+    return { month: m, income: fees + other, expense };
   });
 
   const yearIncome = rows.reduce((s, r) => s + r.income, 0);
@@ -113,7 +118,7 @@ function ReportContent() {
   const collectionRate = yearExpected > 0 ? (yearIncome / yearExpected * 100) : 0;
 
   const byCat = Object.entries(
-    budgetItems.reduce<Record<string, number>>((acc, b) => {
+    expenseItems.reduce<Record<string, number>>((acc, b) => {
       acc[b.category] = (acc[b.category] || 0) + Number(b.amount);
       return acc;
     }, {}),

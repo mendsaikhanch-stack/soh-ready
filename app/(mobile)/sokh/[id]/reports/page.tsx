@@ -52,6 +52,7 @@ export default function ReportsPage() {
           .from('budget_items')
           .select('*')
           .eq('sokh_id', params.id)
+          .eq('type', 'expense')
           .eq('month', month)
           .eq('year', year)
           .order('amount', { ascending: false }),
