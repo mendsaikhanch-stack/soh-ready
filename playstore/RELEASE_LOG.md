@@ -174,9 +174,10 @@ Console: «Latest release: 3 (1.0.1) · Available to selected testers», мэд�
 > ⏳ Гараар ажиллуулах миграц: `supabase-billing-control-migration.sql`
 > (2026-08-28-нд бичигдсэн, Supabase SQL Editor дээр ажиллуулах шаардлагатай)
 >
-> ⏳ Гараар ажиллуулах миграц: `supabase-payroll-migration.sql`
-> (2026-09-02 — staff_salaries, payroll_entries + татварын хувь хэмжээ.
-> Ажиллуулаагүй бол «Цалин» хуудас шар анхааруулга харуулна)
+> ✅ Ажиллуулсан миграц: `supabase-payroll-migration.sql` (2026-09-02).
+> Бүтэн урсгалыг амьдаар шалгав: ажилтан үүсгэх → цалин тогтоох →
+> цалингийн мөр бодох. Нэг ажилтанд нэг сард 2 дахь мөр оруулах оролдлого
+> хаагдсан. anon-д staff_salaries, payroll_entries хоёул хаалттай.
 >
 > ✅ Ажиллуулсан миграц: `supabase-finance-statements-migration.sql`
 > (2026-09-02 — tax_id, opening_balance, opening_balance_date, is_vat_payer +
