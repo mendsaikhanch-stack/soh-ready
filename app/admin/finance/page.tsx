@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import * as XLSX from 'xlsx';
 
-type Tab = 'overview' | 'income' | 'expenses' | 'budget' | 'invoices' | 'reserve' | 'debts';
+type Tab = 'overview' | 'income' | 'expenses' | 'budget' | 'invoices' | 'reserve' | 'debts' | 'payables' | 'annual';
 
 interface BudgetItem { id: number; category: string; amount: number; month: number; year: number; description: string; }
 interface BudgetPlan { id: number; category: string; planned_amount: number; month: number; year: number; notes: string; }
@@ -13,6 +14,8 @@ interface Payment { id: number; resident_id: number; amount: number; description
 interface Invoice { id: number; resident_id: number; year: number; month: number; amount: number; status: string; paid_amount: number; due_date: string; paid_at: string | null; description: string; }
 interface Resident { id: number; name: string; apartment: string; debt: number; entrance: number | null; monthly_fee: number | null; pending_claim: boolean; }
 interface ReserveEntry { id: number; type: string; amount: number; description: string; occurred_at: string; }
+// Өглөг — СӨХ ХЭНД өртэй (авлагын эсрэг тал). supabase-payables-migration.sql
+interface Payable { id: number; vendor: string; category: string; amount: number; paid_amount: number; due_date: string | null; status: string; paid_at: string | null; description: string; }
 
 const categoryOptions = [
   { value: 'cleaning', label: 'Цэвэрлэгээ', icon: '🧹', color: '#3B82F6' },
@@ -49,10 +52,15 @@ export default function AdminFinanceHub() {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [allPayments, setAllPayments] = useState<Payment[]>([]);
-  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
+  // Зардлыг ЖИЛЭЭР нь татна — сарын жагсаалт үүнээс шүүгдэнэ (Жилийн нэгтгэлд хэрэгтэй)
+  const [yearBudgetItems, setYearBudgetItems] = useState<BudgetItem[]>([]);
   const [budgetPlans, setBudgetPlans] = useState<BudgetPlan[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [reserveEntries, setReserveEntries] = useState<ReserveEntry[]>([]);
+  const [payables, setPayables] = useState<Payable[]>([]);
+  // Миграц гараар ажиллуулдаг тул хүснэгт үүсээгүй байж болно — чимээгүй
+  // хоосон харагдвал дарга «ажиллахгүй байна» гэж ойлгоно. Тиймээс хэлнэ.
+  const [payablesError, setPayablesError] = useState('');
   const [monthlyFee, setMonthlyFee] = useState(0);
   const [feeInput, setFeeInput] = useState('');
   const [feeEditing, setFeeEditing] = useState(false);
@@ -68,6 +76,13 @@ export default function AdminFinanceHub() {
   const [planCat, setPlanCat] = useState('cleaning');
   const [planAmount, setPlanAmount] = useState('');
   const [planNotes, setPlanNotes] = useState('');
+
+  const [showPayForm, setShowPayForm] = useState(false);
+  const [payVendor, setPayVendor] = useState('');
+  const [payCat, setPayCat] = useState('other');
+  const [payAmount, setPayAmount] = useState('');
+  const [payDue, setPayDue] = useState('');
+  const [payDesc, setPayDesc] = useState('');
 
   const [showReserveForm, setShowReserveForm] = useState(false);
   const [resType, setResType] = useState<'deposit' | 'withdrawal'>('deposit');
@@ -101,14 +116,15 @@ export default function AdminFinanceHub() {
     const residentIds = residentList.map(r => r.id);
 
     // payments-д sokh_id байхгүй — proxy нь resident_id-ээр tenant scope хийдэг
-    const [{ data: allPay }, { data: items }, { data: plans }, { data: inv }, { data: rf }] = await Promise.all([
+    const [{ data: allPay }, { data: items }, { data: plans }, { data: inv }, { data: rf }, { data: pyb, error: pybErr }] = await Promise.all([
       residentIds.length
         ? adminFrom('payments').select('*').in('resident_id', residentIds).order('paid_at', { ascending: false })
         : Promise.resolve({ data: [] }),
-      adminFrom('budget_items').select('*').eq('sokh_id', sokhId).eq('month', month).eq('year', year).order('amount', { ascending: false }),
+      adminFrom('budget_items').select('*').eq('sokh_id', sokhId).eq('year', year).order('amount', { ascending: false }),
       adminFrom('budget_plans').select('*').eq('sokh_id', sokhId).eq('month', month).eq('year', year),
       adminFrom('invoices').select('*').eq('sokh_id', sokhId).eq('year', year).eq('month', month).order('id', { ascending: true }),
       adminFrom('reserve_fund').select('*').eq('sokh_id', sokhId).order('occurred_at', { ascending: false }).limit(100),
+      adminFrom('payables').select('*').eq('sokh_id', sokhId).order('due_date', { ascending: true }),
     ]);
 
     // Тухайн сарын төлбөрийг JS талд шүүнэ (proxy нь огнооны хязгаар дэмждэггүй)
@@ -126,10 +142,12 @@ export default function AdminFinanceHub() {
     setResidents(residentList);
     setPayments(monthPayments);
     setAllPayments(allPayList);
-    setBudgetItems((items as unknown as BudgetItem[]) || []);
+    setYearBudgetItems((items as unknown as BudgetItem[]) || []);
     setBudgetPlans((plans as unknown as BudgetPlan[]) || []);
     setInvoices((inv as unknown as Invoice[]) || []);
     setReserveEntries((rf as unknown as ReserveEntry[]) || []);
+    setPayables((pyb as unknown as Payable[]) || []);
+    setPayablesError(pybErr || '');
     setLoading(false);
   }, [month, year]);
 
@@ -186,6 +204,46 @@ export default function AdminFinanceHub() {
     await fetchAll();
   };
 
+  // ===== Өглөг =====
+  const addPayable = async () => {
+    if (!payVendor.trim() || !payAmount) return;
+    const sokhId = await getAdminSokhId();
+    await adminFrom('payables').insert([{
+      sokh_id: sokhId, vendor: payVendor.trim(), category: payCat,
+      amount: Number(payAmount), due_date: payDue || null, description: payDesc,
+    }]);
+    setPayVendor(''); setPayAmount(''); setPayDue(''); setPayDesc(''); setShowPayForm(false);
+    await fetchAll();
+  };
+
+  // Төлсөн гэж тэмдэглэхэд ТӨЛСӨН САРЫН зардалд автоматаар бичигдэнэ.
+  // Иймд өглөгөө бүртгэсэн бол зардлыг гараар давхар оруулах шаардлагагүй —
+  // тэгвэл жилийн нэгтгэлд нэг зардал 2 удаа орно.
+  const markPayablePaid = async (p: Payable) => {
+    const remain = Number(p.amount) - Number(p.paid_amount);
+    if (remain <= 0) return;
+    if (!confirm(`«${p.vendor}» — ${remain.toLocaleString()}₮ төлөгдсөн гэж тэмдэглэх үү?
+
+Энэ дүн зардлын бүртгэлд автоматаар нэмэгдэнэ.`)) return;
+    const now = new Date();
+    const sokhId = await getAdminSokhId();
+    await adminFrom('payables').update({
+      status: 'paid', paid_amount: Number(p.amount), paid_at: now.toISOString(),
+    }).eq('id', p.id);
+    await adminFrom('budget_items').insert([{
+      sokh_id: sokhId, category: p.category, amount: remain,
+      month: now.getMonth() + 1, year: now.getFullYear(),
+      description: `Өглөг төлсөн: ${p.vendor}${p.description ? ' — ' + p.description : ''}`,
+    }]);
+    await fetchAll();
+  };
+
+  const delPayable = async (id: number) => {
+    if (!confirm('Өглөг устгах уу?')) return;
+    await adminFrom('payables').delete().eq('id', id);
+    await fetchAll();
+  };
+
   const generateInvoices = async () => {
     if (!residents.length) { alert('Оршин суугч бүртгэгдээгүй байна.'); return; }
     const noFee = residents.filter(r => !feeOf(r));
@@ -237,6 +295,11 @@ export default function AdminFinanceHub() {
   };
 
   // ===== Тооцоо =====
+  // Сарын зардал = жилийн жагсаалтаас тухайн сарынх (нэмэлт хүсэлт хийхгүй)
+  const budgetItems = yearBudgetItems
+    .filter(i => i.month === month)
+    .sort((a, b) => Number(b.amount) - Number(a.amount));
+
   const monthIncome = payments.reduce((s, p) => s + Number(p.amount), 0);
   const monthExpense = budgetItems.reduce((s, i) => s + i.amount, 0);
   const monthNet = monthIncome - monthExpense;
@@ -255,6 +318,25 @@ export default function AdminFinanceHub() {
   const yearIncome = allPayments.filter(p => new Date(p.paid_at).getFullYear() === year).reduce((s, p) => s + Number(p.amount), 0);
   const pendingInvoices = invoices.filter(i => i.status === 'pending' || i.status === 'overdue').length;
 
+  // ===== Өглөг =====
+  const payablesOpen = payables.filter(p => p.status !== 'paid');
+  const payablesTotal = payablesOpen.reduce((s, p) => s + (Number(p.amount) - Number(p.paid_amount)), 0);
+  const payablesOverdue = payablesOpen.filter(p => p.due_date && new Date(p.due_date) < new Date()).length;
+  const payablesPaidYear = payables
+    .filter(p => p.status === 'paid' && p.paid_at && new Date(p.paid_at).getFullYear() === year)
+    .reduce((s, p) => s + Number(p.paid_amount), 0);
+
+  // ===== Жилийн нэгтгэл =====
+  const yearExpense = yearBudgetItems.reduce((s, i) => s + Number(i.amount), 0);
+  const yearNet = yearIncome - yearExpense;
+  // Жилд хүлээгдэх хураамж — одоогийн айлын бүрэлдэхүүнээр (айл нэмэгдвэл өөрчлөгдөнө)
+  const yearExpected = expectedMonthly * 12;
+  const yearCollectionRate = yearExpected > 0 ? (yearIncome / yearExpected * 100) : 0;
+  const yearExpenseByCat = categoryOptions
+    .map(c => ({ ...c, total: yearBudgetItems.filter(i => i.category === c.value).reduce((s, i) => s + Number(i.amount), 0) }))
+    .filter(c => c.total > 0)
+    .sort((a, b) => b.total - a.total);
+
   // 12 сарын chart дата
   const monthlyHistory = Array.from({ length: 12 }, (_, i) => {
     const m = i + 1;
@@ -262,7 +344,8 @@ export default function AdminFinanceHub() {
       const d = new Date(p.paid_at);
       return d.getFullYear() === year && d.getMonth() + 1 === m;
     }).reduce((s, p) => s + Number(p.amount), 0);
-    return { month: m, income: inc };
+    const exp = yearBudgetItems.filter(i => i.month === m).reduce((s, i) => s + Number(i.amount), 0);
+    return { month: m, income: inc, expense: exp };
   });
   const maxMonthlyInc = Math.max(...monthlyHistory.map(h => h.income), 1);
 
@@ -278,23 +361,45 @@ export default function AdminFinanceHub() {
     );
     XLSX.utils.book_append_sheet(wb, incomeSheet, `${year} - Орлого`);
 
-    const expensesByMonth: Record<number, BudgetItem[]> = {};
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      budgetItems.map(i => ({
+      yearBudgetItems.map(i => ({
         'Сар': months[i.month - 1],
         'Ангилал': getCat(i.category).label,
-        'Дүн': i.amount,
+        'Дүн': Number(i.amount),
         'Тайлбар': i.description,
       }))
-    ), `${year}-${month} Зардал`);
+    ), `${year} - Зардал`);
 
+    // Сарын нэгтгэл — орлого, зардал, зөрүү (SPEC #6)
     const summaryRows = monthlyHistory.map(h => ({
       'Сар': months[h.month - 1],
       'Орлого': h.income,
+      'Зардал': h.expense,
+      'Зөрүү': h.income - h.expense,
     }));
+    summaryRows.push({ 'Сар': 'НИЙТ', 'Орлого': yearIncome, 'Зардал': yearExpense, 'Зөрүү': yearNet });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), `${year} - Сараар`);
 
-    XLSX.writeFile(wb, `санхүү-${year}-${month}.xlsx`);
+    // Авлага (айл СӨХ-д өртэй)
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      residents.filter(r => Number(r.debt || 0) > 0)
+        .sort((a, b) => Number(b.debt) - Number(a.debt))
+        .map(r => ({ 'Тоот': r.apartment, 'Нэр': r.name, 'Өр': Number(r.debt) }))
+    ), 'Авлага');
+
+    // Өглөг (СӨХ хэнд өртэй)
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      payables.map(p => ({
+        'Хэнд': p.vendor,
+        'Ангилал': getCat(p.category).label,
+        'Дүн': Number(p.amount),
+        'Төлсөн': Number(p.paid_amount),
+        'Хугацаа': p.due_date ? new Date(p.due_date).toLocaleDateString('mn-MN') : '',
+        'Төлөв': p.status === 'paid' ? 'Төлсөн' : 'Төлөгдөөгүй',
+      }))
+    ), 'Өглөг');
+
+    XLSX.writeFile(wb, `санхүү-${year}.xlsx`);
   };
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
@@ -304,7 +409,9 @@ export default function AdminFinanceHub() {
     { key: 'budget', label: 'Төсөв', icon: '🎯' },
     { key: 'invoices', label: `Нэхэмжлэх${pendingInvoices ? ` (${pendingInvoices})` : ''}`, icon: '🧾' },
     { key: 'reserve', label: 'Нөөц сан', icon: '🏦' },
-    { key: 'debts', label: `Өрүүд${debtors ? ` (${debtors})` : ''}`, icon: '👥' },
+    { key: 'debts', label: `Авлага${debtors ? ` (${debtors})` : ''}`, icon: '👥' },
+    { key: 'payables', label: `Өглөг${payablesOpen.length ? ` (${payablesOpen.length})` : ''}`, icon: '📄' },
+    { key: 'annual', label: 'Жилийн нэгтгэл', icon: '📆' },
   ];
 
   return (
@@ -315,7 +422,8 @@ export default function AdminFinanceHub() {
           <button onClick={() => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); }} className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm">←</button>
           <span className="font-bold text-sm min-w-[120px] text-center">{year} · {months[month - 1]}</span>
           <button onClick={() => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); }} className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm">→</button>
-          <button onClick={exportYearReport} className="ml-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">📥 Excel</button>
+          <Link href={`/admin/finance/report?year=${year}`} className="ml-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">📄 Жилийн тайлан</Link>
+          <button onClick={exportYearReport} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">📥 Excel</button>
         </div>
       </div>
 
@@ -739,6 +847,166 @@ export default function AdminFinanceHub() {
                     {debtors === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Өртэй айл байхгүй ✓</td></tr>}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* ============ PAYABLES (ӨГЛӨГ) ============ */}
+          {tab === 'payables' && (
+            <div>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <KpiCard label="Төлөх өглөг" value={`${payablesTotal.toLocaleString()}₮`} sub={`${payablesOpen.length} бүртгэл`} color="orange" />
+                <KpiCard label="Хугацаа хэтэрсэн" value={String(payablesOverdue)} sub={payablesOverdue ? 'яаралтай' : 'байхгүй'} color={payablesOverdue ? 'red' : 'green'} />
+                <KpiCard label={`${year} онд төлсөн`} value={`${payablesPaidYear.toLocaleString()}₮`} sub="" color="blue" />
+              </div>
+
+              {payablesError && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 text-sm mb-4">
+                  Өглөгийн хүснэгт бэлэн болоогүй байна. Supabase → SQL Editor дээр
+                  <b> supabase-payables-migration.sql</b> файлыг нэг удаа ажиллуулна уу.
+                </div>
+              )}
+
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs text-gray-500">СӨХ хэнд өртэй вэ — нийлүүлэгч, цалин, үйлчилгээний төлөгдөөгүй нэхэмжлэх. «Төлсөн» дарахад зардлын бүртгэлд автоматаар орно.</p>
+                <button onClick={() => setShowPayForm(!showPayForm)} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 whitespace-nowrap ml-4">+ Өглөг нэмэх</button>
+              </div>
+
+              {showPayForm && (
+                <div className="bg-white border rounded-xl p-4 mb-4">
+                  <div className="grid grid-cols-5 gap-3">
+                    <input placeholder="Хэнд өртэй (жнь: Лифт ХХК)" value={payVendor} onChange={e => setPayVendor(e.target.value)} className="border rounded-lg px-3 py-2 text-sm" />
+                    <select value={payCat} onChange={e => setPayCat(e.target.value)} className="border rounded-lg px-3 py-2 text-sm">
+                      {categoryOptions.map(c => <option key={c.value} value={c.value}>{c.icon} {c.label}</option>)}
+                    </select>
+                    <input type="number" placeholder="Дүн (₮)" value={payAmount} onChange={e => setPayAmount(e.target.value)} className="border rounded-lg px-3 py-2 text-sm" />
+                    <input type="date" value={payDue} onChange={e => setPayDue(e.target.value)} className="border rounded-lg px-3 py-2 text-sm" title="Хэзээ хүртэл төлөх" />
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowPayForm(false)} className="flex-1 py-2 rounded-lg border text-sm">Цуцлах</button>
+                      <button onClick={addPayable} disabled={!payVendor.trim() || !payAmount} className="flex-1 py-2 rounded-lg bg-orange-600 text-white text-sm disabled:opacity-50">Нэмэх</button>
+                    </div>
+                  </div>
+                  <input placeholder="Тайлбар (заавал биш)" value={payDesc} onChange={e => setPayDesc(e.target.value)} className="border rounded-lg px-3 py-2 text-sm w-full mt-3" />
+                </div>
+              )}
+
+              <div className="bg-white border rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs text-gray-500">Хэнд</th>
+                      <th className="px-4 py-3 text-left text-xs text-gray-500">Ангилал</th>
+                      <th className="px-4 py-3 text-right text-xs text-gray-500">Дүн</th>
+                      <th className="px-4 py-3 text-left text-xs text-gray-500">Хугацаа</th>
+                      <th className="px-4 py-3 text-left text-xs text-gray-500">Төлөв</th>
+                      <th className="px-4 py-3 text-right text-xs text-gray-500"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payables.map(p => {
+                      const c = getCat(p.category);
+                      const paid = p.status === 'paid';
+                      const overdue = !paid && p.due_date && new Date(p.due_date) < new Date();
+                      return (
+                        <tr key={p.id} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-3 font-medium">{p.vendor}{p.description && <span className="block text-xs text-gray-400">{p.description}</span>}</td>
+                          <td className="px-4 py-3">{c.icon} {c.label}</td>
+                          <td className={`px-4 py-3 text-right font-semibold ${paid ? 'text-gray-400' : 'text-orange-600'}`}>{Number(p.amount).toLocaleString()}₮</td>
+                          <td className="px-4 py-3 text-gray-500">{p.due_date ? new Date(p.due_date).toLocaleDateString('mn-MN') : '—'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${paid ? 'bg-green-100 text-green-700' : overdue ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                              {paid ? 'Төлсөн' : overdue ? 'Хугацаа хэтэрсэн' : 'Төлөгдөөгүй'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {!paid && <button onClick={() => markPayablePaid(p)} className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded mr-1">✓ Төлсөн</button>}
+                            <button onClick={() => delPayable(p.id)} className="text-xs text-red-400 hover:underline">Устгах</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {payables.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Өглөг бүртгээгүй байна</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ============ ANNUAL (ЖИЛИЙН НЭГТГЭЛ) ============ */}
+          {tab === 'annual' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-4 gap-4">
+                <KpiCard label={`${year} оны орлого`} value={`${yearIncome.toLocaleString()}₮`} sub={`${allPayments.filter(p => new Date(p.paid_at).getFullYear() === year).length} төлөлт`} color="green" />
+                <KpiCard label={`${year} оны зардал`} value={`${yearExpense.toLocaleString()}₮`} sub={`${yearBudgetItems.length} бүртгэл`} color="orange" />
+                <KpiCard label="Цэвэр дүн" value={`${yearNet.toLocaleString()}₮`} sub={yearNet >= 0 ? 'Ашигтай' : 'Алдагдалтай'} color={yearNet >= 0 ? 'blue' : 'red'} />
+                <KpiCard label="Жилийн цуглуулалт" value={`${yearCollectionRate.toFixed(1)}%`} sub={`хүлээгдэх ${yearExpected.toLocaleString()}₮`} color="cyan" />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <KpiCard label="Авлага (айл өртэй)" value={`${totalDebt.toLocaleString()}₮`} sub={`${debtors} айл`} color="red" />
+                <KpiCard label="Өглөг (СӨХ өртэй)" value={`${payablesTotal.toLocaleString()}₮`} sub={`${payablesOpen.length} бүртгэл`} color="amber" />
+                <KpiCard label="Нөөц сангийн үлдэгдэл" value={`${reserveBalance.toLocaleString()}₮`} sub="" color="indigo" />
+              </div>
+
+              <div className="bg-white border rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">{year} оны сар бүрийн нэгтгэл</h3>
+                  <Link href={`/admin/finance/report?year=${year}`} className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">📄 Хэвлэх тайлан</Link>
+                </div>
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-4 py-2.5 text-left text-xs text-gray-500">Сар</th>
+                      <th className="px-4 py-2.5 text-right text-xs text-gray-500">Орлого</th>
+                      <th className="px-4 py-2.5 text-right text-xs text-gray-500">Зардал</th>
+                      <th className="px-4 py-2.5 text-right text-xs text-gray-500">Зөрүү</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyHistory.map(h => {
+                      const diff = h.income - h.expense;
+                      const empty = h.income === 0 && h.expense === 0;
+                      return (
+                        <tr key={h.month} className={`border-b ${h.month === month ? 'bg-blue-50/50' : ''}`}>
+                          <td className="px-4 py-2.5">{months[h.month - 1]}</td>
+                          <td className="px-4 py-2.5 text-right text-green-600">{h.income.toLocaleString()}₮</td>
+                          <td className="px-4 py-2.5 text-right text-orange-600">{h.expense.toLocaleString()}₮</td>
+                          <td className={`px-4 py-2.5 text-right font-medium ${empty ? 'text-gray-300' : diff >= 0 ? 'text-blue-600' : 'text-red-600'}`}>{diff.toLocaleString()}₮</td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="bg-gray-50 font-bold">
+                      <td className="px-4 py-3">НИЙТ</td>
+                      <td className="px-4 py-3 text-right text-green-700">{yearIncome.toLocaleString()}₮</td>
+                      <td className="px-4 py-3 text-right text-orange-700">{yearExpense.toLocaleString()}₮</td>
+                      <td className={`px-4 py-3 text-right ${yearNet >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{yearNet.toLocaleString()}₮</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="bg-white border rounded-xl p-4">
+                <h3 className="font-semibold text-sm mb-3">{year} оны зардлын задаргаа</h3>
+                {yearExpenseByCat.length === 0 ? (
+                  <p className="text-gray-400 text-sm py-4 text-center">Зардал бүртгээгүй байна. «Зардал» цэснээс сар бүрийн зарлагаа оруулбал энэ тайлан бүрдэнэ.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {yearExpenseByCat.map(c => {
+                      const pct = yearExpense > 0 ? (c.total / yearExpense * 100) : 0;
+                      return (
+                        <div key={c.value}>
+                          <div className="flex justify-between text-xs mb-0.5">
+                            <span>{c.icon} {c.label}</span>
+                            <span className="font-medium">{c.total.toLocaleString()}₮ ({pct.toFixed(0)}%)</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-2">
+                            <div className="h-2 rounded-full" style={{ width: `${pct}%`, backgroundColor: c.color }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}

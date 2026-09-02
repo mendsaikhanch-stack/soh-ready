@@ -23,7 +23,7 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'platform_bank_accounts', 'platform_transactions', 'sokh_tiers',
     'ebarimt_configs', 'sokh_bank_accounts', 'payment_notices',
     'proposals', 'proposal_voters', 'proposal_votes',
-    'debt_agreements', 'maintenance_works',
+    'debt_agreements', 'maintenance_works', 'payables',
   ]),
   admin: new Set([
     // Admin өөрийн СӨХ-д холбогдох хүснэгтүүд
@@ -45,6 +45,8 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'debt_agreements',
     // Хийсэн засварын тайлан — sokh_id-тэй тул ерөнхий tenant scope хамгаална
     'maintenance_works',
+    // Өглөг (СӨХ хэнд өртэй) — sokh_id-тэй тул ерөнхий tenant scope хамгаална
+    'payables',
   ]),
   osnaa: new Set([
     'sokh_organizations', 'residents', 'utility_usage', 'payments', 'announcements',
