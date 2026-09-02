@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import Link from 'next/link';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
@@ -11,10 +11,14 @@ interface Staff {
   role: string;
   phone: string;
   schedule: string;
-  salary: number;
   status: string;
   created_at: string;
 }
+
+// Цалин нь staff хүснэгтэд БАЙХГҮЙ. Оршин суугчийн апп staff-ыг anon
+// түлхүүрээр уншдаг тул цалинг тэнд хадгалбал нийтэд ил болно —
+// хаалттай staff_salaries хүснэгтэд тусад нь хадгална.
+interface StaffSalary { id: number; staff_id: number; amount: number; }
 
 const roleOptions = [
   { value: 'manager', label: 'Менежер', icon: '👔' },
@@ -27,6 +31,7 @@ const roleOptions = [
 
 export default function AdminStaff() {
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [salaries, setSalaries] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -44,13 +49,16 @@ export default function AdminStaff() {
 
   const fetchStaff = async () => {
     const sokhId = await getAdminSokhId();
-    const { data } = await supabase
-      .from('staff')
-      .select('*')
-      .eq('sokh_id', sokhId)
-      .order('created_at', { ascending: false });
+    // Админ нь Supabase Auth хэрэглэгч биш — уншилт adminFrom proxy-гоор явна
+    const [{ data }, { data: sal }] = await Promise.all([
+      adminFrom('staff').select('*').eq('sokh_id', sokhId).order('created_at', { ascending: false }),
+      adminFrom('staff_salaries').select('*').eq('sokh_id', sokhId),
+    ]);
 
-    setStaff(data || []);
+    setStaff((data as unknown as Staff[]) || []);
+    const map: Record<number, number> = {};
+    for (const row of ((sal as unknown as StaffSalary[]) || [])) map[row.staff_id] = Number(row.amount);
+    setSalaries(map);
     setLoading(false);
   };
 
@@ -64,12 +72,28 @@ export default function AdminStaff() {
     setSaving(true);
 
     const sokhId = await getAdminSokhId();
-    const record = { sokh_id: sokhId, name, role, phone, schedule, salary: Number(salary) || 0, status: 'active' };
+    // salary нь staff-д БИШ — доор staff_salaries руу тусад нь бичнэ
+    const record = { sokh_id: sokhId, name, role, phone, schedule, status: 'active' };
 
+    let staffId = editId;
     if (editId) {
-      await adminFrom('staff').update(record).eq('id', editId);
+      const res = await adminFrom('staff').update(record).eq('id', editId);
+      if (res.error) { alert(`Хадгалагдсангүй: ${res.error}`); setSaving(false); return; }
     } else {
-      await adminFrom('staff').insert([record]);
+      const res = await adminFrom('staff').insert([record]);
+      if (res.error) { alert(`Хадгалагдсангүй: ${res.error}`); setSaving(false); return; }
+      const created = Array.isArray(res.data) ? res.data[0] : res.data;
+      staffId = created ? Number((created as Record<string, unknown>).id) : null;
+    }
+
+    const amount = Number(salary) || 0;
+    if (staffId) {
+      // staff_salaries-д ажилтан бүрд НЭГ мөр (uniq_staff_salary индекс)
+      const existing = salaries[staffId] !== undefined;
+      const salRes = existing
+        ? await adminFrom('staff_salaries').update({ amount, updated_at: new Date().toISOString() }).eq('staff_id', staffId)
+        : await adminFrom('staff_salaries').insert([{ sokh_id: sokhId, staff_id: staffId, amount }]);
+      if (salRes.error) alert(`Цалин хадгалагдсангүй: ${salRes.error}`);
     }
 
     resetForm();
@@ -83,7 +107,7 @@ export default function AdminStaff() {
     setRole(s.role);
     setPhone(s.phone || '');
     setSchedule(s.schedule || '');
-    setSalary(s.salary ? String(s.salary) : '');
+    setSalary(salaries[s.id] ? String(salaries[s.id]) : '');
     setShowForm(true);
   };
 
@@ -122,7 +146,7 @@ export default function AdminStaff() {
           <p className="text-xs text-gray-500">Нийт</p>
         </div>
         <div className="rounded-xl border p-4 bg-amber-50 border-amber-200">
-          <p className="text-xl font-bold text-amber-700">{active.reduce((s, st) => s + (st.salary || 0), 0).toLocaleString()}₮</p>
+          <p className="text-xl font-bold text-amber-700">{active.reduce((s, st) => s + (salaries[st.id] || 0), 0).toLocaleString()}₮</p>
           <p className="text-xs text-gray-500">Сарын цалин</p>
         </div>
       </div>
@@ -141,6 +165,15 @@ export default function AdminStaff() {
 
       {activeTab === 'salary' && (
         <div className="space-y-3 mb-6">
+          <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl p-3">
+            <p className="text-xs text-blue-800 leading-relaxed">
+              Энэ бол <b>урьдчилсан</b> тооцоо. Сар бүрийн бодит цалинг бодож, олгож, зардлын
+              бүртгэлд оруулахдаа «Цалингийн тооцоо» хуудсыг ашиглана.
+            </p>
+            <Link href="/admin/payroll" className="ml-4 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs whitespace-nowrap hover:bg-blue-700">
+              💵 Цалин бодох
+            </Link>
+          </div>
           <h2 className="text-sm font-semibold text-gray-500">САРЫН ЦАЛИНГИЙН ТООЦОО</h2>
           {active.length === 0 ? (
             <p className="text-gray-400 text-center py-8">Идэвхтэй ажилтан байхгүй</p>
@@ -160,7 +193,7 @@ export default function AdminStaff() {
                   </thead>
                   <tbody>
                     {active.map(s => {
-                      const sal = s.salary || 0;
+                      const sal = salaries[s.id] || 0;
                       const ndsh = Math.round(sal * 0.125);
                       const taxable = sal - ndsh;
                       const hhuat = Math.round(taxable * 0.1);
@@ -181,10 +214,10 @@ export default function AdminStaff() {
                   <tfoot className="bg-gray-50 font-bold">
                     <tr className="border-t-2">
                       <td className="px-4 py-2.5" colSpan={2}>Нийт</td>
-                      <td className="px-4 py-2.5 text-right">{active.reduce((s, st) => s + (st.salary || 0), 0).toLocaleString()}₮</td>
-                      <td className="px-4 py-2.5 text-right text-red-500">-{active.reduce((s, st) => s + Math.round((st.salary || 0) * 0.125), 0).toLocaleString()}₮</td>
-                      <td className="px-4 py-2.5 text-right text-red-500">-{active.reduce((s, st) => { const ndsh = Math.round((st.salary || 0) * 0.125); return s + Math.round(((st.salary || 0) - ndsh) * 0.1); }, 0).toLocaleString()}₮</td>
-                      <td className="px-4 py-2.5 text-right text-green-600">{active.reduce((s, st) => { const sal = st.salary || 0; const ndsh = Math.round(sal * 0.125); return s + sal - ndsh - Math.round((sal - ndsh) * 0.1); }, 0).toLocaleString()}₮</td>
+                      <td className="px-4 py-2.5 text-right">{active.reduce((s, st) => s + (salaries[st.id] || 0), 0).toLocaleString()}₮</td>
+                      <td className="px-4 py-2.5 text-right text-red-500">-{active.reduce((s, st) => s + Math.round((salaries[st.id] || 0) * 0.125), 0).toLocaleString()}₮</td>
+                      <td className="px-4 py-2.5 text-right text-red-500">-{active.reduce((s, st) => { const ndsh = Math.round((salaries[st.id] || 0) * 0.125); return s + Math.round(((salaries[st.id] || 0) - ndsh) * 0.1); }, 0).toLocaleString()}₮</td>
+                      <td className="px-4 py-2.5 text-right text-green-600">{active.reduce((s, st) => { const sal = salaries[st.id] || 0; const ndsh = Math.round(sal * 0.125); return s + sal - ndsh - Math.round((sal - ndsh) * 0.1); }, 0).toLocaleString()}₮</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -249,7 +282,7 @@ export default function AdminStaff() {
                       <p className="text-xs text-amber-600">{r.label}</p>
                       {s.phone && <p className="text-xs text-gray-500">📞 {s.phone}</p>}
                       {s.schedule && <p className="text-xs text-gray-500">🕐 {s.schedule}</p>}
-                      {s.salary > 0 && <p className="text-xs text-gray-500">💰 {s.salary.toLocaleString()}₮/сар</p>}
+                      {(salaries[s.id] || 0) > 0 && <p className="text-xs text-gray-500">💰 {(salaries[s.id]).toLocaleString()}₮/сар</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

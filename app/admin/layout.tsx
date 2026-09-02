@@ -22,6 +22,7 @@ const navItems = [
   { icon: '📝', label: 'Гомдол / Санал', href: '/admin/complaints' },
   { icon: '📊', label: 'Ашиглалт', href: '/admin/utilities' },
   { icon: '👷', label: 'Ажилчид', href: '/admin/staff' },
+  { icon: '💵', label: 'Цалин', href: '/admin/payroll' },
   { icon: '🚨', label: 'Яаралтай', href: '/admin/emergency' },
   { icon: '🗳', label: 'Санал хураалт', href: '/admin/polls' },
   { icon: '⚖️', label: 'Цахим ТУЗ', href: '/admin/board' },

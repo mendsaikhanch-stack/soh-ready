@@ -23,7 +23,8 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'platform_bank_accounts', 'platform_transactions', 'sokh_tiers',
     'ebarimt_configs', 'sokh_bank_accounts', 'payment_notices',
     'proposals', 'proposal_voters', 'proposal_votes',
-    'debt_agreements', 'maintenance_works', 'payables',
+    'debt_agreements', 'maintenance_works', 'payables', 'payroll_entries',
+    'staff_salaries',
   ]),
   admin: new Set([
     // Admin өөрийн СӨХ-д холбогдох хүснэгтүүд
@@ -47,6 +48,8 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'maintenance_works',
     // Өглөг (СӨХ хэнд өртэй) — sokh_id-тэй тул ерөнхий tenant scope хамгаална
     'payables',
+    // Цалингийн тооцоо — хувийн мэдээлэл, sokh_id-тэй тул tenant scope хамгаална
+    'payroll_entries', 'staff_salaries',
   ]),
   osnaa: new Set([
     'sokh_organizations', 'residents', 'utility_usage', 'payments', 'announcements',
@@ -295,11 +298,13 @@ export async function POST(request: NextRequest) {
         break;
       }
       case 'insert': {
-        query = supabaseAdmin.from(table).insert(params.data as Record<string, unknown> | Record<string, unknown>[]);
+        // .select() — үүссэн мөрийг буцаана. Шинээр үүсгэсэн бичлэгийн id
+        // хэрэгтэй тохиолдол бий (жнь: ажилтан үүсгээд цалингийн мөр холбох).
+        query = supabaseAdmin.from(table).insert(params.data as Record<string, unknown> | Record<string, unknown>[]).select();
         break;
       }
       case 'upsert': {
-        query = supabaseAdmin.from(table).upsert(params.data as Record<string, unknown> | Record<string, unknown>[]);
+        query = supabaseAdmin.from(table).upsert(params.data as Record<string, unknown> | Record<string, unknown>[]).select();
         break;
       }
       case 'update': {
