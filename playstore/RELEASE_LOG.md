@@ -172,10 +172,10 @@ Console: «Latest release: 3 (1.0.1) · Available to selected testers», мэд�
 > ⏳ Гараар ажиллуулах миграц: `supabase-billing-control-migration.sql`
 > (2026-08-28-нд бичигдсэн, Supabase SQL Editor дээр ажиллуулах шаардлагатай)
 >
-> ⏳ Гараар ажиллуулах миграц: `supabase-finance-statements-migration.sql`
-> (2026-09-02 — регистр, эхний үлдэгдэл, НӨАТ статус. Ажиллуулаагүй бол
-> «Албан ёсны тайлан» хуудсанд эдгээрийг хадгалж чадахгүй, баланс дээр
-> эхний үлдэгдэл 0 гэж тооцно)
+> ✅ Ажиллуулсан миграц: `supabase-finance-statements-migration.sql`
+> (2026-09-02 — tax_id, opening_balance, opening_balance_date, is_vat_payer +
+> budget_items(type) индекс). Шалгав: 4 багана үүссэн, type=NULL мөр 0,
+> зардал ба бусад орлогын бичилт хоёул амжилттай.
 >
 > ✅ Ажиллуулсан миграц: `supabase-payables-migration.sql` (2026-09-02,
 > өглөгийн хүснэгт). Шалгав: service_role бичиж/уншиж чадаж байна, anon-д
