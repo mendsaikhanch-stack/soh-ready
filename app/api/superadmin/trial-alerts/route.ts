@@ -5,6 +5,7 @@ import { isDemoSokh } from '@/app/lib/demo-orgs';
 import {
   DEFAULT_TARIFF,
   billingStartDate,
+  orgTariff,
   daysBetweenUb,
   freeMonths,
   monthlyFee,
@@ -18,7 +19,8 @@ import {
 // Үнэгүй ашиглах хугацаа дуусах гэж буй СӨХ-үүд.
 //
 // Үнэгүй хугацаа нь идэвхжсэн өдрөөс хойш 150-аас доош айлтай бол 1 сар,
-// түүнээс дээш бол 2 сар (тарифаас уншина). Тэр өдөр болоход төлбөр эхлэх
+// түүнээс дээш бол 2 сар (тарифаас уншина) — тухайн СӨХ-д сунгасан бол
+// `free_months_override` давамгайлна. Тэр өдөр болоход төлбөр эхлэх
 // ёстой ч хэн ч сануулахгүй бол мартагдана — энэ endpoint нь суперадмины
 // хянах самбарын анхааруулгыг тэжээнэ.
 //
@@ -98,13 +100,28 @@ export async function GET() {
     .neq('kind', 'setup');
   const invoiced = new Set((invoices || []).map(i => Number(i.sokh_id)));
 
+  // Үнэгүй сарыг СӨХ тус бүрд сунгаж болдог (`free_months_override`). Үүнийг
+  // тооцохгүй бол «Хэрэглэгч СӨХ» карт сунгасан огноог, самбарын сануулга
+  // ерөнхий дүрмийн огноог харуулж, хоёр дэлгэц зөрнө — сунгасан СӨХ «хугацаа
+  // дууссан» гэж улаанаар гарч ирнэ. Багана байхгүй (миграц ажиллаагүй) бол
+  // ерөнхий дүрмээр үргэлжилнэ.
+  const overrideByOrg = new Map<number, number | null>();
+  const { data: billRows } = await supabaseAdmin
+    .from('sokh_organizations')
+    .select('id, free_months_override')
+    .in('id', ids);
+  for (const r of billRows || []) {
+    overrideByOrg.set(Number(r.id), (r.free_months_override as number) ?? null);
+  }
+
   const now = new Date();
   const alerts: TrialAlert[] = [];
 
   for (const o of real) {
     const id = Number(o.id);
     const apartments = aptCount.get(id) || 0;
-    const ends = billingStartDate(o.activated_at as string, tariff, apartments);
+    const t = orgTariff(tariff, overrideByOrg.get(id));
+    const ends = billingStartDate(o.activated_at as string, t, apartments);
     if (!ends) continue;
 
     const daysLeft = daysBetweenUb(ends, now);
@@ -115,11 +132,11 @@ export async function GET() {
       sokh_id: id,
       name: o.name as string,
       apartments,
-      free_months: freeMonths(tariff, apartments),
+      free_months: freeMonths(t, apartments),
       ends_on: ubDay(ends),
       ends_at: ends.toISOString(),
       days_left: daysLeft,
-      monthly_fee: monthlyFee(tariff, apartments),
+      monthly_fee: monthlyFee(t, apartments),
       invoiced: invoiced.has(id),
       level,
     });

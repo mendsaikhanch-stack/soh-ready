@@ -8,7 +8,7 @@
 // Тэр тохиолдолд `migrated: false` буцаана, юу ч унахгүй.
 
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
-import { DEFAULT_TARIFF, type PlatformTariff } from '@/app/lib/platform-pricing';
+import { DEFAULT_TARIFF, orgTariff, type PlatformTariff } from '@/app/lib/platform-pricing';
 import { contractNumberFor, type ContractInput } from './service-agreement';
 
 const BASE_FIELDS = 'id, name, address, phone, contact_email, activated_at, claim_status';
@@ -25,6 +25,7 @@ export interface ContractState {
     claim_status: string;
   };
   apartments: number;
+  /** Тухайн СӨХ-д үйлчлэх тариф — үнэгүй сарыг нь сунгасан бол тэрүүгээр */
   tariff: PlatformTariff;
   /** Гэрээ татах эрх нээгдсэн эсэх */
   unlocked_at: string | null;
@@ -42,6 +43,23 @@ async function loadTariff(): Promise<PlatformTariff> {
     .maybeSingle();
   if (error || !data) return DEFAULT_TARIFF;
   return { ...DEFAULT_TARIFF, ...data };
+}
+
+/** Тухайн СӨХ-д сунгасан үнэгүй сар. Гэрээнд бичигдэх «Үнэгүй хугацаа», төлбөр
+ *  эхлэх өдөр хоёр нь /mng-ctrl/customers картын тоотой заавал таарах ёстой —
+ *  эс бөгөөс дарга гэрээгээрээ нэг огноог, бид самбар дээр өөр огноог харна.
+ *
+ *  Тусад нь уншиж байгаа шалтгаан: billing-control миграц ажиллаагүй орчинд
+ *  энэ багана байхгүй. Үндсэн select-д нийлүүлбэл алдаа нь гэрээний бусад
+ *  талбарыг «миграц ажиллаагүй» гэж буруу тэмдэглэнэ. */
+async function loadFreeMonthsOverride(sokhId: number): Promise<number | null> {
+  const { data, error } = await supabaseAdmin
+    .from('sokh_organizations')
+    .select('free_months_override')
+    .eq('id', sokhId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return (data.free_months_override as number) ?? null;
 }
 
 export async function loadContractState(sokhId: number): Promise<ContractState | null> {
@@ -88,7 +106,7 @@ export async function loadContractState(sokhId: number): Promise<ContractState |
       claim_status: String(row.claim_status || ''),
     },
     apartments: count || 0,
-    tariff: await loadTariff(),
+    tariff: orgTariff(await loadTariff(), await loadFreeMonthsOverride(sokhId)),
     unlocked_at: migrated ? ((row.contract_unlocked_at as string) ?? null) : null,
     number: migrated ? ((row.contract_number as string) ?? null) : null,
     downloaded_at: migrated ? ((row.contract_downloaded_at as string) ?? null) : null,
