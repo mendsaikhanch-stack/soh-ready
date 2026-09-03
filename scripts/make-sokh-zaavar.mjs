@@ -54,14 +54,19 @@ const { data: org } = await sb
   .single();
 if (!org) { console.error(`❌ СӨХ #${sokhId} олдсонгүй`); process.exit(1); }
 
-const { data: units } = await sb.from('residents').select('apartment').eq('sokh_id', sokhId);
-const count = (units || []).length;
+const { data: units } = await sb.from('residents').select('apartment, building, unit_kind').eq('sokh_id', sokhId);
+// Гараж, дэлгүүр зэрэг айл бус нэгжийг тоонд оруулахгүй (make-sokh-qr.mjs-тэй ижил)
+const homes = (units || []).filter((u) => u.unit_kind !== 'business');
+const count = homes.length;
 if (count === 0) {
   console.error('❌ Энэ СӨХ дээр нэг ч айл бүртгэгдээгүй байна — эхлээд жагсаалтаа оруул.');
   process.exit(1);
 }
-const nums = (units || []).map((u) => Number(u.apartment)).filter(Number.isFinite);
+const nums = homes.map((u) => Number(u.apartment)).filter((n) => Number.isFinite(n) && n > 0);
 const range = nums.length ? `${Math.min(...nums)}–${Math.max(...nums)}` : '';
+// Олон байртай СӨХ-д тоот давхцдаг тул байраа заавал бичүүлнэ
+const buildings = [...new Set(homes.map((u) => (u.building || '').trim()).filter(Boolean))];
+const multiBuilding = buildings.length > 1;
 
 const url = `${SITE}/register?sokh=${sokhId}`;
 const qrSvg = renderToStaticMarkup(
@@ -149,6 +154,7 @@ const html = `<!doctype html><html lang="mn"><head><meta charset="utf-8"><style>
       <div class="qrframe">${qrSvg}</div>
       <ol class="steps">
         <li><span>QR кодыг утасныхаа камераар уншуулна<br><span class="url">${esc(shortUrl)}</span></span></li>
+        ${multiBuilding ? `<li><span><b>Байрны дугаар</b> хэсэгт байраа бичнэ (${esc(buildings.join(' / '))})</span></li>` : ''}
         <li><span><b>Тоот</b> хэсэгт хаалганыхаа дугаарыг бичнэ${range ? ` (${esc(range)})` : ''} — урд нь тэг бүү нэм</span></li>
         <li><span>Нэр, утасны дугаараа бичээд <b>өөрийн нууц үгээ</b> тохируулна</span></li>
       </ol>

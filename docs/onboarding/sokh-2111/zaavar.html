@@ -1,0 +1,112 @@
+<!doctype html><html lang="mn"><head><meta charset="utf-8"><style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+         -webkit-font-smoothing: antialiased; background:#fff; display:grid; place-items:center; }
+  @page { size: A4; margin: 0; }
+  .sheet { width:210mm; min-height:297mm; padding:11mm 14mm; background:#fff; color:#0e1b30;
+           display:flex; flex-direction:column; overflow:hidden; }
+  .brandbar { display:flex; align-items:center; gap:14px; }
+  .dot { background:#2563eb; color:#fff; display:grid; place-items:center; font-weight:800;
+         border-radius:16px; width:46px; height:46px; font-size:25px; }
+  .wordmark { font-weight:800; letter-spacing:-0.02em; font-size:29px; }
+  .tag { color:#4a5b76; font-size:16px; margin-left:auto; text-align:right; }
+  h1 { margin:14px 0 0; font-weight:800; letter-spacing:-0.03em; line-height:1.08; font-size:30px; }
+  h1 em { font-style:normal; color:#2563eb; }
+  .lede { color:#4a5b76; margin:8px 0 0; font-size:15.5px; line-height:1.45; }
+  .sec { margin-top:12px; }
+  .sec > h2 { margin:0 0 8px; font-size:15px; font-weight:800; letter-spacing:0.06em;
+              text-transform:uppercase; color:#2563eb; }
+  .login { display:flex; gap:18px; align-items:center; background:#f3f6fc; border:1px solid #d9e1ee;
+           border-radius:20px; padding:14px 18px; }
+  .qrframe { background:#fff; border:2px solid #d9e1ee; border-radius:18px; width:132px; height:132px;
+             flex:none; display:grid; place-items:center; }
+  .qrframe svg { width:112px; height:112px; }
+  .steps { list-style:none; margin:0; padding:0; counter-reset:s; flex:1; }
+  .steps li { counter-increment:s; display:flex; gap:11px; align-items:flex-start;
+              font-size:15px; line-height:1.4; margin-bottom:6px; }
+  .steps li:last-child { margin-bottom:0; }
+  .steps li::before { content:counter(s); background:#2563eb; color:#fff; font-weight:800;
+    border-radius:50%; display:grid; place-items:center; flex:none; width:26px; height:26px; font-size:14px; }
+  .url { color:#2563eb; font-weight:700; word-break:break-all; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; }
+  .use { display:flex; gap:11px; align-items:flex-start; }
+  .use .ic { font-size:22px; line-height:1.1; flex:none; }
+  .use b { display:block; font-size:15px; margin-bottom:1px; }
+  .use span.d { font-size:13px; color:#4a5b76; line-height:1.4; }
+  .keep { background:#eef4ff; border:1px solid #c7d9f7; border-radius:18px; color:#26364f;
+          padding:11px 16px; font-size:14.5px; line-height:1.45; }
+  .keep > b { display:block; font-size:15px; margin-bottom:6px; }
+  .keep .row { display:flex; align-items:flex-start; gap:10px; margin-bottom:5px; }
+  .keep .os { background:#2563eb; color:#fff; border-radius:999px; font-weight:700; flex:none;
+              text-align:center; width:76px; font-size:12.5px; padding:3px 0; }
+  .keep .tail { margin:7px 0 0; font-size:13.5px; color:#4a5b76; }
+  .faq { border:1px solid #d9e1ee; border-radius:18px; padding:10px 16px; font-size:13.5px;
+         line-height:1.5; color:#31405c; }
+  .faq p { margin:0 0 6px; }
+  .faq p:last-child { margin:0; }
+  .faq b { color:#0e1b30; }
+  .foot { margin-top:auto; padding-top:10px; border-top:2px solid #d9e1ee; font-size:14px; color:#4a5b76; }
+</style></head>
+<body><div class="sheet">
+  <div class="brandbar">
+    <div class="dot">Х</div><div class="wordmark">Хотол</div>
+    <div class="tag">Өрнөлт<br>Оршин суугчийн заавар</div>
+  </div>
+
+  <h1>Байрныхаа мэдээллийг<br><em>утаснаасаа</em> хараарай</h1>
+  <p class="lede">Манай СӨХ Хотол системд шилжсэн. 112 айл бүгд бүртгэгдсэн байгаа —
+     та зөвхөн өөрийгөө холбоно. <b>Апп татах шаардлагагүй.</b></p>
+
+  <div class="sec">
+    <h2>1 · Хэрхэн нэвтрэх вэ</h2>
+    <div class="login">
+      <div class="qrframe"><svg height="200" width="200" viewBox="0 0 29 29" role="img"><path fill="#ffffff" d="M0,0 h29v29H0z" shape-rendering="crispEdges"></path><path fill="#0e1b30" d="M0 0h7v1H0zM12 0h3v1H12zM17 0h3v1H17zM22,0 h7v1H22zM0 1h1v1H0zM6 1h1v1H6zM11 1h2v1H11zM14 1h2v1H14zM17 1h1v1H17zM20 1h1v1H20zM22 1h1v1H22zM28,1 h1v1H28zM0 2h1v1H0zM2 2h3v1H2zM6 2h1v1H6zM8 2h2v1H8zM12 2h1v1H12zM14 2h2v1H14zM20 2h1v1H20zM22 2h1v1H22zM24 2h3v1H24zM28,2 h1v1H28zM0 3h1v1H0zM2 3h3v1H2zM6 3h1v1H6zM8 3h1v1H8zM10 3h1v1H10zM12 3h2v1H12zM17 3h1v1H17zM19 3h1v1H19zM22 3h1v1H22zM24 3h3v1H24zM28,3 h1v1H28zM0 4h1v1H0zM2 4h3v1H2zM6 4h1v1H6zM8 4h1v1H8zM10 4h1v1H10zM12 4h1v1H12zM14 4h1v1H14zM16 4h1v1H16zM19 4h2v1H19zM22 4h1v1H22zM24 4h3v1H24zM28,4 h1v1H28zM0 5h1v1H0zM6 5h1v1H6zM8 5h2v1H8zM11 5h3v1H11zM15 5h4v1H15zM20 5h1v1H20zM22 5h1v1H22zM28,5 h1v1H28zM0 6h7v1H0zM8 6h1v1H8zM10 6h1v1H10zM12 6h1v1H12zM14 6h1v1H14zM16 6h1v1H16zM18 6h1v1H18zM20 6h1v1H20zM22,6 h7v1H22zM8 7h3v1H8zM18 7h3v1H18zM0 8h1v1H0zM2 8h5v1H2zM10 8h2v1H10zM13 8h1v1H13zM17 8h1v1H17zM19 8h1v1H19zM22 8h5v1H22zM2 9h4v1H2zM7 9h1v1H7zM9 9h1v1H9zM11 9h1v1H11zM14 9h1v1H14zM16 9h1v1H16zM18 9h7v1H18zM28,9 h1v1H28zM0 10h4v1H0zM5 10h4v1H5zM11 10h2v1H11zM15 10h2v1H15zM20 10h3v1H20zM2 11h1v1H2zM4 11h1v1H4zM10 11h3v1H10zM14 11h1v1H14zM16 11h1v1H16zM19 11h1v1H19zM22 11h2v1H22zM25 11h1v1H25zM27 11h1v1H27zM1 12h8v1H1zM11 12h1v1H11zM13 12h1v1H13zM17 12h1v1H17zM25 12h2v1H25zM0 13h4v1H0zM5 13h1v1H5zM7 13h1v1H7zM9 13h1v1H9zM11 13h2v1H11zM14 13h1v1H14zM16 13h1v1H16zM18 13h5v1H18zM24 13h1v1H24zM28,13 h1v1H28zM0 14h1v1H0zM2 14h2v1H2zM5 14h2v1H5zM11 14h2v1H11zM15 14h3v1H15zM21 14h3v1H21zM25 14h2v1H25zM2 15h1v1H2zM4 15h1v1H4zM14 15h1v1H14zM19 15h3v1H19zM23 15h2v1H23zM27 15h1v1H27zM0 16h1v1H0zM3 16h4v1H3zM12 16h2v1H12zM15 16h3v1H15zM19 16h1v1H19zM23 16h1v1H23zM25 16h2v1H25zM0 17h1v1H0zM2 17h2v1H2zM7 17h3v1H7zM11 17h1v1H11zM14 17h1v1H14zM16 17h4v1H16zM21 17h4v1H21zM26 17h1v1H26zM28,17 h1v1H28zM0 18h1v1H0zM2 18h1v1H2zM6 18h3v1H6zM10 18h3v1H10zM15 18h2v1H15zM18 18h1v1H18zM22 18h2v1H22zM26 18h1v1H26zM0 19h1v1H0zM2 19h1v1H2zM4 19h2v1H4zM9 19h1v1H9zM14 19h1v1H14zM16 19h1v1H16zM20 19h1v1H20zM22 19h3v1H22zM27 19h1v1H27zM0 20h1v1H0zM3 20h6v1H3zM11 20h2v1H11zM16 20h2v1H16zM19 20h6v1H19zM26,20 h3v1H26zM8 21h1v1H8zM11 21h1v1H11zM13 21h1v1H13zM20 21h1v1H20zM24,21 h5v1H24zM0 22h7v1H0zM9 22h2v1H9zM12 22h4v1H12zM17 22h4v1H17zM22 22h1v1H22zM24 22h3v1H24zM0 23h1v1H0zM6 23h1v1H6zM8 23h1v1H8zM10 23h1v1H10zM13 23h1v1H13zM19 23h2v1H19zM24 23h1v1H24zM0 24h1v1H0zM2 24h3v1H2zM6 24h1v1H6zM8 24h1v1H8zM10 24h2v1H10zM14 24h4v1H14zM20 24h5v1H20zM26,24 h3v1H26zM0 25h1v1H0zM2 25h3v1H2zM6 25h1v1H6zM8 25h1v1H8zM13 25h1v1H13zM16 25h1v1H16zM19 25h2v1H19zM23 25h1v1H23zM25,25 h4v1H25zM0 26h1v1H0zM2 26h3v1H2zM6 26h1v1H6zM8 26h4v1H8zM14 26h3v1H14zM19 26h2v1H19zM22 26h6v1H22zM0 27h1v1H0zM6 27h1v1H6zM9 27h1v1H9zM11 27h1v1H11zM14 27h3v1H14zM18 27h1v1H18zM20 27h1v1H20zM23 27h1v1H23zM25 27h1v1H25zM27 27h1v1H27zM0 28h7v1H0zM8 28h3v1H8zM14 28h2v1H14zM17 28h1v1H17zM19 28h1v1H19zM21 28h1v1H21zM23 28h4v1H23z" shape-rendering="crispEdges"></path></svg></div>
+      <ol class="steps">
+        <li><span>QR кодыг утасныхаа камераар уншуулна<br><span class="url">khotol.com/register?sokh=2111</span></span></li>
+        <li><span><b>Байрны дугаар</b> хэсэгт байраа бичнэ (11 / 9А / 9Б)</span></li>
+        <li><span><b>Тоот</b> хэсэгт хаалганыхаа дугаарыг бичнэ (1–40) — урд нь тэг бүү нэм</span></li>
+        <li><span>Нэр, утасны дугаараа бичээд <b>өөрийн нууц үгээ</b> тохируулна</span></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>2 · Аппаас юу хийх вэ</h2>
+    <div class="grid">
+      <div class="use"><span class="ic">💵</span>
+        <span><b>Төлбөр</b><span class="d">Сарын хураамж, өрийн үлдэгдэл, төлсөн түүх — тооцоо тулгахаар явахгүй</span></span></div>
+      <div class="use"><span class="ic">📢</span>
+        <span><b>Зарлал</b><span class="d">СӨХ-ийн мэдээ, ус тасрах зэрэг зарлал утсанд шууд ирнэ</span></span></div>
+      <div class="use"><span class="ic">🔧</span>
+        <span><b>Засвар</b><span class="d">Хүсэлтээ зураг хавсаргаж илгээгээд, явцыг нь хянана</span></span></div>
+      <div class="use"><span class="ic">🛠</span>
+        <span><b>Хийсэн ажил</b><span class="d">СӨХ-ийн хийсэн засварыг огноо, зурагтай нь харна</span></span></div>
+      <div class="use"><span class="ic">💬</span>
+        <span><b>Гомдол / Санал</b><span class="d">Даргад шууд бичнэ — группт маргалдах шаардлагагүй</span></span></div>
+      <div class="use"><span class="ic">🗳</span>
+        <span><b>Санал хураалт</b><span class="d">Хурлын шийдвэрт утаснаасаа санал өгнө</span></span></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>3 · Утсандаа апп болгож хадгалах</h2>
+    <div class="keep">
+      <b>Нэг удаа хийчихвэл дараа нь холбоос хайхгүй</b>
+      <div class="row"><span class="os">Android</span><span>Chrome-ийн баруун дээд булангийн <b>цэг гурвыг</b> дарж «Нүүр хуудсанд нэмэх»</span></div>
+      <div class="row"><span class="os">iPhone</span><span>Safari-ийн доод талын <b>хуваалцах</b> товчийг дарж «Нүүр хуудсанд нэмэх»</span></div>
+      <p class="tail">Утсанд тань «Хотол» икон үүсч, апп шиг шууд нээгдэнэ.</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>Түгээмэл асуулт</h2>
+    <div class="faq">
+      <p><b>Уншуулахад юу ч болохгүй байна.</b> Хөтчөө нээгээд khotol.com/register?sokh=2111 гэж шууд бичнэ.</p>
+      <p><b>«Энэ тоот бүртгэгдсэн» гэж байна.</b> Тухайн тоотод өөр хүн бүртгүүлсэн байна — даргад хандана уу.</p>
+      <p><b>Нууц үгээ мартсан.</b> Дарга сэргээж өгнө. Дараа нь «Миний мэдээлэл»-ээс шинээр тохируулна.</p>
+      <p><b>Өрийн дүн зөрж байна.</b> Группт бичихийн оронд СӨХ-ийн даргад шууд хандаарай.</p>
+    </div>
+  </div>
+
+  <div class="foot">Өрнөлт · Хотол — www.khotol.com</div>
+</div></body></html>
