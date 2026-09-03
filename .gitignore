@@ -57,6 +57,8 @@ sokh-import-skipped.csv
 bzd-target-50.csv
 # Локал ажлын бүртгэл (тестерийн имэйл, гадаад системийн төлөв) — репо public!
 *.local.md
+# PII (утас, нэр) агуулсан нэг удаагийн скрипт — репо public
+scripts/*.local.js
 
 # Marketing screenshots (89 MB) — disk дээр архив, git-д хэт хүнд
 /docs/_archive/marketing/screenshots/

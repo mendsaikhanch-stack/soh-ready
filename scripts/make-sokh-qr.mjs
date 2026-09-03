@@ -49,15 +49,21 @@ const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABA
 const { data: org } = await sb.from('sokh_organizations').select('id, name').eq('id', sokhId).single();
 if (!org) { console.error(`❌ СӨХ #${sokhId} олдсонгүй`); process.exit(1); }
 
-const { data: units } = await sb.from('residents').select('apartment').eq('sokh_id', sokhId);
-const count = (units || []).length;
+const { data: units } = await sb.from('residents').select('apartment, building, unit_kind').eq('sokh_id', sokhId);
+// Гараж, дэлгүүр зэрэг айл бус нэгжийг тоонд оруулахгүй — самбар дээрх «N айл»
+// нь оршин суугчийн ойлгодог тоо байх ёстой.
+const homes = (units || []).filter(u => u.unit_kind !== 'business');
+const count = homes.length;
 if (count === 0) {
   console.error('❌ Энэ СӨХ дээр нэг ч айл бүртгэгдээгүй байна.');
   console.error('   Жагсаалтгүй байхад QR тараавал оршин суугч өөрөө бүртгүүлэхэд ШИНЭ мөр үүснэ.');
   process.exit(1);
 }
-const nums = (units || []).map(u => Number(u.apartment)).filter(Number.isFinite);
+const nums = homes.map(u => Number(u.apartment)).filter(n => Number.isFinite(n) && n > 0);
 const range = nums.length ? `${Math.min(...nums)}–${Math.max(...nums)}` : '';
+// Олон байртай СӨХ-д тоот давхцдаг тул байраа заавал бичүүлнэ
+const buildings = [...new Set(homes.map(u => (u.building || '').trim()).filter(Boolean))];
+const multiBuilding = buildings.length > 1;
 
 const url = `${SITE}/register?sokh=${sokhId}`;
 const qr = (size) => renderToStaticMarkup(createElement(QRCodeSVG, {
@@ -166,6 +172,7 @@ const posterHtml = `<!doctype html><html lang="mn"><head><meta charset="utf-8"><
   </div>
   <ol class="steps">
     <li>QR кодыг утасныхаа камераар уншуулна</li>
+    ${multiBuilding ? `<li><b>Байрны дугаар</b> хэсэгт байраа бичнэ (${esc(buildings.join(' / '))})</li>` : ''}
     <li><b>Тоот</b> хэсэгт хаалганыхаа дугаарыг бичнэ${range ? ` (${esc(range)})` : ''}</li>
     <li>Нэр, утасны дугаараа бичээд өөрийн нууц үгээ тохируулна</li>
     <li>Болоо. Төлбөр, зарлал, засварын хүсэлт бүгд утсанд тань байна</li>

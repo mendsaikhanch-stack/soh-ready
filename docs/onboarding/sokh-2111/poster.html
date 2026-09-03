@@ -1,0 +1,78 @@
+<!doctype html><html lang="mn"><head><meta charset="utf-8"><style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+         -webkit-font-smoothing: antialiased; background:#eef1f7; display:grid; place-items:center; }
+  .sheet { background:#fff; color:#0e1b30; display:flex; flex-direction:column; overflow:hidden; }
+  .brandbar { display:flex; align-items:center; gap:16px; }
+  .dot { background:#2563eb; color:#fff; display:grid; place-items:center; font-weight:800; border-radius:22px; }
+  .wordmark { font-weight:800; letter-spacing:-0.02em; }
+  .tag { color:#4a5b76; }
+  h1 { margin:0; font-weight:800; letter-spacing:-0.03em; line-height:1.06; }
+  h1 em { font-style:normal; color:#2563eb; }
+  .lede { color:#4a5b76; margin:0; }
+  .perks { list-style:none; margin:0; padding:0; }
+  .perks li { display:flex; align-items:center; gap:14px; }
+  .qrframe { background:#fff; border:3px solid #d9e1ee; border-radius:26px; display:grid; place-items:center; }
+  .steps { list-style:none; margin:0; padding:0; counter-reset:s; }
+  .steps li { counter-increment:s; display:flex; gap:16px; align-items:flex-start; }
+  .steps li::before { content:counter(s); background:#2563eb; color:#fff; font-weight:800;
+    border-radius:50%; display:grid; place-items:center; flex:none; }
+  .note { background:#f3f6fc; border:1px solid #d9e1ee; border-radius:18px; color:#31405c; }
+  .url { color:#2563eb; font-weight:700; word-break:break-all; }
+  /* «Нүүр хуудсанд нэмэх» — бүртгүүлээд хаачихвал дахин ирэхэд хэцүү тул
+     иконоо хадгалуулах нь хамгийн чухал алхам. */
+  .keep { background:#eef4ff; border:1px solid #c7d9f7; border-radius:18px; color:#26364f; }
+  .keep .row { display:flex; align-items:flex-start; }
+  .keep .row > span:last-child { flex:1; }
+  .keep .os { background:#2563eb; color:#fff; border-radius:999px; font-weight:700; flex:none; text-align:center; }
+
+  @page { size: A4; margin: 0; }
+  body { background:#fff; }
+  .sheet { width:210mm; min-height:297mm; padding:18mm 16mm; }
+  .brandbar .dot { width:52px; height:52px; font-size:28px; border-radius:18px; }
+  .brandbar .wordmark { font-size:32px; }
+  .brandbar .tag { font-size:17px; margin-left:auto; }
+  h1 { font-size:44px; margin-top:26px; }
+  .lede { font-size:19px; margin-top:14px; }
+  .qrwrap { text-align:center; margin:26px 0; }
+  .qrframe { width:300px; height:300px; margin:0 auto; }
+  .qrframe svg { width:255px; height:255px; }
+  .scan { font-size:17px; color:#4a5b76; margin:12px 0 4px; }
+  .steps li { font-size:19px; margin-bottom:14px; line-height:1.45; }
+  .steps li::before { width:32px; height:32px; font-size:17px; }
+  .keep { font-size:16px; padding:14px 18px; margin-top:16px; line-height:1.5; }
+  .keep > b { display:block; font-size:17px; margin-bottom:8px; }  /* зөвхөн гарчиг — мөр доторх <b> инлайн хэвээр */
+  .keep .row { gap:10px; margin-bottom:6px; }
+  .keep .os { width:78px; font-size:13px; padding:3px 0; }
+  .keep .tail { margin:8px 0 0; font-size:14px; color:#4a5b76; }
+  .note { font-size:14px; padding:12px 18px; margin-top:14px; line-height:1.5; }
+  .foot { margin-top:auto; padding-top:16px; border-top:2px solid #d9e1ee; font-size:15px; color:#4a5b76; }
+</style></head><body><div class="sheet">
+  <div class="brandbar"><div class="dot">Х</div><div class="wordmark">Хотол</div><div class="tag">Өрнөлт</div></div>
+  <h1>Байрныхаа мэдээллийг<br><em>утаснаасаа</em> хараарай</h1>
+  <p class="lede">Манай СӨХ Хотол системд шилжлээ. 112 айл бүгд бүртгэгдсэн байгаа —
+     та зөвхөн өөрийгөө холбоно.</p>
+  <div class="qrwrap">
+    <div class="qrframe"><svg height="255" width="255" viewBox="0 0 29 29" role="img"><path fill="#ffffff" d="M0,0 h29v29H0z" shape-rendering="crispEdges"></path><path fill="#0e1b30" d="M0 0h7v1H0zM12 0h3v1H12zM17 0h3v1H17zM22,0 h7v1H22zM0 1h1v1H0zM6 1h1v1H6zM11 1h2v1H11zM14 1h2v1H14zM17 1h1v1H17zM20 1h1v1H20zM22 1h1v1H22zM28,1 h1v1H28zM0 2h1v1H0zM2 2h3v1H2zM6 2h1v1H6zM8 2h2v1H8zM12 2h1v1H12zM14 2h2v1H14zM20 2h1v1H20zM22 2h1v1H22zM24 2h3v1H24zM28,2 h1v1H28zM0 3h1v1H0zM2 3h3v1H2zM6 3h1v1H6zM8 3h1v1H8zM10 3h1v1H10zM12 3h2v1H12zM17 3h1v1H17zM19 3h1v1H19zM22 3h1v1H22zM24 3h3v1H24zM28,3 h1v1H28zM0 4h1v1H0zM2 4h3v1H2zM6 4h1v1H6zM8 4h1v1H8zM10 4h1v1H10zM12 4h1v1H12zM14 4h1v1H14zM16 4h1v1H16zM19 4h2v1H19zM22 4h1v1H22zM24 4h3v1H24zM28,4 h1v1H28zM0 5h1v1H0zM6 5h1v1H6zM8 5h2v1H8zM11 5h3v1H11zM15 5h4v1H15zM20 5h1v1H20zM22 5h1v1H22zM28,5 h1v1H28zM0 6h7v1H0zM8 6h1v1H8zM10 6h1v1H10zM12 6h1v1H12zM14 6h1v1H14zM16 6h1v1H16zM18 6h1v1H18zM20 6h1v1H20zM22,6 h7v1H22zM8 7h3v1H8zM18 7h3v1H18zM0 8h1v1H0zM2 8h5v1H2zM10 8h2v1H10zM13 8h1v1H13zM17 8h1v1H17zM19 8h1v1H19zM22 8h5v1H22zM2 9h4v1H2zM7 9h1v1H7zM9 9h1v1H9zM11 9h1v1H11zM14 9h1v1H14zM16 9h1v1H16zM18 9h7v1H18zM28,9 h1v1H28zM0 10h4v1H0zM5 10h4v1H5zM11 10h2v1H11zM15 10h2v1H15zM20 10h3v1H20zM2 11h1v1H2zM4 11h1v1H4zM10 11h3v1H10zM14 11h1v1H14zM16 11h1v1H16zM19 11h1v1H19zM22 11h2v1H22zM25 11h1v1H25zM27 11h1v1H27zM1 12h8v1H1zM11 12h1v1H11zM13 12h1v1H13zM17 12h1v1H17zM25 12h2v1H25zM0 13h4v1H0zM5 13h1v1H5zM7 13h1v1H7zM9 13h1v1H9zM11 13h2v1H11zM14 13h1v1H14zM16 13h1v1H16zM18 13h5v1H18zM24 13h1v1H24zM28,13 h1v1H28zM0 14h1v1H0zM2 14h2v1H2zM5 14h2v1H5zM11 14h2v1H11zM15 14h3v1H15zM21 14h3v1H21zM25 14h2v1H25zM2 15h1v1H2zM4 15h1v1H4zM14 15h1v1H14zM19 15h3v1H19zM23 15h2v1H23zM27 15h1v1H27zM0 16h1v1H0zM3 16h4v1H3zM12 16h2v1H12zM15 16h3v1H15zM19 16h1v1H19zM23 16h1v1H23zM25 16h2v1H25zM0 17h1v1H0zM2 17h2v1H2zM7 17h3v1H7zM11 17h1v1H11zM14 17h1v1H14zM16 17h4v1H16zM21 17h4v1H21zM26 17h1v1H26zM28,17 h1v1H28zM0 18h1v1H0zM2 18h1v1H2zM6 18h3v1H6zM10 18h3v1H10zM15 18h2v1H15zM18 18h1v1H18zM22 18h2v1H22zM26 18h1v1H26zM0 19h1v1H0zM2 19h1v1H2zM4 19h2v1H4zM9 19h1v1H9zM14 19h1v1H14zM16 19h1v1H16zM20 19h1v1H20zM22 19h3v1H22zM27 19h1v1H27zM0 20h1v1H0zM3 20h6v1H3zM11 20h2v1H11zM16 20h2v1H16zM19 20h6v1H19zM26,20 h3v1H26zM8 21h1v1H8zM11 21h1v1H11zM13 21h1v1H13zM20 21h1v1H20zM24,21 h5v1H24zM0 22h7v1H0zM9 22h2v1H9zM12 22h4v1H12zM17 22h4v1H17zM22 22h1v1H22zM24 22h3v1H24zM0 23h1v1H0zM6 23h1v1H6zM8 23h1v1H8zM10 23h1v1H10zM13 23h1v1H13zM19 23h2v1H19zM24 23h1v1H24zM0 24h1v1H0zM2 24h3v1H2zM6 24h1v1H6zM8 24h1v1H8zM10 24h2v1H10zM14 24h4v1H14zM20 24h5v1H20zM26,24 h3v1H26zM0 25h1v1H0zM2 25h3v1H2zM6 25h1v1H6zM8 25h1v1H8zM13 25h1v1H13zM16 25h1v1H16zM19 25h2v1H19zM23 25h1v1H23zM25,25 h4v1H25zM0 26h1v1H0zM2 26h3v1H2zM6 26h1v1H6zM8 26h4v1H8zM14 26h3v1H14zM19 26h2v1H19zM22 26h6v1H22zM0 27h1v1H0zM6 27h1v1H6zM9 27h1v1H9zM11 27h1v1H11zM14 27h3v1H14zM18 27h1v1H18zM20 27h1v1H20zM23 27h1v1H23zM25 27h1v1H25zM27 27h1v1H27zM0 28h7v1H0zM8 28h3v1H8zM14 28h2v1H14zM17 28h1v1H17zM19 28h1v1H19zM21 28h1v1H21zM23 28h4v1H23z" shape-rendering="crispEdges"></path></svg></div>
+    <p class="scan">Утасныхаа камераар уншуулна уу</p>
+    <p class="url" style="font-size:17px">https://www.khotol.com/register?sokh=2111</p>
+  </div>
+  <ol class="steps">
+    <li>QR кодыг утасныхаа камераар уншуулна</li>
+    <li><b>Байрны дугаар</b> хэсэгт байраа бичнэ (11 / 9А / 9Б)</li>
+    <li><b>Тоот</b> хэсэгт хаалганыхаа дугаарыг бичнэ (1–40)</li>
+    <li>Нэр, утасны дугаараа бичээд өөрийн нууц үгээ тохируулна</li>
+    <li>Болоо. Төлбөр, зарлал, засварын хүсэлт бүгд утсанд тань байна</li>
+  </ol>
+  <div class="keep">
+    <b>Дараа нь утсандаа апп болгож хадгална уу</b>
+    <div class="row"><span class="os">Android</span><span>Chrome-ийн баруун дээд булангийн <b>цэг гурвыг</b> дарж «Нүүр хуудсанд нэмэх»</span></div>
+    <div class="row"><span class="os">iPhone</span><span>Safari-ийн доод талын <b>хуваалцах</b> товчийг дарж «Нүүр хуудсанд нэмэх»</span></div>
+    <p class="tail">Ингэвэл утсанд тань «Хотол» икон үүсч, дараа нь QR хайлгүй шууд нээгдэнэ.</p>
+  </div>
+  <div class="note">
+    <b>Апп татах шаардлагагүй</b> — QR-аар шууд нээгдэнэ. Утасны дугаар нь таны нэвтрэх нэр болно.
+    Нэг тоотод нэг хүн бүртгүүлнэ. Асуудал гарвал СӨХ-ийн даргад хандана уу.
+  </div>
+  <div class="foot">Өрнөлт · Хотол — www.khotol.com</div>
+</div></body></html>
