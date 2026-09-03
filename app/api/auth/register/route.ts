@@ -7,6 +7,23 @@ import { normalizeSohName } from '@/app/lib/directory/normalize';
 
 const CLAIM_COOKIE = 'manual-hoa-claim';
 
+/**
+ * Байрны дугаарыг зөөлөн харьцуулах хэлбэрт оруулна.
+ * Дарга «9А», оршин суугч «9а», «9 A», «9A байр» гэж бичсэн ч таарах ёстой.
+ * Латин a/b/c/e/o/p/x нь кирилл а/б/с/е/о/р/х-тэй ижил харагддаг тул хөрвүүлнэ.
+ */
+const LOOKALIKE: Record<string, string> = {
+  a: 'а', b: 'б', c: 'с', e: 'е', o: 'о', p: 'р', x: 'х', y: 'у', k: 'к', m: 'м', t: 'т', h: 'н',
+};
+function normBuilding(v: unknown): string {
+  return String(v ?? '')
+    .toLowerCase()
+    .replace(/байр|дугаар/g, '')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .replace(/[a-z]/g, (ch) => LOOKALIKE[ch] ?? ch)
+    .replace(/^(\d+)р$/, '$1');   // «11-р байр» → «11»
+}
+
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') || 'unknown';
   const { allowed, retryAfterSec } = registerLimiter.check(ip);
@@ -15,7 +32,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { phone, password, name, apartment, unit, sokh_id: sokhIdRaw, sokh_name, khoroo_id } = await req.json();
+    const { phone, password, name, apartment, unit, building, sokh_id: sokhIdRaw, sokh_name, khoroo_id } = await req.json();
     let sokh_id: number | undefined = sokhIdRaw;
 
     if (!phone || !password || !name) {
@@ -37,6 +54,9 @@ export async function POST(req: NextRequest) {
     }
     if (unit && (typeof unit !== 'string' || unit.trim().length > 20)) {
       return NextResponse.json({ error: 'Тоот буруу байна' }, { status: 400 });
+    }
+    if (building && (typeof building !== 'string' || building.trim().length > 20)) {
+      return NextResponse.json({ error: 'Байрны дугаар буруу байна' }, { status: 400 });
     }
 
     const cleanPhone = phone.trim();
@@ -120,6 +140,7 @@ export async function POST(req: NextRequest) {
     // айл өөр утсаар бүртгүүлбэл тэр тоот давхар мөр болж, айлын тоо ба нийт
     // дүн буруу гардаг байв. Одоо эхлээд байгаа мөрийг хайна.
     const cleanUnit = typeof unit === 'string' ? unit.trim() : '';
+    const cleanBuilding = typeof building === 'string' ? building.trim() : '';
     let resident: { id: number } | null = null;
     let claimedExisting = false;
     let pending = false;
@@ -127,11 +148,18 @@ export async function POST(req: NextRequest) {
     if (sokh_id && cleanUnit) {
       const { data: matches } = await supabaseAdmin
         .from('residents')
-        .select('id, auth_user_id')
+        .select('id, auth_user_id, building')
         .eq('sokh_id', sokh_id)
         .eq('apartment', cleanUnit);
 
-      const free = (matches || []).filter((m) => !m.auth_user_id);
+      let free = (matches || []).filter((m) => !m.auth_user_id);
+      // Олон байртай СӨХ-д тоот давхцдаг (жишээ нь Өрнөлт: 9А-12, 9Б-12, 11-12).
+      // Тийм үед бүртгүүлэгчийн бичсэн байраар нарийсгана.
+      if (free.length > 1 && cleanBuilding) {
+        const want = normBuilding(cleanBuilding);
+        const narrowed = free.filter((m) => normBuilding(m.building) === want);
+        if (narrowed.length === 1) free = narrowed;
+      }
       // Яг нэг эзэнгүй мөр байвал л холбоно. Хэд хэдэн бол аль нь болох нь
       // тодорхойгүй тул даргад шийдүүлнэ.
       if (free.length === 1) {
@@ -174,6 +202,8 @@ export async function POST(req: NextRequest) {
           name: name.trim(),
           phone: cleanPhone,
           apartment: cleanUnit || apartment || '',
+          // Байраа бичсэн бол хадгална — дарга давхардсан мөрийг ялгахад хэрэгтэй
+          building: cleanBuilding || null,
           debt: 0,
           sokh_id,
           auth_user_id: authData.user?.id ?? null,

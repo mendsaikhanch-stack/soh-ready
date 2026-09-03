@@ -218,6 +218,9 @@ function RegisterInner() {
           // Цэвэр тоот — сервер тал үүгээр даргын бүртгэлтэй тулгаж, байгаа
           // мөр рүү нь холбоно (давхар мөр үүсгэхгүй).
           unit: door.trim() || undefined,
+          // Олон байртай СӨХ-д тоот давхцдаг тул байрыг нь бас илгээнэ —
+          // сервер эхлээд тоотоор, олон таарвал байраар нь ялгана.
+          building: apartment.trim() || undefined,
           sokh_id: selectedSokh?.id,
           sokh_name: !selectedSokh && customSokhName.trim() ? customSokhName.trim() : undefined,
           khoroo_id: !selectedSokh && customSokhName.trim() ? selectedKhoroo?.id : undefined,
