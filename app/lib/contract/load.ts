@@ -25,6 +25,8 @@ export interface ContractState {
     claim_status: string;
   };
   apartments: number;
+  setupDiscountPercent: number | null;
+  setupListPerUnit: number | null;
   /** Тухайн СӨХ-д үйлчлэх тариф — үнэгүй сарыг нь сунгасан бол тэрүүгээр */
   tariff: PlatformTariff;
   /** Гэрээ татах эрх нээгдсэн эсэх */
@@ -62,6 +64,19 @@ async function loadFreeMonthsOverride(sokhId: number): Promise<number | null> {
   return (data.free_months_override as number) ?? null;
 }
 
+/** Суурилуулалтын хөнгөлөлт (%). Гэрээ ба нэхэмжлэх ижил дүн харуулахын тулд
+ *  хэрэгтэй. free_months_override-той ижил шалтгаанаар тусад нь уншина —
+ *  миграц ажиллаагүй орчинд багана нь байхгүй. */
+async function loadSetupDiscount(sokhId: number): Promise<number | null> {
+  const { data, error } = await supabaseAdmin
+    .from('sokh_organizations')
+    .select('setup_discount_percent')
+    .eq('id', sokhId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return (data.setup_discount_percent as number) ?? null;
+}
+
 export async function loadContractState(sokhId: number): Promise<ContractState | null> {
   let migrated = true;
   let row: Record<string, unknown> | null = null;
@@ -95,6 +110,9 @@ export async function loadContractState(sokhId: number): Promise<ContractState |
     .select('id', { count: 'exact', head: true })
     .eq('sokh_id', sokhId);
 
+  const listTariff = await loadTariff();
+  const discount = await loadSetupDiscount(sokhId);
+
   return {
     org: {
       id: Number(row.id),
@@ -106,7 +124,9 @@ export async function loadContractState(sokhId: number): Promise<ContractState |
       claim_status: String(row.claim_status || ''),
     },
     apartments: count || 0,
-    tariff: orgTariff(await loadTariff(), await loadFreeMonthsOverride(sokhId)),
+    setupDiscountPercent: discount,
+    setupListPerUnit: discount ? listTariff.setup_per_unit : null,
+    tariff: orgTariff(listTariff, await loadFreeMonthsOverride(sokhId), discount),
     unlocked_at: migrated ? ((row.contract_unlocked_at as string) ?? null) : null,
     number: migrated ? ((row.contract_number as string) ?? null) : null,
     downloaded_at: migrated ? ((row.contract_downloaded_at as string) ?? null) : null,
@@ -135,6 +155,8 @@ export function buildContractInput(
     apartments: state.apartments,
     tariff: state.tariff,
     activatedAt: state.org.activated_at,
+    setupDiscountPercent: state.setupDiscountPercent,
+    setupListPerUnit: state.setupListPerUnit,
   };
 }
 

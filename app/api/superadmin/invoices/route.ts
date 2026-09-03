@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { getAuthRole } from '@/app/lib/session-token';
-import { DEFAULT_TARIFF, setupFee, monthlyFee } from '@/app/lib/platform-pricing';
+import { DEFAULT_TARIFF, orgTariff, setupFee, monthlyFee } from '@/app/lib/platform-pricing';
 
 async function requireSuperadmin() {
   const auth = await getAuthRole();
@@ -217,6 +217,18 @@ export async function POST(req: NextRequest) {
       .from('platform_tariff').select('*').eq('id', 1).maybeSingle();
     const tariff = { ...DEFAULT_TARIFF, ...(tRow || {}) };
 
+    // СӨХ тус бүрийн хөнгөлөлтийг тооцно — гэрээ, нэхэмжлэх хоёр зөрөх ёсгүй
+    const { data: orgBilling } = await supabaseAdmin
+      .from('sokh_organizations')
+      .select('free_months_override, setup_discount_percent')
+      .eq('id', sokh_id)
+      .maybeSingle();
+    const orgT = orgTariff(
+      tariff,
+      (orgBilling?.free_months_override as number) ?? null,
+      (orgBilling?.setup_discount_percent as number) ?? null,
+    );
+
     const { count } = await supabaseAdmin
       .from('residents')
       .select('id', { count: 'exact', head: true })
@@ -228,8 +240,8 @@ export async function POST(req: NextRequest) {
     }
 
     const amount = kind === 'setup'
-      ? setupFee(tariff, apartments)
-      : monthlyFee(tariff, apartments);
+      ? setupFee(orgT, apartments)
+      : monthlyFee(orgT, apartments);
 
     // Тухайн сарын дараа сарын 15-нд төлөх хугацаа дуусна
     const dueDate = new Date(period_year, period_month, 15).toISOString().split('T')[0];
@@ -242,7 +254,11 @@ export async function POST(req: NextRequest) {
       amount,
       calculation_details: {
         apartments,
-        per_unit_fee: kind === 'setup' ? tariff.setup_per_unit : tariff.monthly_per_unit,
+        per_unit_fee: kind === 'setup' ? orgT.setup_per_unit : orgT.monthly_per_unit,
+        ...(kind === 'setup' && orgBilling?.setup_discount_percent
+          ? { list_per_unit_fee: tariff.setup_per_unit,
+              discount_percent: orgBilling.setup_discount_percent }
+          : {}),
         unit_total: amount,
         plan_name: kind === 'setup' ? 'Суурилуулалт' : 'Сарын хураамж',
       },

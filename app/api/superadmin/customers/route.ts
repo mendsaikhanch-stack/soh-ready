@@ -294,6 +294,18 @@ export async function GET() {
     .select('id, free_months_override, billing_note, settled_at, settled_note, settled_by')
     .in('id', orgIds);
   const billingMigrated = !billErr;
+
+  // Суурилуулалтын хөнгөлөлтийг тусад нь уншина: setup_discount_percent багана
+  // байхгүй орчинд дээрх select-тэй нийлүүлбэл үнэгүй сар, тооцооны тэмдэглэгээ
+  // бүхэлдээ «миграц ажиллаагүй» болж алдагдана.
+  const discountByOrg = new Map<number, number | null>();
+  const { data: discRows } = await supabaseAdmin
+    .from('sokh_organizations')
+    .select('id, setup_discount_percent')
+    .in('id', orgIds);
+  for (const r of discRows || []) {
+    discountByOrg.set(Number(r.id), (r.setup_discount_percent as number) ?? null);
+  }
   for (const r of billRows || []) {
     billingByOrg.set(Number(r.id), {
       free_months_override: (r.free_months_override as number) ?? null,
@@ -311,8 +323,8 @@ export async function GET() {
     const orgInvoices = invByOrg.get(o.id) || [];
     const billing = billingByOrg.get(o.id) || null;
 
-    // Үнэгүй сарыг тухайн СӨХ-д сунгасан бол тарифыг нь тэрүүгээр солино
-    const t = orgTariff(tariff, billing?.free_months_override);
+    // Үнэгүй сар, суурилуулалтын хөнгөлөлтийг тухайн СӨХ-д тохируулсан бол тарифыг нь солино
+    const t = orgTariff(tariff, billing?.free_months_override, discountByOrg.get(o.id) ?? null);
 
     const setupInvoice = orgInvoices.find(i => i.kind === 'setup') || null;
     const monthlyInvoices = orgInvoices.filter(i => i.kind !== 'setup');

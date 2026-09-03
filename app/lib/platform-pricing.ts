@@ -34,10 +34,21 @@ export const DEFAULT_TARIFF: PlatformTariff = {
 export function orgTariff(
   tariff: PlatformTariff,
   freeMonthsOverride: number | null | undefined,
+  setupDiscountPercent?: number | null,
 ): PlatformTariff {
-  if (freeMonthsOverride == null) return tariff;
-  const n = Math.max(0, Math.round(freeMonthsOverride));
-  return { ...tariff, free_months_below: n, free_months_above: n };
+  let t = tariff;
+  if (freeMonthsOverride != null) {
+    const n = Math.max(0, Math.round(freeMonthsOverride));
+    t = { ...t, free_months_below: n, free_months_above: n };
+  }
+  // Суурилуулалтын хөнгөлөлт — тохиролцоогоор СӨХ тус бүрд өгнө.
+  // Гэрээ ба нэхэмжлэх хоёр ижил дүн харуулахын тулд ЭНД тарифыг өөрчилнө,
+  // дэлгэц бүр өөрөө хасаж эхэлбэл нэг нь хуучин үнээр үлдэнэ.
+  if (setupDiscountPercent != null) {
+    const pct = Math.min(100, Math.max(0, Math.round(setupDiscountPercent)));
+    if (pct > 0) t = { ...t, setup_per_unit: Math.round(t.setup_per_unit * (100 - pct) / 100) };
+  }
+  return t;
 }
 
 /** Нэг удаагийн суурилуулалтын төлбөр */

@@ -58,6 +58,11 @@ export interface ContractInput {
   tariff: PlatformTariff;
   /** Идэвхжсэн огноо — үнэгүй хугацаа эндээс тоологдоно */
   activatedAt?: string | null;
+  /** Суурилуулалтын хөнгөлөлт (%). tariff.setup_per_unit аль хэдийн хөнгөлөгдсөн
+   *  байдаг — энэ нь зөвхөн гэрээнд «хөнгөлөлттэй» гэдгийг тайлбарлахад хэрэгтэй. */
+  setupDiscountPercent?: number | null;
+  /** Хөнгөлөлтгүй үеийн жишиг үнэ (₮/айл) */
+  setupListPerUnit?: number | null;
 }
 
 export interface ContractSection {
@@ -145,7 +150,10 @@ export function contractSections(input: ContractInput): ContractSection[] {
       title: 'Төлбөр, тооцоо',
       clauses: [
         `Гэрээ байгуулах үеийн айлын тоо: ${units}. Төлбөрийг айлын тоогоор тооцно.`,
-        `Суурилуулалтын нэг удаагийн төлбөр: ${units} айл × ${money(tariff.setup_per_unit)} = ${num(setup, 12)}.`,
+        `Суурилуулалтын нэг удаагийн төлбөр: ${units} айл × ${money(tariff.setup_per_unit)} = ${num(setup, 12)}.`
+          + (input.setupDiscountPercent && input.setupListPerUnit
+              ? ` Энэ нь жишиг үнэ ${money(input.setupListPerUnit)}-өөс ${input.setupDiscountPercent}% хөнгөлсөн, зөвхөн энэ гэрээнд хамаарах тусгай нөхцөл юм.`
+              : ''),
         `Сарын хураамж: ${units} айл × ${money(tariff.monthly_per_unit)} = ${num(monthly, 12)}.`,
         `Үйлчилгээ эхэлснээс хойш ${isBlank ? blank(null, 4) : free} сарын хугацаанд сарын хураамж тооцогдохгүй. Сарын хураамж ${mnDate(start)}-ний өдрөөс эхэлнэ.`,
         'Гүйцэтгэгч сар бүрийн эхний 5 хоногт нэхэмжлэх илгээх ба Захиалагч тухайн сарын 15-ны дотор төлнө.',
