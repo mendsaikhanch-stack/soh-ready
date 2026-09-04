@@ -20,7 +20,10 @@
 //   --due=25           тухайн сарын хэд хүртэл төлөх (анхдагч 25)
 //   --no-debt          өмнөх өрийн мөрийг оруулахгүй
 //   --qr               банкны QR-ыг нэхэмжлэх дээр бас гаргана (анхдагчаар ГАРАХГҮЙ)
-//   --blank-payer      хариуцагчийн ТТД/нэр/хаяг/утас/гэрээг ХООСОН үлдээж, гараар бөглөнө
+//   --blank            БҮРЭН ХООСОН МАЯГТ — юу ч бичээгүй, хаана ч хэрэглэнэ.
+//                      --month, --unit, --fee шаардахгүй. --rows=N мөрийн тоо (анхдагч 8)
+//   --blank-payer      нэхэмжлэхийн дугаар, хариуцагчийн ТТД/нэр/хаяг/утас/гэрээ,
+//                      гүйлгээний утга, ОГНОО, төлөх хугацааг ХООСОН үлдээж, гараар бөглөнө
 //
 // Гаралт: docs/invoices/sokh-<id>/<YYYY-MM>/
 //   nekhemjlekh.pdf   — айл бүр нэг нүүр, дараалуулсан (хэвлэхэд)
@@ -58,6 +61,11 @@ const WITH_BUSINESS = process.argv.includes('--with-business') || BUSINESS_ONLY;
 const NO_DEBT = process.argv.includes('--no-debt');
 const WITH_QR = process.argv.includes('--qr');   // банкны QR-ыг нэхэмжлэх дээр гаргах эсэх
 const BLANK_PAYER = process.argv.includes('--blank-payer'); // хариуцагчийн талыг гараар бөглөхөөр хоосон
+// БҮРЭН ХООСОН МАЯГТ — бараа/үйлчилгээ, код, үнэ, дүн, огноо бүгд хоосон.
+// Нэхэмжлэгчийн тал (СӨХ, ТТД, банк, данс) л хэвлэгдэнэ — тэр л тамга дардаг.
+// Дахин ашиглах маягт тул --month, --unit, --fee юу ч хэрэггүй.
+const BLANK_FORM = process.argv.includes('--blank');
+const BLANK_ROWS = Math.max(1, Number(arg('rows') || 8));
 const ONLY_UNIT = arg('unit');
 const MONTH = arg('month');
 const MONTHS = Math.max(1, Number(arg('months') || 1));   // «Тоо, хэмжээ» багана
@@ -66,11 +74,11 @@ const PAYER = { name: arg('payer-name'), tin: arg('payer-tin'), address: arg('pa
 const DUE_DAY = Number(arg('due') || 25);          // тухайн сарын хэддэхэн хүртэл төлөх
 const SERVICE_CODE = arg('code') || '7221201';     // Орон сууц ашиглалтын конторын үйлчилгээ
 
-if (!Number.isFinite(sokhId) || sokhId <= 0 || !MONTH || !/^\d{4}-\d{2}$/.test(MONTH)) {
+if (!Number.isFinite(sokhId) || sokhId <= 0 || (!BLANK_FORM && (!MONTH || !/^\d{4}-\d{2}$/.test(MONTH)))) {
   console.error('Ашиглах нь: node scripts/make-sokh-invoice.mjs <sokh_id> --month=YYYY-MM [--all|--unit=9Б-34] [--with-business]');
   process.exit(1);
 }
-const [YEAR, MON] = MONTH.split('-').map(Number);
+const [YEAR, MON] = (MONTH || '2000-01').split('-').map(Number);
 
 // ---- env ----
 for (const line of fs.readFileSync(path.join(ROOT, '.env.local'), 'utf8').split('\n')) {
@@ -121,14 +129,14 @@ residents.sort((a, b) =>
   (Number(a.apartment) || 0) - (Number(b.apartment) || 0) ||
   String(a.apartment).localeCompare(String(b.apartment), 'mn'));
 
-if (!residents.length) { console.error('❌ Нэгж олдсонгүй'); process.exit(1); }
+if (!BLANK_FORM && !residents.length) { console.error('❌ Нэгж олдсонгүй'); process.exit(1); }
 
 // Тарифгүй нэгжид таамгаар дүн бичихгүй — тамга дарж явуулах баримт тул зогсооно.
 // Айл нь СӨХ-ийн ерөнхий хураамжийг авна, ААН нь ЗААВАЛ өөрийн тарифтай байх ёстой.
 const feeOf = (r) => FEE_OVERRIDE ?? (r.unit_kind === 'business'
   ? (r.monthly_fee ?? null)
   : (r.monthly_fee ?? org.monthly_fee ?? null));
-const noFee = residents.filter((r) => !(feeOf(r) > 0));
+const noFee = BLANK_FORM ? [] : residents.filter((r) => !(feeOf(r) > 0));
 if (noFee.length) {
   console.error(`\n❌ ${noFee.length} нэгжийн сарын тариф тодорхойгүй байна — дүнг таамгаар бичихгүй:`);
   noFee.forEach((r) => console.error(`   ${r.building || ''}-${r.apartment}  ${r.name}`));
@@ -272,7 +280,9 @@ function sheet(r) {
   return `
 <div class="sheet">
   <p class="doctitle">НЭХЭМЖЛЭХ</p>
-  <p class="subtitle"><span class="no">№ ${esc(invNo)}</span> · ${esc(org.name)}</p>
+  <p class="subtitle">${BLANK_PAYER
+    ? `<span class="no fill">№ ${wline}</span>`
+    : `<span class="no">№ ${esc(invNo)}</span>`} · ${esc(org.name)}</p>
 
   <div class="parties">
     <div>
@@ -297,10 +307,14 @@ function sheet(r) {
       <p>НЭР: <b>${esc(PAYER.name || r.name)}</b></p>
       <p>Хаяг: <b>${esc(PAYER.address || addr)}</b></p>
       <p>Утас: ${esc(PAYER.phone || r.phone || blank)}</p>
-      <p>Гэрээний №: ${esc(blank)}</p>`}
+      <p class="fill">Гэрээний №: ${wline}</p>`}
+      ${BLANK_PAYER ? `
+      <p class="fill">Нэхэмжилсэн огноо: ${'.'.repeat(28)}</p>
+      <p class="fill">Төлбөр хийх хугацаа (Хоног): ${'.'.repeat(14)}</p>
+      <p class="fill">Төлөх эцсийн хугацаа: ${'.'.repeat(24)}</p>` : `
       <p>Нэхэмжилсэн огноо: ${esc(issueDate)}</p>
       <p>Төлбөр хийх хугацаа (Хоног): ${dueDays}</p>
-      <p>Төлөх эцсийн хугацаа: <b>${esc(dueDate)}</b></p>
+      <p>Төлөх эцсийн хугацаа: <b>${esc(dueDate)}</b></p>`}
     </div>
   </div>
 
@@ -377,12 +391,109 @@ function sheet(r) {
 </div>`;
 }
 
+/** БҮРЭН ХООСОН МАЯГТ — нэхэмжлэгчийн талаас өөр бүх зүйл цэгэн зураас.
+ *  Нэг удаа хэвлээд олон дахин ашиглана: ямар ч үйлчилгээ, ямар ч хариуцагч. */
+function blankSheet() {
+  const L = (n) => '.'.repeat(n);
+  const rows = Array.from({ length: BLANK_ROWS }, (_, i) => `
+      <tr>
+        <td class="c">${i + 1}</td><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td>
+      </tr>`).join('');
+  return `
+<div class="sheet">
+  <p class="doctitle">НЭХЭМЖЛЭХ</p>
+  <p class="subtitle"><span class="no fill">№ ${L(34)}</span> · ${esc(org.name)}</p>
+
+  <div class="parties">
+    <div>
+      <h3>Нэхэмжлэгч:</h3>
+      <p>ТТД: ${esc(org.tax_id || blank)}</p>
+      <p>НЭР: <b>${esc(org.name)}</b></p>
+      <p>Хаяг: ${esc(org.address || blank)}</p>
+      <p>Утас: ${esc(org.phone || blank)}</p>
+      <p>Э-Шуудан: ${esc(org.contact_email || blank)}</p>
+      <p>Банкны нэр: ${esc(bank?.bank_name || blank)}</p>
+      <p>Банкны дансны дугаар: <b>${esc(bank?.account_number || blank)}</b></p>
+    </div>
+    <div>
+      <h3>Хариуцагч:</h3>
+      <p class="fill">ТТД: ${L(38)}</p>
+      <p class="fill">НЭР: ${L(38)}</p>
+      <p class="fill">Хаяг: ${L(38)}</p>
+      <p class="fill">Утас: ${L(38)}</p>
+      <p class="fill">Гэрээний №: ${L(32)}</p>
+      <p class="fill">Нэхэмжилсэн огноо: ${L(24)}</p>
+      <p class="fill">Төлбөр хийх хугацаа (Хоног): ${L(12)}</p>
+      <p class="fill">Төлөх эцсийн хугацаа: ${L(20)}</p>
+    </div>
+  </div>
+
+  <table class="items">
+    <thead>
+      <tr>
+        <th style="width:26px">Д/д</th>
+        <th>Бараа, ажил, үйлчилгээний нэр</th>
+        <th style="width:58px">Код</th>
+        <th style="width:56px">Хэмжих<br>нэгж</th>
+        <th style="width:56px">Тоо,<br>хэмжээ</th>
+        <th style="width:88px">Нэгжийн үнэ</th>
+        <th style="width:92px">Бүгд үнэ</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <div class="bottom">
+    <div class="totals">
+      <table>
+        <tr><td class="lbl">Бараа, ажил үйлчилгээний үнэ:</td><td class="val">&nbsp;</td></tr>
+        <tr><td class="lbl">Нэмэгдсэн өртгийн албан татвар:</td><td class="val">&nbsp;</td></tr>
+        <tr><td class="lbl">Нийслэл хотын албан татвар:</td><td class="val">&nbsp;</td></tr>
+        <tr class="grand"><td class="lbl">Нийт дүн:</td><td class="val">&nbsp;</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <p class="words fill">Үсгээр: ${L(56)}</p>
+
+  <table class="paybox">
+    <tr><td class="k">Гүйлгээний утга</td><td class="v"><span class="fill">${L(46)}</span></td></tr>
+    <tr><td class="k">Төлөх дүн</td><td class="v"><span class="fill">${L(28)}</span></td></tr>
+  </table>
+  <p class="payhint">
+    Төлбөрөө <b>${esc(bank?.bank_name || '')} ${esc(bank?.account_number || '')}</b>
+    (${esc(bank?.account_holder || org.name)}) данс руу шилжүүлнэ үү.
+    Гүйлгээний утгыг <b>яг дээрх байдлаар</b> бичихийг хүсье.
+  </p>
+
+  <div class="sign">
+    <div>
+      <p>Нэхэмжлэх гаргасан:</p>
+      <p class="line">${esc(/сөх/i.test(org.name) ? org.name : org.name + ' СӨХ')}-ийн дарга</p>
+      <p class="rule">..................................... /гарын үсэг/</p>
+      <p class="stamp">Т А М Г А</p>
+    </div>
+    <div>
+      <p>Хүлээн авсан:</p>
+      <p class="line">&nbsp;</p>
+      <p class="rule">..................................... /гарын үсэг/</p>
+      <p class="rule">Огноо: 20....... оны ........ сарын ........ өдөр</p>
+    </div>
+  </div>
+
+  <p class="foot">
+    Энэ бол СӨХ-ийн нэхэмжлэх бөгөөд татварын баримт (e-Баримт) БИШ.
+    Төлбөрийн баримтыг төлбөр хийсний дараа банкнаас авна уу.
+  </p>
+</div>`;
+}
+
 const html = `<!doctype html><html lang="mn"><head><meta charset="utf-8">
-<title>${esc(org.name)} — ${MONTH} нэхэмжлэх</title><style>${CSS}</style></head>
-<body>${residents.map(sheet).join('\n')}</body></html>`;
+<title>${esc(org.name)} — ${BLANK_FORM ? 'нэхэмжлэхийн хоосон маягт' : MONTH + ' нэхэмжлэх'}</title><style>${CSS}</style></head>
+<body>${BLANK_FORM ? blankSheet() : residents.map(sheet).join('\n')}</body></html>`;
 
 // ---- гаралт ----
-const outDir = path.join(ROOT, 'docs', 'invoices', `sokh-${sokhId}`, MONTH);
+const outDir = path.join(ROOT, 'docs', 'invoices', `sokh-${sokhId}`, BLANK_FORM ? 'maygt' : MONTH);
 fs.mkdirSync(outDir, { recursive: true });
 const htmlPath = path.join(outDir, 'nekhemjlekh.html');
 fs.writeFileSync(htmlPath, html, 'utf8');
@@ -396,14 +507,14 @@ const first = await page.$('.sheet');
 await first.screenshot({ path: path.join(outDir, 'jishee.png') });
 await browser.close();
 
-const totalSum = residents.reduce((s, r) =>
+const totalSum = BLANK_FORM ? 0 : residents.reduce((s, r) =>
   s + Number(feeOf(r)) * MONTHS + (NO_DEBT ? 0 : Number(r.debt || 0)), 0);
 
 console.log(`\n✅ ${org.name} (#${sokhId}) — ${MONTH} сарын нэхэмжлэх`);
-console.log(`   Нэхэмжлэх:      ${residents.length} ширхэг${ALL ? '' : ONLY_UNIT ? '' : '  (жишээ — бүгдийг гаргах бол --all)'}`);
-console.log(`   Нэгжийн үнэ:    ${money(feeOf(residents[0]))} × ${MONTHS} сар`);
-console.log(`   Нийт дүн:       ${money(totalSum)}  (хураамж + өмнөх өр)`);
-console.log(`   Төлөх хугацаа:  ${dueDate}`);
+console.log(`   Нэхэмжлэх:      ${BLANK_FORM ? `ХООСОН МАЯГТ (${BLANK_ROWS} мөр)` : `${residents.length} ширхэг${ALL || ONLY_UNIT ? '' : '  (жишээ — бүгдийг гаргах бол --all)'}`}`);
+if (!BLANK_FORM) console.log(`   Нэгжийн үнэ:    ${money(feeOf(residents[0]))} × ${MONTHS} сар`);
+if (!BLANK_FORM) console.log(`   Нийт дүн:       ${money(totalSum)}  (хураамж + өмнөх өр)`);
+if (!BLANK_FORM) console.log(`   Төлөх хугацаа:  ${dueDate}`);
 if (!org.tax_id) console.log(`   ⚠️  СӨХ-ийн ТТД байхгүй — нэхэмжлэх дээр хоосон гарна. Даргаас авч DB-д нэм.`);
 if (!bank) console.log(`   ⚠️  Банкны данс бүртгэгдээгүй — төлөх мэдээлэл хоосон гарна.`);
 else if (WITH_QR && !qrDataUri) console.log(`   ⚠️  Банкны QR татагдсангүй — зөвхөн дансны дугаар гарна.`);
