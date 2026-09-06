@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface Package {
   id: number;
@@ -31,7 +32,7 @@ export default function PackagesPage() {
   const [unit, setUnit] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem(`pkg-info-${params.id}`);
+    const saved = safeLocal.getItem(`pkg-info-${params.id}`);
     if (saved) { const d = JSON.parse(saved); setName(d.name); setUnit(d.unit); }
     fetchPackages();
   }, [params.id]);
@@ -56,7 +57,7 @@ export default function PackagesPage() {
 
   const saveName = () => {
     if (!name || !unit) return;
-    localStorage.setItem(`pkg-info-${params.id}`, JSON.stringify({ name, unit }));
+    safeLocal.setItem(`pkg-info-${params.id}`, JSON.stringify({ name, unit }));
   };
 
   const myPackages = packages.filter(p => p.unit_number === unit || p.resident_name === name);

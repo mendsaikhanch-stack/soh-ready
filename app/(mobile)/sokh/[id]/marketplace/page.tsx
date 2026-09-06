@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import ReportButton from '@/app/components/ReportButton';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface Listing {
   id: number;
@@ -56,7 +57,7 @@ export default function MarketplacePage() {
   const [phone, setPhone] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem(`market-name-${params.id}`);
+    const saved = safeLocal.getItem(`market-name-${params.id}`);
     if (saved) { const d = JSON.parse(saved); setSellerName(d.name); setSellerUnit(d.unit); setPhone(d.phone || ''); }
     fetchListings();
   }, [params.id]);
@@ -75,7 +76,7 @@ export default function MarketplacePage() {
   const submit = async () => {
     if (!title || !sellerName) return;
     setSaving(true);
-    localStorage.setItem(`market-name-${params.id}`, JSON.stringify({ name: sellerName, unit: sellerUnit, phone }));
+    safeLocal.setItem(`market-name-${params.id}`, JSON.stringify({ name: sellerName, unit: sellerUnit, phone }));
 
     await supabase.from('marketplace_listings').insert([{
       sokh_id: params.id, seller_name: sellerName, seller_unit: sellerUnit,

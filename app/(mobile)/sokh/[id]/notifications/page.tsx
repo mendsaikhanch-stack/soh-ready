@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface Notification {
   id: string;
@@ -196,14 +197,14 @@ export default function NotificationsPage() {
 
   const getReadAnnouncements = (): number[] => {
     try {
-      const stored = localStorage.getItem(`sokh-${params.id}-read-announcements`);
+      const stored = safeLocal.getItem(`sokh-${params.id}-read-announcements`);
       return stored ? JSON.parse(stored) : [];
     } catch { return []; }
   };
 
   const getReadNotifications = (): string[] => {
     try {
-      const stored = localStorage.getItem(`sokh-${params.id}-read-notifs`);
+      const stored = safeLocal.getItem(`sokh-${params.id}-read-notifs`);
       return stored ? JSON.parse(stored) : [];
     } catch { return []; }
   };
@@ -213,7 +214,7 @@ export default function NotificationsPage() {
     const annIds = notifications
       .filter(n => n.id.startsWith('ann-'))
       .map(n => parseInt(n.id.replace('ann-', '')));
-    localStorage.setItem(`sokh-${params.id}-read-announcements`, JSON.stringify(annIds));
+    safeLocal.setItem(`sokh-${params.id}-read-announcements`, JSON.stringify(annIds));
 
     // Товлосон мэдэгдлүүдийг уншсан болгох
     const snIds = notifications
@@ -221,9 +222,9 @@ export default function NotificationsPage() {
       .map(n => n.id);
     const existingReadNotifs = getReadNotifications();
     const allRead = [...new Set([...existingReadNotifs, ...snIds])];
-    localStorage.setItem(`sokh-${params.id}-read-notifs`, JSON.stringify(allRead));
+    safeLocal.setItem(`sokh-${params.id}-read-notifs`, JSON.stringify(allRead));
 
-    localStorage.setItem(`sokh-${params.id}-notif-seen`, new Date().toISOString());
+    safeLocal.setItem(`sokh-${params.id}-notif-seen`, new Date().toISOString());
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 

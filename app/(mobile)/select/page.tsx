@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { safeSession } from '@/app/lib/safe-storage';
 
 interface City { id: number; name: string; }
 interface District { id: number; city_id: number; name: string; }
@@ -118,7 +119,7 @@ export default function Home() {
     if (trimmed.length < 2) { setError('СӨХ-ийн нэрээ оруулна уу'); return; }
     if (!selectedCity || !selectedDistrict || !selectedKhoroo) return;
     try {
-      window.sessionStorage.setItem('register-prefill', JSON.stringify({
+      safeSession.setItem('register-prefill', JSON.stringify({
         cityId: selectedCity.id,
         districtId: selectedDistrict.id,
         khorooId: selectedKhoroo.id,

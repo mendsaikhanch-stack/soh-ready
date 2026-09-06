@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 type Locale = 'mn' | 'en';
 
@@ -139,13 +140,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('mn');
 
   useEffect(() => {
-    const saved = localStorage.getItem('sokh-locale') as Locale;
+    const saved = safeLocal.getItem('sokh-locale') as Locale;
     if (saved && translations[saved]) setLocaleState(saved);
   }, []);
 
   const setLocale = (l: Locale) => {
     setLocaleState(l);
-    localStorage.setItem('sokh-locale', l);
+    safeLocal.setItem('sokh-locale', l);
   };
 
   const t = (key: string) => translations[locale][key] || translations.mn[key] || key;

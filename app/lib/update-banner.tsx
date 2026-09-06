@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { safeSession } from '@/app/lib/safe-storage';
 
 /**
  * "Шинэ хувилбар гарлаа" зурвас.
@@ -67,7 +68,7 @@ export default function UpdateBanner() {
   // Дараагийн deploy гармагц шинэ хувилбар тул зурвас дахин гарна.
   const dismissed =
     outdated && typeof window !== 'undefined' &&
-    (() => { try { return sessionStorage.getItem(DISMISS_KEY) === liveVersion; } catch { return false; } })();
+    (() => { try { return safeSession.getItem(DISMISS_KEY) === liveVersion; } catch { return false; } })();
 
   if (!outdated || dismissed) return null;
 
@@ -89,7 +90,7 @@ export default function UpdateBanner() {
         </button>
         <button
           onClick={() => {
-            try { sessionStorage.setItem(DISMISS_KEY, liveVersion!); } catch { /* ignore */ }
+            try { safeSession.setItem(DISMISS_KEY, liveVersion!); } catch { /* ignore */ }
             setLiveVersion(null);
           }}
           aria-label="Хаах"

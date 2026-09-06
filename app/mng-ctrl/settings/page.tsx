@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface PricingTier {
   id: string;
@@ -55,12 +56,12 @@ export default function SettingsPage() {
   const [newTier, setNewTier] = useState<PricingTier>({ id: '', name: '', locations: '', perHousehold: 0, sokhMonthly: 0, description: '' });
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = safeLocal.getItem(STORAGE_KEY);
     if (stored) setSettings(JSON.parse(stored));
   }, []);
 
   const save = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    safeLocal.setItem(STORAGE_KEY, JSON.stringify(settings));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

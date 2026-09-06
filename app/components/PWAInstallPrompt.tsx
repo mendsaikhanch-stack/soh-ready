@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -19,7 +20,7 @@ export default function PWAInstallPrompt({ appName = 'Хотол' }: { appName?:
 
     if (ios && !standalone) {
       // iOS дээр аль хэдийн суулгасан эсвэл хэрэглэгч хаасан эсэхийг шалгах
-      const dismissed = localStorage.getItem('pwa-install-dismissed');
+      const dismissed = safeLocal.getItem('pwa-install-dismissed');
       if (!dismissed) {
         setIsIOS(true);
         setShowBanner(true);
@@ -30,7 +31,7 @@ export default function PWAInstallPrompt({ appName = 'Хотол' }: { appName?:
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      const dismissed = localStorage.getItem('pwa-install-dismissed');
+      const dismissed = safeLocal.getItem('pwa-install-dismissed');
       if (!dismissed) {
         setShowBanner(true);
       }
@@ -56,7 +57,7 @@ export default function PWAInstallPrompt({ appName = 'Хотол' }: { appName?:
 
   const handleDismiss = () => {
     setShowBanner(false);
-    localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+    safeLocal.setItem('pwa-install-dismissed', Date.now().toString());
   };
 
   if (!showBanner) return null;

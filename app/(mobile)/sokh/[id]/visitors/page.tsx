@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/auth-context';
 import { QRCodeSVG } from 'qrcode.react';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface Visitor {
   id: string;
@@ -27,13 +28,13 @@ export default function VisitorsPage() {
   const storageKey = `visitors_${params.id}_${profile?.id}`;
 
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
+    const saved = safeLocal.getItem(storageKey);
     if (saved) {
       const parsed: Visitor[] = JSON.parse(saved);
       // Хугацаа дууссан зочдыг арилгах
       const valid = parsed.filter(v => new Date(v.expiresAt) > new Date());
       setVisitors(valid);
-      localStorage.setItem(storageKey, JSON.stringify(valid));
+      safeLocal.setItem(storageKey, JSON.stringify(valid));
     }
   }, [storageKey]);
 
@@ -59,7 +60,7 @@ export default function VisitorsPage() {
 
     const updated = [visitor, ...visitors];
     setVisitors(updated);
-    localStorage.setItem(storageKey, JSON.stringify(updated));
+    safeLocal.setItem(storageKey, JSON.stringify(updated));
     setForm({ name: '', phone: '', purpose: 'visit' });
     setShowForm(false);
     setShowQR(visitor);
@@ -68,7 +69,7 @@ export default function VisitorsPage() {
   const removeVisitor = (id: string) => {
     const updated = visitors.filter(v => v.id !== id);
     setVisitors(updated);
-    localStorage.setItem(storageKey, JSON.stringify(updated));
+    safeLocal.setItem(storageKey, JSON.stringify(updated));
   };
 
   const shareCode = (v: Visitor) => {

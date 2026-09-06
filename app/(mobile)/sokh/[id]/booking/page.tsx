@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface Space {
   id: number;
@@ -51,7 +52,7 @@ export default function BookingPage() {
   const [unitNumber, setUnitNumber] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem(`booking-info-${params.id}`);
+    const saved = safeLocal.getItem(`booking-info-${params.id}`);
     if (saved) { const d = JSON.parse(saved); setResidentName(d.name); setUnitNumber(d.unit); }
     fetchData();
   }, [params.id]);
@@ -74,7 +75,7 @@ export default function BookingPage() {
   const submit = async () => {
     if (!selectedSpace || !residentName || !date) return;
     setSaving(true);
-    localStorage.setItem(`booking-info-${params.id}`, JSON.stringify({ name: residentName, unit: unitNumber }));
+    safeLocal.setItem(`booking-info-${params.id}`, JSON.stringify({ name: residentName, unit: unitNumber }));
 
     await supabase.from('space_bookings').insert([{
       sokh_id: params.id, space_id: selectedSpace, resident_name: residentName,

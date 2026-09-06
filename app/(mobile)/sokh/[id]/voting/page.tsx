@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface Poll {
   id: number;
@@ -41,7 +42,7 @@ export default function VotingPage() {
     fetchPolls();
 
     // Миний саналууд localStorage-с
-    const saved = localStorage.getItem(`votes_${params.id}`);
+    const saved = safeLocal.getItem(`votes_${params.id}`);
     if (saved) setMyVotes(JSON.parse(saved));
 
     // Real-time subscription
@@ -84,7 +85,7 @@ export default function VotingPage() {
     if (!error) {
       const updated = { ...myVotes, [pollId]: choice };
       setMyVotes(updated);
-      localStorage.setItem(`votes_${params.id}`, JSON.stringify(updated));
+      safeLocal.setItem(`votes_${params.id}`, JSON.stringify(updated));
 
       // Optimistic update
       setPolls(prev => prev.map(p =>

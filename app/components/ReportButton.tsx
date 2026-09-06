@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 const reasons = [
   { value: 'spam', label: 'Спам, зар сурталчилгаа' },
@@ -32,7 +33,7 @@ export default function ReportButton({
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem(storageKey)) setDone(true);
+    if (safeLocal.getItem(storageKey)) setDone(true);
   }, [storageKey]);
 
   const submit = async () => {
@@ -50,7 +51,7 @@ export default function ReportButton({
       reporter_name: reporterName || null,
     }]);
 
-    localStorage.setItem(storageKey, '1');
+    safeLocal.setItem(storageKey, '1');
     setSending(false);
     setOpen(false);
     setDone(true);

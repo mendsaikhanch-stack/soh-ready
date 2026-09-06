@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface PointActivity {
   id: number;
@@ -45,7 +46,7 @@ export default function PointsPage() {
   const [name, setName] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem(`points-name-${params.id}`);
+    const saved = safeLocal.getItem(`points-name-${params.id}`);
     if (saved) setName(saved);
     fetchData();
   }, [params.id]);
@@ -85,9 +86,9 @@ export default function PointsPage() {
             <p className="font-semibold mb-1">Нэрээ оруулна уу</p>
             <input placeholder="Жнь: Б.Болд" value={name}
               onChange={e => setName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && name) localStorage.setItem(`points-name-${params.id}`, name); }}
+              onKeyDown={e => { if (e.key === 'Enter' && name) safeLocal.setItem(`points-name-${params.id}`, name); }}
               className="w-full border rounded-lg px-3 py-2 mb-3 text-sm text-center" autoFocus />
-            <button onClick={() => { if (name) localStorage.setItem(`points-name-${params.id}`, name); }}
+            <button onClick={() => { if (name) safeLocal.setItem(`points-name-${params.id}`, name); }}
               disabled={!name} className="w-full bg-amber-500 text-white py-2.5 rounded-xl font-medium disabled:opacity-50">
               Нэвтрэх
             </button>

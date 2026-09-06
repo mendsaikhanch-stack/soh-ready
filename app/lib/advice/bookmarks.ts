@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 // Хадгалсан зөвлөгөө — localStorage дээр, сервер рүү юу ч илгээхгүй.
 // useSyncExternalStore ашигласан шалтгаан: effect дотор setState дуудвал
@@ -12,7 +13,7 @@ const listeners = new Set<() => void>();
 
 function readRaw(): string {
   try {
-    return localStorage.getItem(KEY) ?? '[]';
+    return safeLocal.getItem(KEY) ?? '[]';
   } catch {
     return '[]';
   }
@@ -53,7 +54,7 @@ export function useBookmarks() {
     const current = parse(readRaw());
     const next = current.includes(id) ? current.filter(x => x !== id) : [...current, id];
     try {
-      localStorage.setItem(KEY, JSON.stringify(next));
+      safeLocal.setItem(KEY, JSON.stringify(next));
     } catch {
       // private mode — хадгалахгүй ч уншихад саад болохгүй
     }

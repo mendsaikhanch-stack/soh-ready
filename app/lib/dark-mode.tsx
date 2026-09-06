@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface DarkModeContextType {
   dark: boolean;
@@ -13,7 +14,7 @@ export function DarkModeProvider({ children }: { children: ReactNode }) {
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('sokh-dark-mode');
+    const saved = safeLocal.getItem('sokh-dark-mode');
     if (saved === 'true') {
       setDark(true);
       document.documentElement.classList.add('dark');
@@ -23,7 +24,7 @@ export function DarkModeProvider({ children }: { children: ReactNode }) {
   const toggle = () => {
     const next = !dark;
     setDark(next);
-    localStorage.setItem('sokh-dark-mode', String(next));
+    safeLocal.setItem('sokh-dark-mode', String(next));
     if (next) {
       document.documentElement.classList.add('dark');
     } else {

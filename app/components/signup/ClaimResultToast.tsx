@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { safeSession } from '@/app/lib/safe-storage';
 
 interface ClaimResult {
   membershipsLinked: number;
@@ -18,11 +19,11 @@ export default function ClaimResultToast() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const raw = window.sessionStorage.getItem('manual-hoa-claim-result');
+      const raw = safeSession.getItem('manual-hoa-claim-result');
       if (!raw) return;
       const parsed = JSON.parse(raw) as ClaimResult;
       setInfo(parsed);
-      window.sessionStorage.removeItem('manual-hoa-claim-result');
+      safeSession.removeItem('manual-hoa-claim-result');
     } catch {
       // ignore
     }

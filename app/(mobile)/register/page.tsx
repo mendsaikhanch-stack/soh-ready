@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
+import { safeSession } from '@/app/lib/safe-storage';
 
 interface City { id: number; name: string; }
 interface District { id: number; city_id: number; name: string; }
@@ -65,9 +66,9 @@ function RegisterInner() {
   // /select хуудсаас ирсэн prefill (хот/дүүрэг/хороо + хэрэглэгчийн оруулсан СӨХ-ийн нэр)
   // sessionStorage-аас уншаад шууд step 5 руу шилжүүлнэ
   useEffect(() => {
-    const raw = (() => { try { return window.sessionStorage.getItem('register-prefill'); } catch { return null; } })();
+    const raw = (() => { try { return safeSession.getItem('register-prefill'); } catch { return null; } })();
     if (!raw) return;
-    try { window.sessionStorage.removeItem('register-prefill'); } catch { /* ignore */ }
+    try { safeSession.removeItem('register-prefill'); } catch { /* ignore */ }
     let prefill: { cityId?: number; districtId?: number; khorooId?: number; sokhName?: string };
     try { prefill = JSON.parse(raw); } catch { return; }
     if (!prefill.cityId || !prefill.districtId || !prefill.khorooId || !prefill.sokhName) return;
@@ -245,7 +246,7 @@ function RegisterInner() {
       // sessionStorage-д тэмдэглэж амжилтын toast харуулна.
       if (typeof window !== 'undefined' && result?.claim?.anythingLinked) {
         try {
-          window.sessionStorage.setItem(
+          safeSession.setItem(
             'manual-hoa-claim-result',
             JSON.stringify({
               membershipsLinked: result.claim.membershipsLinked,

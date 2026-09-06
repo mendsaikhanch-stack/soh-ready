@@ -3,6 +3,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface InspectorUser { id: number; name: string; kontorNumber: number | null; }
 const InspectorCtx = createContext<InspectorUser | null>(null);
@@ -46,20 +47,20 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
       const data = await res.json();
       if (data.authenticated) {
         try {
-          const saved = localStorage.getItem('inspector_user');
+          const saved = safeLocal.getItem('inspector_user');
           if (saved) {
             const parsed = JSON.parse(saved);
             if (parsed && typeof parsed.id === 'number' && typeof parsed.name === 'string') {
               setInspector(parsed);
             } else {
-              localStorage.removeItem('inspector_user');
+              safeLocal.removeItem('inspector_user');
               setInspector({ id: 0, name: 'Байцаагч', kontorNumber: null });
             }
           } else {
             setInspector({ id: 0, name: 'Байцаагч', kontorNumber: null });
           }
         } catch {
-          localStorage.removeItem('inspector_user');
+          safeLocal.removeItem('inspector_user');
           setInspector({ id: 0, name: 'Байцаагч', kontorNumber: null });
         }
       }
@@ -82,7 +83,7 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
       if (res.ok && data.success) {
         const user = { id: data.inspectorId, name: data.name, kontorNumber: data.kontorNumber || null };
         setInspector(user);
-        localStorage.setItem('inspector_user', JSON.stringify(user));
+        safeLocal.setItem('inspector_user', JSON.stringify(user));
       } else {
         setError(data.error || 'Нэвтрэх нэр эсвэл нууц үг буруу');
       }
@@ -96,7 +97,7 @@ export default function InspectorLayout({ children }: { children: React.ReactNod
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'inspector' }),
     });
-    localStorage.removeItem('inspector_user');
+    safeLocal.removeItem('inspector_user');
     setInspector(null);
   };
 

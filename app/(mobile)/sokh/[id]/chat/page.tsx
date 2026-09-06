@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import ReportButton from '@/app/components/ReportButton';
+import { safeLocal } from '@/app/lib/safe-storage';
 
 interface Message {
   id: number;
@@ -24,7 +25,7 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem(`chat-name-${params.id}`);
+    const saved = safeLocal.getItem(`chat-name-${params.id}`);
     if (saved) { setName(saved); setNameSet(true); }
     fetchMessages();
 
@@ -62,7 +63,7 @@ export default function ChatPage() {
 
   const saveName = () => {
     if (!name.trim()) return;
-    localStorage.setItem(`chat-name-${params.id}`, name.trim());
+    safeLocal.setItem(`chat-name-${params.id}`, name.trim());
     setNameSet(true);
   };
 
@@ -151,7 +152,7 @@ export default function ChatPage() {
           <div className="text-right">
             <p className="text-xs text-white/70">{name}</p>
             <button
-              onClick={() => { setNameSet(false); localStorage.removeItem(`chat-name-${params.id}`); }}
+              onClick={() => { setNameSet(false); safeLocal.removeItem(`chat-name-${params.id}`); }}
               className="text-xs text-white/50 underline"
             >
               Нэр солих
