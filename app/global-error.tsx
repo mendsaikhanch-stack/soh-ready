@@ -21,6 +21,18 @@ export default function GlobalError({
         digest: error.digest,
         source: 'client',
         route: window.location.pathname,
+        // Аль СӨХ-ийн хуудсанд унасныг URL-аас тогтооно (/sokh/2111/... эсвэл ?sokh=2111).
+        // Нэвтрээгүй оршин суугчийн хувьд «хаана» гэдгийг мэдэх цорын ганц эх сурвалж.
+        sokh_id: Number(
+          window.location.pathname.match(/\/sokh\/(\d+)/)?.[1]
+          ?? new URLSearchParams(window.location.search).get('sokh')
+        ) || undefined,
+        metadata: {
+          ua: navigator.userAgent,
+          // Хадгалалт хаагдсан хөтөч (Messenger, Private) эсэхийг шууд тэмдэглэнэ
+          storage: (() => { try { window.localStorage.setItem('__p__','1'); window.localStorage.removeItem('__p__'); return 'ok'; } catch { return 'blocked'; } })(),
+          standalone: window.matchMedia?.('(display-mode: standalone)')?.matches ?? null,
+        },
       }),
     }).catch(() => {});
   }, [error]);

@@ -337,15 +337,24 @@ export async function POST(request: NextRequest) {
     }
 
     if (action !== 'select') {
+      // «Хэн, хэзээ, юуг» бүртгэл. Алдааг залгина — бүртгэл унасан ч
+      // үндсэн үйлдэл амжилттай болсон тул хэрэглэгчид алдаа буцаахгүй.
+      // ⚠️ Хүснэгт байхгүй үед ЧИМЭЭГҮЙ алдаж байсныг 2026-09-06-нд илрүүлэв
+      //    (supabase-audit-logs-migration.sql). Тиймээс одоо консолд бичнэ.
       Promise.resolve(
         supabaseAdmin.from('audit_logs').insert({
           user_id: auth.userId ? parseInt(auth.userId) : null,
           role,
+          sokh_id: auth.sokhId ? parseInt(auth.sokhId) : null,
           action,
           table_name: table,
           details: params?.eq || params?.data ? JSON.stringify(params.eq || params.data).slice(0, 1000) : null,
+          ip: request.headers.get('x-forwarded-for')?.slice(0, 100) || null,
+          user_agent: request.headers.get('user-agent')?.slice(0, 500) || null,
         })
-      ).catch(() => {});
+      ).then(({ error: auditErr }) => {
+        if (auditErr) console.error('[admin/db] audit_logs:', auditErr.message);
+      }).catch((e) => console.error('[admin/db] audit_logs:', e));
     }
 
     return NextResponse.json({ data, count });
