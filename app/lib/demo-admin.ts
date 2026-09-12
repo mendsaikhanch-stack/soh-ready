@@ -26,7 +26,9 @@ export const DEMO_BLOCKED_PREFIXES = [
 // Тухайн зам өөрөө демо эрхийг шалгаж, зөвхөн уншихыг зөвшөөрнө:
 //   • /api/admin/db      → `action !== 'select'` бол 403 (route.ts дотор)
 //   • /api/auth/*        → нэвтрэх, гарах, шалгах (нэвтрэлтгүй хүнд ч нээлттэй)
-export const DEMO_METHOD_EXEMPT_PREFIXES = ['/api/admin/db', '/api/auth/'];
+//   • /api/demo/*        → демо сешн олгох. Аль хэдийн демо горимд байхад
+//                          линкийг дахин дарахад хаагдаж болохгүй
+export const DEMO_METHOD_EXEMPT_PREFIXES = ['/api/admin/db', '/api/auth/', '/api/demo/'];
 
 // Демо горимд бичих үйлдэл оролдвол буцаах тайлбар.
 export const DEMO_READONLY_MESSAGE =

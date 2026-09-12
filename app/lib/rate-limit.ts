@@ -59,6 +59,9 @@ export const qpayCheckLimiter = rateLimit({ name: 'qpay-check', windowMs: 60 * 1
 export const adminDbLimiter = rateLimit({ name: 'admin-db', windowMs: 60 * 1000, maxRequests: 300 });
 export const adminUsersLimiter = rateLimit({ name: 'admin-users', windowMs: 60 * 1000, maxRequests: 20 });
 export const authCheckLimiter = rateLimit({ name: 'auth-check', windowMs: 60 * 1000, maxRequests: 60 });
+// Танилцуулгын демо сешн — нууц үггүй тул нээлттэй. Нэг сешн олгоход
+// хангалттай, дахин дахин шинэчлэх шаардлагагүй тул хатуухан барив.
+export const demoSessionLimiter = rateLimit({ name: 'demo-session', windowMs: 60 * 1000, maxRequests: 10 });
 export const pushSendLimiter = rateLimit({ name: 'push-send', windowMs: 60 * 1000, maxRequests: 20 });
 export const profileLimiter = rateLimit({ name: 'profile', windowMs: 60 * 1000, maxRequests: 20 });
 // Оршин суугч өр төлөх гэрээгээ зөвшөөрөх — нэг хүн олон дахин дардаггүй үйлдэл
