@@ -34,6 +34,7 @@ const navGroups = [
       { icon: '📞', label: 'Холбоо хүсэлтүүд', href: '/mng-ctrl/leads' },
       { icon: '🖥', label: 'Demo хүсэлтүүд', href: '/mng-ctrl/demo-requests' },
       { icon: '📣', label: 'Маркетинг', href: '/mng-ctrl/marketing' },
+      { icon: '📱', label: 'Play туршилт', href: '/mng-ctrl/play-testers' },
     ],
   },
   {

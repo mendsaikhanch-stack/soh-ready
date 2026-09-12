@@ -9,6 +9,7 @@ import { getTheme } from '@/app/lib/themes';
 import Image from 'next/image';
 import { useDarkMode } from '@/app/lib/dark-mode';
 import { useI18n } from '@/app/lib/i18n';
+import PlayTesterAsk from '@/app/components/PlayTesterAsk';
 
 interface SokhOrg {
   id: number;
@@ -449,6 +450,11 @@ export default function SokhDashboard() {
           <span className="text-red-300">›</span>
         </div>
       )}
+
+      {/* Play туршилтад урих — зөвхөн Android, нэг удаа (PlayTesterAsk дотор шийднэ) */}
+      <div className="px-4 mt-3">
+        <PlayTesterAsk />
+      </div>
 
       {/* Main Tabs: СӨХ / ОСНАА / ЦАХ */}
       <div className="grid grid-cols-3 gap-2 px-4 mt-3">
