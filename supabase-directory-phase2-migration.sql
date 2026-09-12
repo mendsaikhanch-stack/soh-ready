@@ -38,8 +38,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_provisional_dedupe
   WHERE status IN ('PENDING', 'HAS_DEMAND', 'MATCH_CANDIDATE');
 
 ALTER TABLE hoa_provisional ENABLE ROW LEVEL SECURITY;
+-- Бодлого зориуд НЭГ Ч БАЙХГҮЙ: энэ хүснэгтэд хэрэглэгчийн хаяг, тоот,
+-- user_id зэрэг хувийн мэдээлэл хадгалагдана. Зөвхөн сервер (service_role)
+-- хандана. RLS асаалттай + policy байхгүй = anon ба authenticated 0 мөр авна.
 DROP POLICY IF EXISTS "hoa_provisional_all" ON hoa_provisional;
-CREATE POLICY "hoa_provisional_all" ON hoa_provisional FOR ALL USING (true) WITH CHECK (true);
+REVOKE ALL ON hoa_provisional FROM anon;
+REVOKE ALL ON hoa_provisional FROM authenticated;
 
 -- 2. Resident memberships (хэрэглэгч <-> СӨХ identity)
 CREATE TABLE IF NOT EXISTS resident_memberships (
@@ -65,8 +69,12 @@ CREATE INDEX IF NOT EXISTS idx_memberships_provisional ON resident_memberships(p
 CREATE INDEX IF NOT EXISTS idx_memberships_status ON resident_memberships(status);
 
 ALTER TABLE resident_memberships ENABLE ROW LEVEL SECURITY;
+-- Бодлого зориуд НЭГ Ч БАЙХГҮЙ: энэ хүснэгтэд хэрэглэгчийн хаяг, тоот,
+-- user_id зэрэг хувийн мэдээлэл хадгалагдана. Зөвхөн сервер (service_role)
+-- хандана. RLS асаалттай + policy байхгүй = anon ба authenticated 0 мөр авна.
 DROP POLICY IF EXISTS "resident_memberships_all" ON resident_memberships;
-CREATE POLICY "resident_memberships_all" ON resident_memberships FOR ALL USING (true) WITH CHECK (true);
+REVOKE ALL ON resident_memberships FROM anon;
+REVOKE ALL ON resident_memberships FROM authenticated;
 
 -- 3. СӨХ дээр Khotol идэвхжүүлэх хүсэлт (албан ёсны interest signal)
 CREATE TABLE IF NOT EXISTS hoa_activation_requests (
@@ -91,8 +99,12 @@ CREATE INDEX IF NOT EXISTS idx_activation_provisional ON hoa_activation_requests
 CREATE INDEX IF NOT EXISTS idx_activation_status ON hoa_activation_requests(status, created_at DESC);
 
 ALTER TABLE hoa_activation_requests ENABLE ROW LEVEL SECURITY;
+-- Бодлого зориуд НЭГ Ч БАЙХГҮЙ: энэ хүснэгтэд хэрэглэгчийн хаяг, тоот,
+-- user_id зэрэг хувийн мэдээлэл хадгалагдана. Зөвхөн сервер (service_role)
+-- хандана. RLS асаалттай + policy байхгүй = anon ба authenticated 0 мөр авна.
 DROP POLICY IF EXISTS "hoa_activation_requests_all" ON hoa_activation_requests;
-CREATE POLICY "hoa_activation_requests_all" ON hoa_activation_requests FOR ALL USING (true) WITH CHECK (true);
+REVOKE ALL ON hoa_activation_requests FROM anon;
+REVOKE ALL ON hoa_activation_requests FROM authenticated;
 
 -- 4. Activation summary (СӨХ бүрийн нийт эрэлтийн агрегат)
 CREATE TABLE IF NOT EXISTS hoa_activation_summaries (
@@ -113,8 +125,12 @@ CREATE INDEX IF NOT EXISTS idx_summaries_status ON hoa_activation_summaries(stat
 CREATE INDEX IF NOT EXISTS idx_summaries_interest ON hoa_activation_summaries(interest_count DESC);
 
 ALTER TABLE hoa_activation_summaries ENABLE ROW LEVEL SECURITY;
+-- Бодлого зориуд НЭГ Ч БАЙХГҮЙ: энэ хүснэгтэд хэрэглэгчийн хаяг, тоот,
+-- user_id зэрэг хувийн мэдээлэл хадгалагдана. Зөвхөн сервер (service_role)
+-- хандана. RLS асаалттай + policy байхгүй = anon ба authenticated 0 мөр авна.
 DROP POLICY IF EXISTS "hoa_activation_summaries_all" ON hoa_activation_summaries;
-CREATE POLICY "hoa_activation_summaries_all" ON hoa_activation_summaries FOR ALL USING (true) WITH CHECK (true);
+REVOKE ALL ON hoa_activation_summaries FROM anon;
+REVOKE ALL ON hoa_activation_summaries FROM authenticated;
 
 -- 5. Merge audit log
 CREATE TABLE IF NOT EXISTS hoa_merge_logs (
@@ -131,8 +147,12 @@ CREATE INDEX IF NOT EXISTS idx_merge_logs_provisional ON hoa_merge_logs(provisio
 CREATE INDEX IF NOT EXISTS idx_merge_logs_directory ON hoa_merge_logs(directory_id);
 
 ALTER TABLE hoa_merge_logs ENABLE ROW LEVEL SECURITY;
+-- Бодлого зориуд НЭГ Ч БАЙХГҮЙ: энэ хүснэгтэд хэрэглэгчийн хаяг, тоот,
+-- user_id зэрэг хувийн мэдээлэл хадгалагдана. Зөвхөн сервер (service_role)
+-- хандана. RLS асаалттай + policy байхгүй = anon ба authenticated 0 мөр авна.
 DROP POLICY IF EXISTS "hoa_merge_logs_all" ON hoa_merge_logs;
-CREATE POLICY "hoa_merge_logs_all" ON hoa_merge_logs FOR ALL USING (true) WITH CHECK (true);
+REVOKE ALL ON hoa_merge_logs FROM anon;
+REVOKE ALL ON hoa_merge_logs FROM authenticated;
 
 -- 6. updated_at trigger (Phase 1-ээс set_updated_at_directory() аль хэдийн үүссэн)
 DROP TRIGGER IF EXISTS trg_hoa_provisional_updated ON hoa_provisional;

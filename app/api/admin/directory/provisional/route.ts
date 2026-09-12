@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { checkAnyAuth } from '@/app/lib/session-token';
+import { isMissingTableError, PHASE2_UNAVAILABLE_MESSAGE } from '@/app/lib/directory/table-missing';
 import { suggestProvisionalMatch, type ProvisionalRow } from '@/app/lib/directory/merge-provisional';
 
 // Provisional СӨХ-ийн жагсаалт + suggested матч-уудыг буцаана
@@ -24,7 +25,14 @@ export async function GET(req: NextRequest) {
   if (district) q = q.eq('district', district);
 
   const { data, error } = await q;
-  if (error) return NextResponse.json({ error: 'Татаж чадсангүй' }, { status: 500 });
+  if (error) {
+    // Миграц ажиллаагүй = боломж асаагүй (table-missing.ts тайлбарыг үз)
+    if (isMissingTableError(error)) {
+      return NextResponse.json({ rows: [], unavailable: true, message: PHASE2_UNAVAILABLE_MESSAGE });
+    }
+    console.error('[directory/provisional]', error.message);
+    return NextResponse.json({ error: 'Татаж чадсангүй' }, { status: 500 });
+  }
 
   const rows = (data || []) as ProvisionalRow[];
 

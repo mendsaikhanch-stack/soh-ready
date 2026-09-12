@@ -39,6 +39,7 @@ export default function DemandPage() {
   const [district, setDistrict] = useState('');
   const [khoroo, setKhoroo] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [unavailable, setUnavailable] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,6 +51,7 @@ export default function DemandPage() {
     const data = await res.json();
     setRows(data.rows || []);
     setTotals(data.totals || null);
+    setUnavailable(data.unavailable ? (data.message || 'Энэ хэсэг хараахан асаагүй байна.') : '');
     setLoading(false);
   }, [district, khoroo, statusFilter]);
 
@@ -66,6 +68,12 @@ export default function DemandPage() {
           🔍 Гар оролтыг шалгах
         </Link>
       </div>
+
+      {unavailable && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 text-sm">
+          {unavailable}
+        </div>
+      )}
 
       {totals && (
         <>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { checkAnyAuth } from '@/app/lib/session-token';
+import { isMissingTableError, PHASE2_UNAVAILABLE_MESSAGE } from '@/app/lib/directory/table-missing';
 
 export interface DemandRow {
   kind: 'directory' | 'provisional';
@@ -39,6 +40,16 @@ export async function GET(req: NextRequest) {
     .limit(500);
 
   if (error) {
+    // Миграц ажиллаагүй = боломж асаагүй. Улаан алдаа биш, тайлбар харуулна.
+    if (isMissingTableError(error)) {
+      return NextResponse.json({
+        rows: [],
+        totals: null,
+        unavailable: true,
+        message: PHASE2_UNAVAILABLE_MESSAGE,
+      });
+    }
+    console.error('[admin/demand]', error.message);
     return NextResponse.json({ error: 'Татаж чадсангүй' }, { status: 500 });
   }
 
