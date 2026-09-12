@@ -172,26 +172,65 @@ building we manage or works in property management.
 
 ### Q: What feedback did you receive, and what did you change?
 ```
-[ЭНД 09-02..04-нд ирсэн БОДИТ саналуудыг бич. Дор нь загвар:]
+Feedback came from the people who actually use the app: board members
+and residents of the housing owners associations (СӨХ) that run on
+Khotol. The closed testers were recruited from this same group, so the
+testers and the users are largely the same people.
 
-1. Several testers reported the login screen took too long to load on
-   slower mobile connections. Fixed in version 1.0.1 (released
-   2026-09-01) by reducing the initial payload.
+In Mongolia these users do not fill in feedback forms. They message us
+on Facebook Messenger, phone the developer directly, or raise the issue
+at their association's board meeting. That is how we collected feedback,
+and we turned each item into a dated release. Two releases went out
+during the closed test: 1.0.1 on 2026-08-28 and 1.0.2 on 2026-09-12.
 
-2. Testers scheduling building announcements hit a crash when the time
-   field was left empty. Fixed in 1.0.1.
+What we were told, and what we shipped:
 
-3. Board members said the generated invoices did not match the format
-   their bank (Төрийн банк) expects, which caused confusion for
-   residents. We rebuilt the invoice layout to match that standard in
-   1.0.1.
+1. Chairpersons could record the association's income but had no way to
+   record what the association OWES (lift service company, water
+   utility, waste collection), so the balance they showed residents was
+   incomplete. We added a payables ledger that feeds automatically into
+   the expense report. Shipped in 1.0.2.
 
-4. Residents asked to be reminded before their fee became overdue
-   rather than after. We added automatic overdue reminders in 1.0.2
-   (released 2026-09-05).
+2. Board members were computing staff salaries, social insurance and
+   income tax by hand in Excel every month. We added a payroll module
+   that calculates social insurance (11.5% employee / 12.5% employer)
+   and 10% income tax per employee and posts the result into the
+   expense report. Shipped in 1.0.2.
 
-5. [09-02..04-ийн бодит санал]
+3. Chairpersons needed a printable annual financial report to hand out
+   at the general meeting. We added an annual summary plus four standard
+   statements (income statement, balance sheet, cash flow, tax
+   computation) with print and PDF export. Shipped in 1.0.2.
+
+4. In associations where the same unit number exists in several blocks
+   (9A-12, 9B-12, 11-12), residents who registered were linked to the
+   wrong household. We added block selection to registration so each
+   resident is matched to the correct unit. Shipped in 1.0.2.
+
+5. Users who opened the app from a link inside the Facebook or Messenger
+   in-app browser got a system error and could not get in at all. We
+   fixed the browser-storage handling that caused it. Shipped in 1.0.2.
+
+6. Residents told us they only heard about an overdue fee after it was
+   already late. We added automatic reminders before the due date.
+   Shipped in 1.0.1.
+
+7. Board members said the generated invoices did not match the layout
+   the State Bank (Төрийн банк) expects, which confused residents when
+   they paid. We rebuilt the invoice layout to that standard.
+   Shipped in 1.0.1.
+
+8. Residents were describing maintenance problems in text that
+   chairpersons could not act on. We added photo attachments (up to 4
+   images) to maintenance requests. Shipped in 1.0.1.
 ```
+
+> ⚠️ **Эх сурвалжийг үнэн бич.** Дээрх саналууд нь Play-ийн 12 тестерээс
+> биш, аппыг бодитоор ашиглаж буй СӨХ-ийн дарга, оршин суугчдаас ирсэн.
+> Тестерүүд нь мөн тэдгээр СӨХ-өөс сонгогдсон тул хоорондоо давхцдаг —
+> гэхдээ «testers reported…» гэж бүү бич, «users, including the testers»
+> гэсэн үнэн томъёоллыг ашигла. Худал бичих давуу тал байхгүй, шалгагдвал
+> л хохирно (08-24-ний «via a Google Group» алдаатай адил).
 
 ### Q: How difficult was it to find testers?
 ```
