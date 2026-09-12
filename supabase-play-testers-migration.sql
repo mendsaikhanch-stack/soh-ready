@@ -30,8 +30,15 @@ CREATE TABLE IF NOT EXISTS play_tester_signups (
 );
 
 -- Нэг хаяг нэг л удаа. Дахин илгээвэл шинэчилнэ (API дээр upsert).
+--
+-- ⚠️ Индекс нь ЯГ `email` багана дээр байх ёстой, `lower(email)` дээр БИШ.
+-- PostgREST-ийн upsert нь `ON CONFLICT (email)` гэж илгээдэг бөгөөд
+-- функцэн индекс үүнд тохирдоггүй → 42P10 «no unique or exclusion
+-- constraint matching the ON CONFLICT specification».
+-- Жижиг/том үсгийн ялгааг API тал нь хадгалахаасаа өмнө lowercase болгож
+-- шийднэ (app/api/play-testers/route.ts).
 CREATE UNIQUE INDEX IF NOT EXISTS uq_play_tester_email
-  ON play_tester_signups (lower(email));
+  ON play_tester_signups (email);
 
 CREATE INDEX IF NOT EXISTS idx_play_tester_status
   ON play_tester_signups (status, created_at DESC);
