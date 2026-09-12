@@ -255,6 +255,24 @@ Release 3 нийтлэгдсэн · Feedback суваг review-д · 14 хоно
 > `.aab` бэлэн, гарын үсэгтэй. Дараах алхмуудыг **гараар** хийнэ
 > (Play Console руу нэвтрэх шаардлагатай тул автоматжуулаагүй).
 
+### ⚠️ «Upload хийвэл 14 хоногийн тоолол дахин эхлэх үү?» — ҮГҮЙ
+
+Google-ийн албан ёсны шаардлага (Play Console Help 14151465):
+
+> «At least 12 testers must be opted in to your closed test when you apply for
+> production access, and they must have been opted in **continuously for the
+> preceding 14 days**.»
+
+Тоолол нь **тестерүүдийн opt-in тасралтгүй байдлаар** хэмжигдэнэ — build,
+versionCode, release notes-той огт хамаагүй. Тооллыг тасалдаг ганц зүйл нь
+**opt-in тоо 12-оос доошлох**.
+
+Харин ч эсрэгээрээ: 2026-08-28-ны татгалзлын **2-р шалтгаан** нь «You didn't
+follow testing best practices … updates to your app» байсан — өөрөөр хэлбэл
+тест явж байх хугацаанд шинэ release ГАРГААГҮЙ нь унасан цэг байв
+([REAPPLY_PLAN_2026-08-28.md](REAPPLY_PLAN_2026-08-28.md) §1). Тиймээс
+хүлээж байх хугацаандаа `.aab` гаргах нь **эрсдэл биш, шаардлага**.
+
 1. Play Console ▸ **Closed testing ▸ Alpha** ▸ Create new release
 2. `C:\Users\MNG\Desktop\khotol-v1.0.2-vc4.aab` файлыг upload хийнэ
    — Console `4 (1.0.2)` гэж таних ёстой
