@@ -131,10 +131,11 @@ Console: «Latest release: 3 (1.0.1) · Available to selected testers», мэд�
 
 ---
 
-## Release 4 (v1.0.2, versionCode 4) — ⏳ UPLOAD ХҮЛЭЭЖ БАЙНА
+## Release 4 (v1.0.2, versionCode 4) — 🔄 ШАЛГАЛТАД ОРСОН
 
-Төлөв: **2026-09-12-нд build хийж, гарын үсэг зурав.** Play Console руу
-upload хийх алхам үлдсэн (доорх «Дараагийн алхам»-ыг үз).
+Төлөв: **2026-09-12-нд build хийж, Play Console-д upload хийж,
+«Send changes for review» илгээв.** Publishing overview дээр
+«Changes in review» болсон. Google-ийн хариу ихэвчлэн ≤7 хоногт ирнэ.
 Хамрах хугацаа: versionCode 3 (2026-08-28) гарснаас хойш.
 
 | | |
@@ -143,6 +144,8 @@ upload хийх алхам үлдсэн (доорх «Дараагийн алх�
 | Хуулбар | `C:\Users\MNG\Desktop\khotol-v1.0.2-vc4.aab` |
 | Гарын үсэг | `android/khotol-release.jks` (гэрчилгээ 2053-11-02 хүртэл) |
 | Шалгасан | `.aab` дотроос versionName `1.0.2`, package `mn.khotol.app`; `signReleaseBundle` амжилттай |
+| Console таньсан | `4 (1.0.2)` · API 24+ · Target SDK 36 · ABIs All · шинэ суулгац 3.88 MB |
+| Анхааруулга | «There is no deobfuscation file» — код нуулгүй build (`minifyEnabled false`) тул ач холбогдолгүй, Release 3-тай ижил |
 
 | Огноо | Commit | Өөрчлөлт | Хэнд | RN |
 |---|---|---|---|---|
@@ -250,10 +253,10 @@ Release 3 нийтлэгдсэн · Feedback суваг review-д · 14 хоно
 
 ---
 
-## Дараагийн алхам — Release 4-ийг Play Console-д upload хийх
+## Release 4-ийн upload — ✅ гүйцэтгэсэн (2026-09-12)
 
-> `.aab` бэлэн, гарын үсэгтэй. Дараах алхмуудыг **гараар** хийнэ
-> (Play Console руу нэвтрэх шаардлагатай тул автоматжуулаагүй).
+> ✅ **2026-09-12-нд 1–4-р алхам ГҮЙЦЭТГЭГДСЭН.** Үлдсэн нь Google-ийн
+> хариуг хүлээх ба дараа нь энэ гарчгийг «✅ ГАРСАН» болгох.
 
 ### ⚠️ «Upload хийвэл 14 хоногийн тоолол дахин эхлэх үү?» — ҮГҮЙ
 
@@ -273,13 +276,32 @@ follow testing best practices … updates to your app» байсан — өөр�
 ([REAPPLY_PLAN_2026-08-28.md](REAPPLY_PLAN_2026-08-28.md) §1). Тиймээс
 хүлээж байх хугацаандаа `.aab` гаргах нь **эрсдэл биш, шаардлага**.
 
-1. Play Console ▸ **Closed testing ▸ Alpha** ▸ Create new release
-2. `C:\Users\MNG\Desktop\khotol-v1.0.2-vc4.aab` файлыг upload хийнэ
-   — Console `4 (1.0.2)` гэж таних ёстой
-3. Release name: `4 (1.0.2)`. Release notes-д дээрх mn-MN блокыг буулгана
-4. Save ▸ Publishing overview ▸ **Send changes for review**
-5. Шалгалт давсны дараа энэ файлын Release 4 гарчгийг «✅ ГАРСАН» болгож,
+1. ✅ Play Console ▸ Closed testing ▸ Alpha ▸ Create new release
+2. ✅ `.aab` upload — Console `4 (1.0.2)`, API 24+, target SDK 36 гэж таньсан
+3. ✅ Release name `4 (1.0.2)`, release notes mn-MN (460 тэмдэгт) оруулсан
+4. ✅ Save ▸ Publishing overview ▸ Send changes for review →
+   «Changes in review». Илгээсэн зүйл: *Closed testing - Alpha · 4 (1.0.2) ·
+   Start full rollout*
+5. ⏳ Шалгалт давсны дараа энэ файлын Release 4 гарчгийг «✅ ГАРСАН» болгож,
    огноог тэмдэглэнэ
+
+---
+
+### 📌 Production-ы шалгуур бүрдсэн (2026-09-12)
+
+App dashboard ▸ «Apply for access to production» дээр гурван шалгуур бүгд
+**зураастай (биелсэн)** байна:
+
+- ~~Publish a closed testing release~~
+- ~~Have at least 12 testers opted-in to your closed test~~
+- ~~Run your closed test with at least 12 testers for 14 more days~~
+
+**«Apply for production» товч идэвхтэй.** Өргөдлийн Part 1-д тестерүүдийн
+engagement, ирсэн санал, түүнийг хэрхэн цуглуулсныг бичнэ —
+[PERSONAL_ACCOUNT_PLAN.md](PERSONAL_ACCOUNT_PLAN.md) §6-г үз.
+
+> ℹ️ Google энэ шалгуур бүрдсэнийг **имэйлээр мэдэгддэггүй** — зөвхөн Console
+> дээрх товч идэвхждэг. Имэйл нь шалгалтын хариу, бодлогын асуудал дээр ирнэ.
 
 ---
 
