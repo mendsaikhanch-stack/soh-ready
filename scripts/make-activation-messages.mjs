@@ -67,10 +67,23 @@ const rows = [...stat.entries()]
   // Нэн тэргүүнд «унтсан» олонтой, дараа нь идэвхжүүлэх нөөц ихтэй
   .sort((a, b) => (b.dormant - a.dormant) || ((b.homes - b.d30) - (a.homes - a.d30)));
 
+// Мэндчилгээ. admin_users.display_name нь заримдаа хүний нэр («Сарантуяа»),
+// заримдаа СӨХ-ийн нэр («Жаргалан апартмент СӨХ») байдаг. Сүүлийнхийг
+// «Сайн байна уу, Жаргалан апартмент СӨХ аа» гэж бичвэл эвгүй сонсогдоно —
+// тэр тохиолдолд энгийн «дарга аа» гэе.
+const greet = (r) => {
+  const n = (r.admin?.display_name || '').trim();
+  const looksLikeOrg = !n
+    || /СӨХ|дарга|апартмент|хаус|admin/i.test(n)
+    || n.toLowerCase() === (r.name || '').toLowerCase()
+    || /\d/.test(n);
+  return looksLikeOrg ? 'Сайн байна уу, дарга аа.' : `Сайн байна уу, ${n} аа.`;
+};
+
 const qrDir = (id) => `docs/onboarding/sokh-${id}`;
 const hasQr = (id) => existsSync(resolve(ROOT, qrDir(id), 'poster.pdf'));
 
-const dormantMsg = (r) => `Сайн байна уу, ${r.admin?.display_name || '[дарга]'} аа.
+const dormantMsg = (r) => `${greet(r)}
 
 Танай СӨХ-ийн **${r.homes} айлын мэдээлэл Хотол системд бүрэн орсон** байгаа.
 Гэхдээ одоогоор ердөө **${r.ever} айл** нь л аппаараа нэвтэрч үзсэн байна —
@@ -97,7 +110,7 @@ ${r.noPhone > 0 ? `
 ` : ''}
 Хэдэн айл орсныг би хараад танд хэлж байя.`;
 
-const qrMsg = (r) => `Сайн байна уу, ${r.admin?.display_name || '[дарга]'} аа.
+const qrMsg = (r) => `${greet(r)}
 
 Танай СӨХ-ийн **${r.homes} айлын жагсаалт Хотолд орсон** байгаа. Одоогоор
 **${r.d30} айл** аппаа ашиглаж байна. Үлдсэнд нь хүрэхийн тулд оршин суугчид
