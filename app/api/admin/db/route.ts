@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { getAuthRole, type AuthRole } from '@/app/lib/session-token';
 import { adminDbLimiter } from '@/app/lib/rate-limit';
+import { DEMO_READONLY_MESSAGE } from '@/app/lib/demo-admin';
 
 // Role тус бүрд зөвшөөрөгдсөн хүснэгтүүд
 type Role = AuthRole;
@@ -227,6 +228,13 @@ export async function POST(request: NextRequest) {
 
     if (role === 'inspector' && action !== 'select' && !INSPECTOR_WRITE_TABLES.has(table)) {
       return NextResponse.json({ error: 'Write access denied for your role' }, { status: 403 });
+    }
+
+    // Танилцуулгын демо админ — зөвхөн харах. Энэ proxy нь уншихдаа ч POST
+    // хэрэглэдэг тул middleware-ийн метод дээрх шалгалт энд тохирохгүй;
+    // хориглох эсэхийг `action`-оор шийднэ.
+    if (auth.demo && action !== 'select') {
+      return NextResponse.json({ error: DEMO_READONLY_MESSAGE }, { status: 403 });
     }
 
     // Multi-tenant enforcement

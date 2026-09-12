@@ -6,6 +6,7 @@ import HotolLogo from '@/app/components/HotolLogo';
 import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
 import { supabase } from '@/app/lib/supabase';
 import Image from 'next/image';
+import { DEMO_BLOCKED_PREFIXES } from '@/app/lib/demo-admin';
 
 const navItems = [
   { icon: '📊', label: 'Хянах самбар', href: '/admin' },
@@ -63,6 +64,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(false);
   const [orgLogo, setOrgLogo] = useState<string | null>(null);
   const [orgName, setOrgName] = useState('');
+  // Танилцуулгын демо эрх — зөвхөн харах. Цэс, мэдэгдлийг үүгээр тохируулна.
+  const [isDemo, setIsDemo] = useState(false);
 
   // Админ PWA manifest солих
   useEffect(() => {
@@ -98,6 +101,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       const res = await fetch('/api/auth/check?type=admin');
       const data = await res.json();
       setAuthed(data.authenticated);
+      setIsDemo(data.demo === true);
     } catch {
       setAuthed(false);
     }
@@ -120,6 +124,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       if (res.ok && data.success) {
         setAuthed(true);
+        setIsDemo(data.demo === true);
         setUsername('');
         setPassword('');
       } else {
@@ -139,9 +144,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       body: JSON.stringify({ type: 'admin' }),
     });
     setAuthed(false);
+    setIsDemo(false);
     setUsername('');
     setPassword('');
   };
+
+  // Демо эрхэд нээгдэхгүй цэсийг харуулахгүй — дарахад л буцаагдана
+  const visibleNavItems = isDemo
+    ? navItems.filter((item) => !DEMO_BLOCKED_PREFIXES.some((prefix) => item.href.startsWith(prefix)))
+    : navItems;
 
   if (checking) {
     return (
@@ -231,7 +242,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           )}
         </div>
         <nav className="p-2 flex-1 overflow-y-auto">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <button
@@ -278,6 +289,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       <main className="flex-1 overflow-auto">
+        {isDemo && (
+          <div className="bg-amber-50 border-b border-amber-200 px-5 py-2.5 text-sm text-amber-900">
+            <b>Танилцуулгын горим.</b> Энэ бол жишээ өгөгдөл бүхий туршилтын СӨХ — зөвхөн
+            харах боломжтой, хийсэн өөрчлөлт хадгалагдахгүй.
+          </div>
+        )}
         {children}
       </main>
       <PWAInstallPrompt appName="Хотол Удирдлага" />

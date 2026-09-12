@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
 import { createSessionToken } from '@/app/lib/session-token';
 import { OTP_DISABLED } from '@/app/lib/auth-flags';
+import { DEMO_ADMIN_USERNAME } from '@/app/lib/demo-admin';
 
 // Rate limiting
 const attempts = new Map<string, { count: number; lockUntil: number }>();
@@ -92,7 +93,10 @@ export async function POST(request: Request) {
         if (error) console.error('[login] last_login_at', error.message);
       });
     const sokhId = adminUser.sokh_id || 0;
-    const token = createSessionToken({ userId: adminUser.id, sokhId, role: expectedRole });
+    // Танилцуулгын демо админ бол token-д тэмдэглэнэ — middleware түүгээр нь
+    // бичих үйлдэл болон бусад СӨХ-ийн өгөгдөл харуулдаг хуудсыг хаана.
+    const isDemo = expectedRole === 'admin' && adminUser.username === DEMO_ADMIN_USERNAME;
+    const token = createSessionToken({ userId: adminUser.id, sokhId, role: expectedRole, demo: isDemo });
     const cookieName = type === 'superadmin' ? 'superadmin-session' : type === 'osnaa' ? 'osnaa-session' : 'admin-session';
     // "Намайг сана" → 30 хоног, эс бол стандарт (superadmin 12ц, бусад 24ц)
     // Зөөлрүүлсэн горим: default 30 хоног (байнга гарахгүй). Зөвхөн remember-ийг
@@ -104,7 +108,7 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({
       success: true, role: adminUser.role, sokhId, displayName: adminUser.display_name,
-      otpSkipped: skipOtp,
+      otpSkipped: skipOtp, demo: isDemo,
     });
     response.cookies.set(cookieName, token, {
       httpOnly: true, secure: process.env.NODE_ENV === 'production',

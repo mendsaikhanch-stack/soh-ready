@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import {
+  DEMO_BLOCKED_PREFIXES,
+  DEMO_METHOD_EXEMPT_PREFIXES,
+  DEMO_READONLY_MESSAGE,
+} from '@/app/lib/demo-admin';
 
 function validateToken(token: string, maxAgeMs: number): boolean {
   try {
@@ -35,8 +40,52 @@ function clearExpiredCookie(request: NextRequest, cookieName: string, maxAgeMs: 
   return null;
 }
 
+// Танилцуулгын демо админ эсэх — admin-session token-ы payload-оос уншина.
+// Энд гарын үсэг шалгахгүй: энэ шалгалт зөвхөн эрх ХААХАД хэрэглэгддэг тул
+// хуурамч token хамгийн ихдээ өөрийгөө л хязгаарлана. Эрх нээх шийдвэрийг
+// урьдын адил `session-token.ts` дахь HMAC баталгаажуулалт гаргана.
+function isDemoAdmin(request: NextRequest): boolean {
+  const token = request.cookies.get('admin-session')?.value;
+  if (!token) return false;
+  const dotIdx = token.lastIndexOf('.');
+  const payload = dotIdx !== -1 ? token.slice(0, dotIdx) : token;
+  return payload.split(':')[5] === 'demo';
+}
+
+// Демо админд хориотой хүсэлт эсэх:
+//   • бичих аргууд (GET/HEAD/OPTIONS-оос бусад) — нэвтрэх/гарахаас бусад нь
+//   • бусад СӨХ-ийн өгөгдөл харуулдаг зам — унших ч болохгүй
+function demoDenialReason(request: NextRequest): 'blocked-page' | 'readonly' | null {
+  const { pathname } = request.nextUrl;
+
+  if (DEMO_BLOCKED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return 'blocked-page';
+  }
+
+  const isWrite = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
+  const exempt = DEMO_METHOD_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  if (isWrite && !exempt && pathname.startsWith('/api/')) {
+    return 'readonly';
+  }
+
+  return null;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // ===== Танилцуулгын демо админ — зөвхөн харах =====
+  if (isDemoAdmin(request)) {
+    const denial = demoDenialReason(request);
+    if (denial) {
+      if (pathname.startsWith('/api/')) {
+        const res = NextResponse.json({ error: DEMO_READONLY_MESSAGE }, { status: 403 });
+        return addSecurityHeaders(res);
+      }
+      // Хуудас бол хянах самбар руу буцаана — эвдэрсэн дэлгэц харуулахгүй
+      return addSecurityHeaders(NextResponse.redirect(new URL('/admin', request.url)));
+    }
+  }
 
   // API route-уудад аюулгүй байдлын header нэмэх
   if (pathname.startsWith('/api/')) {

@@ -37,5 +37,8 @@ export async function GET(request: Request) {
     sokhId: parseInt(result.sokhId || '0'),
     userId: parseInt(result.userId || '0'),
     otpVerified,
+    // Танилцуулгын демо (зөвхөн харах) эрх эсэх — админ дэлгэц үүгээр
+    // тайлбар мэдэгдэл харуулж, бусад СӨХ-ийн цэсийг нуудаг.
+    demo: result.demo === true,
   });
 }

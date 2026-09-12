@@ -9,15 +9,19 @@ function sign(payload: string): string {
 }
 
 // Token үүсгэх: payload.signature
-// payload = timestamp:sokhId:userId:role:nonce  (role signature-т шингэнэ)
+// payload = timestamp:sokhId:userId:role:nonce[:demo]  (role signature-т шингэнэ)
+// Сүүлийн `demo` хэсэг нь зөвхөн танилцуулгын демо админд нэмэгдэнэ —
+// байхгүй бол энгийн нэвтрэлт (хуучин token-ууд ч хэвээр ажиллана).
 export function createSessionToken(parts: {
   userId: string | number;
   sokhId?: string | number;
   role: AuthRole;
+  demo?: boolean;
 }): string {
   const timestamp = Date.now();
   const nonce = randomUUID();
-  const payload = `${timestamp}:${parts.sokhId || 0}:${parts.userId}:${parts.role}:${nonce}`;
+  const base = `${timestamp}:${parts.sokhId || 0}:${parts.userId}:${parts.role}:${nonce}`;
+  const payload = parts.demo ? `${base}:demo` : base;
   const sig = sign(payload);
   return `${payload}.${sig}`;
 }
@@ -31,6 +35,7 @@ export function validateSessionToken(token: string, maxAgeMs: number, expectedRo
   userId?: string;
   sokhId?: string;
   role?: AuthRole;
+  demo?: boolean;
 } {
   if (!token) return { valid: false };
 
@@ -61,6 +66,7 @@ export function validateSessionToken(token: string, maxAgeMs: number, expectedRo
     sokhId: parts[1],
     userId: parts[2],
     role,
+    demo: parts[5] === 'demo',
   };
 }
 
@@ -85,7 +91,7 @@ const ROLE_MAX_AGE: Record<AuthRole, number> = {
 };
 
 // Нэг role-ийн session шалгах — token доторх role мөн таарах ёстой
-export async function checkAuth(role: AuthRole): Promise<{ valid: boolean; userId?: string; sokhId?: string; role?: AuthRole }> {
+export async function checkAuth(role: AuthRole): Promise<{ valid: boolean; userId?: string; sokhId?: string; role?: AuthRole; demo?: boolean }> {
   const cookieStore = await cookies();
   const token = cookieStore.get(`${role}-session`)?.value;
   if (!token) return { valid: false };
@@ -93,7 +99,7 @@ export async function checkAuth(role: AuthRole): Promise<{ valid: boolean; userI
 }
 
 // Олон role-ийн аль нэгийг шалгах (admin || superadmin гэх мэт)
-export async function checkAnyAuth(...roles: AuthRole[]): Promise<{ valid: boolean; role?: AuthRole; userId?: string; sokhId?: string }> {
+export async function checkAnyAuth(...roles: AuthRole[]): Promise<{ valid: boolean; role?: AuthRole; userId?: string; sokhId?: string; demo?: boolean }> {
   for (const role of roles) {
     const result = await checkAuth(role);
     if (result.valid) return { ...result, role };
@@ -102,11 +108,11 @@ export async function checkAnyAuth(...roles: AuthRole[]): Promise<{ valid: boole
 }
 
 // Бүх role-ийн дотроос хамгийн өндөр эрхтэйг олох
-export async function getAuthRole(): Promise<{ role: AuthRole; userId?: string; sokhId?: string } | null> {
+export async function getAuthRole(): Promise<{ role: AuthRole; userId?: string; sokhId?: string; demo?: boolean } | null> {
   const order: AuthRole[] = ['superadmin', 'admin', 'osnaa', 'inspector'];
   for (const role of order) {
     const result = await checkAuth(role);
-    if (result.valid) return { role, userId: result.userId, sokhId: result.sokhId };
+    if (result.valid) return { role, userId: result.userId, sokhId: result.sokhId, demo: result.demo };
   }
   return null;
 }
