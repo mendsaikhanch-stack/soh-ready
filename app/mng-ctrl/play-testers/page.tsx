@@ -37,6 +37,7 @@ export default function PlayTestersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [marking, setMarking] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,6 +69,26 @@ export default function PlayTestersPage() {
     } catch {
       setError('Хуулж чадсангүй — гараар сонгож хуулна уу');
     }
+  };
+
+  // Play Console-д хуулсны дараа тэмдэглэнэ — дараа нь зөвхөн ҮНЭХЭЭР
+  // шинэ хаяг «Console-д нэмээгүй» жагсаалтад үлдэнэ.
+  const markAdded = async () => {
+    if (!confirm(`${pending.length} хаягийг «Console-д нэмсэн» гэж тэмдэглэх үү?`)) return;
+    setMarking(true);
+    try {
+      const res = await fetch('/api/play-testers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: 'new', status: 'added' }),
+      });
+      const data = await res.json();
+      if (!res.ok) setError(data.error || 'Тэмдэглэж чадсангүй');
+      else await load();
+    } catch {
+      setError('Сервертэй холбогдож чадсангүй');
+    }
+    setMarking(false);
   };
 
   return (
@@ -112,12 +133,25 @@ export default function PlayTestersPage() {
           <p className="text-xs text-gray-700 bg-white border rounded-lg p-3 break-all font-mono">
             {pending.map(r => r.email).join(', ')}
           </p>
-          <button
-            onClick={copyPending}
-            className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold active:bg-blue-700"
-          >
-            {copied ? '✓ Хуулагдлаа' : 'Бүгдийг хуулах'}
-          </button>
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button
+              onClick={copyPending}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold active:bg-blue-700"
+            >
+              {copied ? '✓ Хуулагдлаа' : 'Бүгдийг хуулах'}
+            </button>
+            <button
+              onClick={markAdded}
+              disabled={marking}
+              className="border border-blue-300 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-blue-100"
+            >
+              {marking ? 'Тэмдэглэж байна...' : 'Console-д нэмсэн гэж тэмдэглэх'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Хуулаад Play Console-д тавьсны дараа тэмдэглээрэй — дараа нь зөвхөн
+            шинэ хаяг энд үлдэнэ.
+          </p>
         </div>
       )}
 

@@ -90,3 +90,38 @@ export async function GET() {
   }
   return NextResponse.json({ rows: data || [] });
 }
+
+// Төлөв тэмдэглэх — зөвхөн супер админ.
+// Хаягуудыг Play Console-д хуулсны дараа «added» болгоно; дараа нь зөвхөн
+// ҮНЭХЭЭР шинэ хаяг «Console-д нэмээгүй» жагсаалтад үлдэнэ.
+const STATUSES = ['new', 'added', 'opted_in', 'installed', 'declined'];
+
+export async function PATCH(request: Request) {
+  const auth = await checkAuth('superadmin');
+  if (!auth.valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  try {
+    const { ids, from, status } = await request.json();
+    if (!STATUSES.includes(status)) {
+      return NextResponse.json({ error: 'Төлөв буруу' }, { status: 400 });
+    }
+
+    let q = sb.from('play_tester_signups').update({ status, updated_at: new Date().toISOString() });
+    if (Array.isArray(ids) && ids.length) {
+      q = q.in('id', ids.filter((n: unknown) => Number.isInteger(n)).slice(0, 500));
+    } else if (STATUSES.includes(from)) {
+      q = q.eq('status', from);          // «бүх шинэийг нэмсэн болгох»
+    } else {
+      return NextResponse.json({ error: 'ids эсвэл from шаардлагатай' }, { status: 400 });
+    }
+
+    const { data, error } = await q.select('id');
+    if (error) {
+      console.error('[play-testers] patch', error.message);
+      return NextResponse.json({ error: 'Хадгалж чадсангүй' }, { status: 500 });
+    }
+    return NextResponse.json({ success: true, updated: (data || []).length });
+  } catch {
+    return NextResponse.json({ error: 'Серверийн алдаа' }, { status: 500 });
+  }
+}
