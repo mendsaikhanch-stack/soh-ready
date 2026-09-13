@@ -104,7 +104,9 @@ const ROWS = [
   ['901',   55000], ['902',       0], ['903',       0], ['904',  220000],
   ['905',  110000], ['906',       0], ['908',       0], ['909',       0],
   ['1001', 275000], ['1002',      0], ['1003',      0], ['1004',      0],
-  ['1005', 605000], ['1006',      0], ['1007',      0], ['1008',      0],
+  // 1006 — саяхан 2026 он дуустал төлсөн (дарга, 2026-09-13):
+  // 1 сарын тайлангаас хойших 2-12 сар = 11 × 90,000₮ урьдчилгаа → сөрөг үлдэгдэл
+  ['1005', 605000], ['1006', -990000], ['1007',      0], ['1008',      0],
   ['1009',  55000], ['1010',      0],
   ['1101',  55000], ['1102',  55000], ['1103',  55000], ['1104',      0],
   ['1105', 440000], ['1106',      0], ['1107',  55000], ['1108',      0],  // 1108 — СӨХ-ийнх, төлсөн
@@ -204,9 +206,13 @@ async function run() {
   const odd = noFit.filter(([a]) => !CONFIRMED_ODD[a]);
   const okOdd = noFit.filter(([a]) => CONFIRMED_ODD[a]);
 
+  const prepaid = ROWS.filter((r) => r[1] < 0);
   console.log('\n📊 Өр (2026 оны 01 сарын байдлаар):');
-  console.log(`   Өртэй:         ${String(withDebt.length).padStart(3)} айл · ${money(debtTotal)}`);
-  console.log(`   Төлсөн:        ${String(ROWS.length - withDebt.length).padStart(3)} айл`);
+  console.log(`   Өртэй:         ${String(withDebt.length).padStart(3)} айл · ${money(debtTotal)} (цэвэр)`);
+  console.log(`   Төлсөн:        ${String(ROWS.length - withDebt.length - prepaid.length).padStart(3)} айл`);
+  if (prepaid.length) {
+    console.log(`   Урьдчилж төлсөн: ${prepaid.length} айл — ${prepaid.map(([a, d]) => `${a}: ${money(d)}`).join(', ')}`);
+  }
   console.log(`   Хамгийн их өр: ${money(maxDebt)} (${withDebt.find((r) => r[1] === maxDebt)[0]} тоот)`);
 
   const spots = Object.values(GARAGE).reduce((a, b) => a + b, 0);
