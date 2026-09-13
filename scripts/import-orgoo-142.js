@@ -11,13 +11,22 @@
 //   • Тоот нь 301…1211 — эхний 1-2 орон нь давхар (3-12 давхар). 1, 2 давхар байхгүй.
 //   • Нэр, утас өгөгдөөгүй → аккаунт үүсгэхгүй. Нэвтрэлтийг QR-аар өөрсдөөр нь
 //     бүртгүүлнэ. Нэрийг «<тоот> тоот» гэж бичнэ.
-//   • Сарын хураамж = 55,000₮ (айлын суурь) + гараажны зогсоол бүрт 35,000₮.
-//     Гараажтай 7 тоотод хураамжийг айл тус бүрд нь бичнэ (residents.monthly_fee):
-//       405 — 2 зогсоол → 125,000₮ ;  бусад 6 нь 1 зогсоол → 90,000₮
+//   • Сарын хураамж = 55,000₮ (айлын суурь) + гараажны зогсоол бүрт 35,000₮
+//     → 1 зогсоолтой 90,000₮, 2 зогсоолтой 125,000₮. Айл тус бүрд нь
+//     `residents.monthly_fee`-д бичнэ.
 //   • 501 тоотын нүдэнд гараар бичсэн дансны дугаар орсон байсныг хаяж, 165,000 гэж авав.
+//     (Тэр тоот нь гараажны жагсаалт дээр ч шаргалаар тэмдэглэгдсэн байв.)
 //   • 1111 тоотын нүд ХООСОН — «төлсөн» гэж үзэж 0 болгов.
 //   • 907 ба 1206 тоот гэж БАЙХГҮЙ (дарга 2026-09-13-нд баталгаажуулав).
 //   • 1108 тоот нь СӨХ-ийнх бөгөөд төлбөрөө төлсөн (дарга) → өр 0.
+//
+// Гараажны эх сурвалж: «Дулаан зогсоол эзэмшигчдийн бүртгэл» цаасан жагсаалт
+// (28 мөр, 2026-09-13-нд зургаар авав) + даргын дараагийн засвар. Нэг тоот
+// ХОЁР мөрөнд бичигдсэн нь 2 зогсоолтой гэсэн үг (909, 809, 405, 906).
+// Даргын засвар: 1210 ба 803 гараажгүй БОЛСОН; 602 ба 802 хоёр гараажтай БОЛСОН.
+// ЖИЧ: өрийг 2026.01-нд бодсон тул «болсон» өөрчлөлтөөс ӨМНӨХ хураамжаар
+// тооцоологдсон байна (802: 180,000 = 2 × 90,000). Энэ нь зөрчил биш.
+// Зогсоолын утас/машины дугаар → `docs/sokh-2693-garage.local.md` (git-д ОРОХГҮЙ).
 //
 // Хяналт: эх баримтад нийт дүнгийн мөр БАЙХГҮЙ тул тулгах дүн алга. Оронд нь
 // скрипт давхар бүрийн тоо, нийт 96 айл, давхардал, өр бүр өөрийн сарын
@@ -44,16 +53,29 @@ const COMMIT = process.argv.includes('--commit');
 
 // ------- СӨХ-ийн тохиргоо -------
 const ORG_NAME = process.env.ORG_NAME || 'Өргөө-142 СӨХ';
-const ORG_ADDRESS = process.env.ORG_ADDRESS || '';
+// Баянгол дүүрэг, 1-р хороо, 142-р байр (дарга, 2026-09-13). khoroo #1 = БГД 1-р хороо.
+const ORG_ADDRESS = process.env.ORG_ADDRESS || 'Баянгол дүүрэг, 1-р хороо, 142-р байр';
 const ORG_PHONE = process.env.ORG_PHONE || '';
-const KHOROO_ID = process.env.KHOROO_ID ? Number(process.env.KHOROO_ID) : null;
+const KHOROO_ID = process.env.KHOROO_ID ? Number(process.env.KHOROO_ID) : 1;
 const SOKH_ID = process.env.SOKH_ID ? Number(process.env.SOKH_ID) : null;
 const MONTHLY_FEE = 55000;   // айлын суурь хураамж
 const GARAGE_FEE = 35000;    // гараажны нэг зогсоол
 
-// Гараажтай тоотууд — [тоот: зогсоолын тоо] (дарга, 2026-09-13)
+// Гараажтай тоотууд — [тоот: зогсоолын тоо]
+// «Дулаан зогсоол эзэмшигчдийн бүртгэл» + даргын засвар (2026-09-13). Нийт 24 зогсоол.
 const GARAGE = {
-  '405': 2, '709': 1, '802': 1, '806': 1, '1108': 1, '1110': 1, '1205': 1,
+  '405': 2, '501': 1, '602': 2, '607': 1, '708': 1, '709': 1,
+  '802': 2, '809': 2, '906': 2, '908': 1, '909': 2,
+  '1006': 1, '1007': 1, '1108': 1, '1110': 1, '1205': 1, '1207': 1, '1209': 1,
+};
+// Цаасан жагсаалтад БАЙГАА боловч дарга «гараажгүй болсон» гэсэн: 1210, 803.
+// 806 — дарга эхэндээ «гараажтай» гэсэн ч дараа нь «гараажгүй» гэж
+// залруулав (2026-09-13), цаасан жагсаалттай ч нийцэж байна.
+
+// Өр нь ямар ч тарифын бүхэл үржвэр биш боловч ЗӨВ нь баталгаажсан тоот.
+// (Хэдэн жилээр хуримтлагдсан өр — хуучин тариф, хэсэгчилсэн төлөлт холилдсон.)
+const CONFIRMED_ODD = {
+  '806': 'дарга: гараажгүй, СӨХ-өө төлдөггүй айл — олон жилийн хуримтлагдсан өр',
 };
 const feeOf = (apt) => MONTHLY_FEE + GARAGE_FEE * (GARAGE[apt] || 0);
 
@@ -174,23 +196,35 @@ async function run() {
   const withDebt = ROWS.filter((r) => r[1] > 0);
   const debtTotal = ROWS.reduce((s, r) => s + r[1], 0);
   const maxDebt = Math.max(...ROWS.map((r) => r[1]));
-  const odd = withDebt.filter((r) => r[1] % feeOf(r[0]) !== 0);
+  // Өр нь 2026.01-нд бодогдсон бөгөөд зарим айлын гарааж хожим өөрчлөгдсөн тул
+  // боломжит 3 тарифын АЛЬ НЭГЭД нь бүхлээр хуваагдаж байвал зөв гэж үзнэ.
+  const PLAUSIBLE = [MONTHLY_FEE, MONTHLY_FEE + GARAGE_FEE, MONTHLY_FEE + 2 * GARAGE_FEE];
+  const fits = (debt) => PLAUSIBLE.filter((f) => debt % f === 0);
+  const noFit = withDebt.filter((r) => fits(r[1]).length === 0);
+  const odd = noFit.filter(([a]) => !CONFIRMED_ODD[a]);
+  const okOdd = noFit.filter(([a]) => CONFIRMED_ODD[a]);
 
   console.log('\n📊 Өр (2026 оны 01 сарын байдлаар):');
   console.log(`   Өртэй:         ${String(withDebt.length).padStart(3)} айл · ${money(debtTotal)}`);
   console.log(`   Төлсөн:        ${String(ROWS.length - withDebt.length).padStart(3)} айл`);
   console.log(`   Хамгийн их өр: ${money(maxDebt)} (${withDebt.find((r) => r[1] === maxDebt)[0]} тоот)`);
 
+  const spots = Object.values(GARAGE).reduce((a, b) => a + b, 0);
+  const one = Object.keys(GARAGE).filter((a) => GARAGE[a] === 1);
+  const two = Object.keys(GARAGE).filter((a) => GARAGE[a] === 2);
   console.log('\n🚗 Сарын хураамж:');
   console.log(`   ${money(MONTHLY_FEE).padStart(9)} × ${ROWS.length - Object.keys(GARAGE).length} айл (гараажгүй)`);
-  Object.entries(GARAGE).forEach(([a, n]) => console.log(`   ${money(feeOf(a)).padStart(9)} × ${a} тоот (${n} зогсоол: ${money(MONTHLY_FEE)} + ${n}×${money(GARAGE_FEE)})`));
+  console.log(`   ${money(MONTHLY_FEE + GARAGE_FEE).padStart(9)} × ${one.length} айл (1 зогсоол): ${one.join(', ')}`);
+  console.log(`   ${money(MONTHLY_FEE + 2 * GARAGE_FEE).padStart(9)} × ${two.length} айл (2 зогсоол): ${two.join(', ')}`);
+  console.log(`   Нийт ${spots} зогсоол / ${Object.keys(GARAGE).length} айл`);
 
   if (odd.length) {
-    console.log(`\n   ⚠️  Өр нь сарын хураамжийн бүхэл үржвэр БИШ ${odd.length} тоот (хэсэгчлэн төлсөн байж болно — даргаар шалгуулах):`);
-    odd.forEach(([a, d]) => console.log(`      ${a} тоот: ${money(d).padStart(12)} ÷ ${money(feeOf(a))} = ${(d / feeOf(a)).toFixed(2)} сар`));
+    console.log(`\n   ⚠️  Өр нь 55,000 / 90,000 / 125,000-ын АЛЬ Ч НЭГЭНД бүхлээр хуваагдахгүй ${odd.length} тоот (даргаар шалгуулах):`);
+    odd.forEach(([a, d]) => console.log(`      ${a} тоот: ${money(d).padStart(12)} — ${PLAUSIBLE.map((f) => `${(d / f).toFixed(2)}×${money(f)}`).join(' · ')}`));
   } else {
-    console.log('\n   ✓ Өр бүр өөрийн сарын хураамжийн бүхэл үржвэр.');
+    console.log('\n   ✓ Өр бүр боломжит тарифын бүхэл үржвэр (баталгаажсанаас бусад).');
   }
+  okOdd.forEach(([a, d]) => console.log(`   ✓ ${a} тоот ${money(d)} — тарифт хуваагдахгүй ч ЗӨВ: ${CONFIRMED_ODD[a]}`));
 
   const sb = getClient();
   if (!sb) return;
@@ -199,6 +233,19 @@ async function run() {
   let org = await findOrg(sb);
   if (org) {
     console.log(`\n🏢 Байгаа СӨХ: #${org.id} — ${org.name} (${org.claim_status}, хороо ${org.khoroo_id ?? '—'})`);
+    const orgPatch = {};
+    if (KHOROO_ID && org.khoroo_id !== KHOROO_ID) orgPatch.khoroo_id = KHOROO_ID;
+    if (ORG_ADDRESS && org.address !== ORG_ADDRESS) orgPatch.address = ORG_ADDRESS;
+    if (ORG_PHONE && org.phone !== ORG_PHONE) orgPatch.phone = ORG_PHONE;
+    if (Object.keys(orgPatch).length) {
+      console.log(`   Засах: ${JSON.stringify(orgPatch)} (одоо: хороо ${org.khoroo_id ?? '—'}, хаяг ${org.address || '—'})`);
+      if (COMMIT) {
+        const { error } = await sb.from('sokh_organizations').update(orgPatch).eq('id', org.id);
+        if (error) { console.error(`   ❌ ${error.message}`); process.exitCode = 1; return; }
+        Object.assign(org, orgPatch);
+        console.log('   ✓ Засав');
+      }
+    }
   } else {
     console.log(`\n🏢 СӨХ олдсонгүй → шинээр үүсгэнэ: "${ORG_NAME}"`);
     console.log(`   хороо: ${KHOROO_ID ?? '— (дараа холбоно)'}   утас: ${ORG_PHONE || '—'}   хаяг: ${ORG_ADDRESS || '—'}`);
