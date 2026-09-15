@@ -73,3 +73,6 @@ scripts/*.local.js
 # Нийтэд тарвал хэн ч хуурамч баримт үйлдэж чадна. README-г нь л оруулна.
 /docs/contracts/*
 !/docs/contracts/README.md
+
+# Үүсгэсэн өр төлбөрийн тайлан — оршин суугчийн нэр, утас, өрийн дүн. Репо public!
+/docs/reports/
