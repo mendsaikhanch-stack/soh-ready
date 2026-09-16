@@ -62,7 +62,10 @@ if (count === 0) {
   console.error('❌ Энэ СӨХ дээр нэг ч айл бүртгэгдээгүй байна — эхлээд жагсаалтаа оруул.');
   process.exit(1);
 }
-const nums = homes.map((u) => Number(u.apartment)).filter((n) => Number.isFinite(n) && n > 0);
+// Number('') нь 0 болдог тул тоог биш, ТЭКСТИЙГ шалгана — ингэснээр хоосон
+// тоот хасагдаж, «0» тоот (Бадрах СӨХ шиг) мужид үлдэнэ.
+const nums = homes.map((u) => String(u.apartment ?? '').trim())
+  .filter((v) => /^\d+$/.test(v)).map(Number);
 const range = nums.length ? `${Math.min(...nums)}–${Math.max(...nums)}` : '';
 // Олон байртай СӨХ-д тоот давхцдаг тул байраа заавал бичүүлнэ
 const buildings = [...new Set(homes.map((u) => (u.building || '').trim()).filter(Boolean))];
