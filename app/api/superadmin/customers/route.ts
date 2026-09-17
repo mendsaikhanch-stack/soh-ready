@@ -178,11 +178,29 @@ export async function GET() {
     });
   }
 
-  // Айлын тоо — unit_count нь гараар бичсэн тоо, бодит мөрөөр тоолно
-  const { data: residents } = await supabaseAdmin
-    .from('residents')
-    .select('sokh_id, debt, created_at, name, auth_user_id')
-    .in('sokh_id', orgIds);
+  // Айлын тоо — unit_count нь гараар бичсэн тоо, бодит мөрөөр тоолно.
+  //
+  // ⚠️ Хуудаслаж татах ЗААВАЛ: Supabase нэг хүсэлтэд 1000 мөр л буцаадаг.
+  // Хуучин кодод .range() байгаагүй тул нийт айл 1000-г давмагц үлдсэнийг нь
+  // чимээгүй хаяж, том СӨХ-ийг дутуу тоолж байв (437 айлтай Бадрахыг 54 гэж
+  // харуулсан, улмаар суурилуулалт/сарын хураамж ч буруу бодогдож байсан).
+  const residents: { sokh_id: number; debt: number | null; created_at: string | null;
+    name: string | null; auth_user_id: string | null }[] = [];
+  for (let from = 0; from < 100_000; from += 1000) {
+    const { data, error } = await supabaseAdmin
+      .from('residents')
+      .select('sokh_id, debt, created_at, name, auth_user_id')
+      .in('sokh_id', orgIds)
+      .order('id')
+      .range(from, from + 999);
+    if (error) {
+      console.error('[superadmin/customers] residents:', error.message);
+      break;
+    }
+    if (!data?.length) break;
+    residents.push(...(data as typeof residents));
+    if (data.length < 1000) break;
+  }
 
   // Апп ашиглалт — нэвтрэх бүртгэлтэй айл, тэдгээрийн сүүлийн нэвтрэлт
   const signIns = await loadSignIns('superadmin/customers');
