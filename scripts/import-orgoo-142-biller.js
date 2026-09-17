@@ -67,7 +67,9 @@ const pad = (v, n) => String(v).padStart(n, '0');
 const codeFor = (apt) =>
   CODE.prefix + pad(CODE.horoo, 2) + pad(CODE.bair, 4) + pad(CODE.korpus, 1) + pad(apt, 4) + pad(CODE.orh, 1);
 
-// «ДОРЖРАВДАН» → «Доржравдан», «Н.АНХБАЯР» → «Н.Анхбаяр», «Д САРАНТУЯА» → «Д Сарантуяа»
+// Биллер нэрийг ТОМ үсгээр өгдөг тул эхний үсгээр нь жижигрүүлнэ.
+// Жишээ (зохиомол): «ХХХХХХ» → «Хххххх», «Б.ХХХХ» → «Б.Хххх», «Б ХХХХ» → «Б Хххх»
+// ЖИЧ: энд бодит оршин суугчийн нэр БҮҮ бич — репо public.
 function titleCase(s) {
   return String(s || '')
     .trim()
