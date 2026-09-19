@@ -77,6 +77,8 @@ interface Customer {
   admins: AdminAcct[];
   activation_token: { expires_at: string; used: boolean; expired: boolean } | null;
   setup_fee: number;
+  setup_fee_list: number;
+  setup_discount_percent: number | null;
   monthly_fee: number;
   free_months: number;
   free_months_default: number;
@@ -522,10 +524,17 @@ function CustomerRow({
         </div>
 
         <div className="text-right">
-          <p className="text-sm text-white">{c.apartments ? money(c.setup_fee) : '—'}</p>
+          <p className="text-sm text-white">
+            {c.apartments && c.setup_discount_percent ? (
+              <span className="text-gray-600 line-through text-xs mr-1">{money(c.setup_fee_list)}</span>
+            ) : null}
+            {c.apartments ? money(c.setup_fee) : '—'}
+          </p>
           <p className="text-[10px]">
             {!c.apartments ? (
               <span className="text-gray-600">айл ороогүй</span>
+            ) : c.setup_discount_percent && !c.setup_invoice ? (
+              <span className="text-cyan-300">−{c.setup_discount_percent}% · бүртгээгүй</span>
             ) : c.setup_invoice?.status === 'paid' ? (
               <span className="text-green-400">✓ төлсөн</span>
             ) : c.setup_invoice ? (
@@ -671,12 +680,20 @@ function CustomerRow({
               <div className="flex justify-between gap-2">
                 <dt className="text-gray-400">Суурилуулалт</dt>
                 <dd className="text-white">
+                  {c.setup_discount_percent ? (
+                    <span className="text-gray-500 line-through mr-1.5">{money(c.setup_fee_list)}</span>
+                  ) : null}
                   {money(c.setup_fee)}
                   {c.setup_invoice
                     ? c.setup_invoice.status === 'paid'
                       ? <span className="text-green-400"> ✓ төлсөн</span>
                       : <span className="text-amber-400"> · төлөгдөөгүй</span>
                     : <span className="text-gray-500"> · бүртгээгүй</span>}
+                  {c.setup_discount_percent ? (
+                    <span className="block text-[11px] text-cyan-300">
+                      Нээлтийн хямдрал — {c.setup_discount_percent}% хөнгөлсөн
+                    </span>
+                  ) : null}
                 </dd>
               </div>
               <div className="flex justify-between gap-2">

@@ -415,6 +415,11 @@ export async function GET() {
 
       // Тарифаар тооцсон дүн (нэхэмжлэх үүсгэхээс өмнө ч харагдана)
       setup_fee: setupFee(t, apartments),
+      // Хөнгөлөлтгүй жишиг үнэ + хувь. Хөнгөлөлттэй СӨХ-ийн дүн нь
+      // «айлын тоо × 1,500₮»-тэй таарахгүй тул хямдралыг нь хажууд нь
+      // харуулахгүй бол самбар дээрх тоо буруу бодогдсон мэт харагдана.
+      setup_fee_list: setupFee(tariff, apartments),
+      setup_discount_percent: discountByOrg.get(o.id) ?? null,
       monthly_fee: monthlyFee(t, apartments),
       free_months: freeMonths(t, apartments),
       free_months_default: freeMonths(tariff, apartments),
