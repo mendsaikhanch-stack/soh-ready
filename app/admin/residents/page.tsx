@@ -32,6 +32,10 @@ interface Resident {
 const emptyForm = { name: '', apartment: '', phone: '', debt: '0', area_sqm: '0', building: '', resident_type: '', monthly_fee: '', unit_kind: 'household', bank_customer_code: '' };
 
 const TYPE_LABELS: Record<string, string> = { owner: 'Эзэмшигч', tenant: 'Түрээслэгч', family: 'Гэр бүл' };
+// Нүдэнд ижил харагддаг латин → кирилл үсэг (/api/auth/register-ийнхтэй ижил)
+const LOOKALIKE: Record<string, string> = {
+  a: 'а', b: 'б', c: 'с', e: 'е', o: 'о', p: 'р', x: 'х', y: 'у', k: 'к', m: 'м', t: 'т', h: 'н',
+};
 const isPlaceholderName = (n: string) => /тоот\s*$/i.test(n || '') || /-р\s*байр/i.test(n || '');
 const isComplete = (r: Resident) => !!r.resident_type && !isPlaceholderName(r.name);
 
@@ -66,8 +70,12 @@ export default function AdminResidents() {
   // Өргөө-142: 801–1211 давхардалгүй). Тиймээс тогтсон загвар шаардахгүй:
   // хайлтын мөрийг үг/тоо болгон хуваагаад, ХЭСЭГ БҮР нь аль нэг талбарт
   // таарсан айлыг олдсонд тооцно. Ингэснээр «88-14», «88 14», «14 88» бүгд ажиллана.
-  const tokenize = (s: string) => s.toLowerCase().split(/[\s\-–—/,.]+/).filter(Boolean);
-  const norm = (v: unknown) => String(v ?? '').trim().toLowerCase();
+  // Байрны нэрэнд «23А», «22Б» гэх мэт кирилл үсэг ордог. Латин «a» нь кирилл
+  // «а»-тай нүдэнд ижил харагддаг тул гараас аль нь ч бичигдэж болно —
+  // хайлтын мөр, өгөгдөл хоёрыг ижил аргаар нэгтгэвэл аль нь ч таарна.
+  const norm = (v: unknown) => String(v ?? '').trim().toLowerCase()
+    .replace(/[a-z]/g, ch => LOOKALIKE[ch] ?? ch);
+  const tokenize = (s: string) => norm(s).split(/[\s\-–—/,.]+/).filter(Boolean);
 
   // strict = цэвэр тоог ЯГ таарахаар нь шалгана («14» гэхэд 114, 140–144 гарахгүй).
   const hitsToken = (r: Resident, t: string, strict: boolean) => {
