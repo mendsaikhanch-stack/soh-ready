@@ -46,6 +46,8 @@ const AGREEMENT_STATUS: Record<string, { label: string; cls: string }> = {
 
 /** /admin/bank-account дээр тохируулсан хураамж хүлээн авах данс */
 interface BankRow {
+  id: number;
+  sort_order?: number | null;
   bank_name: string;
   account_number: string;
   account_holder: string;
@@ -58,6 +60,7 @@ export default function AdminPayments() {
   const [notices, setNotices] = useState<PaymentNotice[]>([]);
   const [resolving, setResolving] = useState<number | null>(null);
   const [bankRow, setBankRow] = useState<BankRow | null>(null);
+  const [bankCount, setBankCount] = useState(0);
   const [agreements, setAgreements] = useState<DebtAgreement[]>([]);
   const [closingId, setClosingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,8 +92,12 @@ export default function AdminPayments() {
     setNotices((nt as unknown as PaymentNotice[]) || []);
 
     // Хураамж хүлээн авах данс (/admin/bank-account дээр тохируулдаг)
-    const { data: bank } = await adminFrom('sokh_bank_accounts').select('*').eq('sokh_id', sokhId).single();
-    setBankRow((bank as unknown as BankRow) || null);
+    // СӨХ олон данстай байж болно — энд үндсэн (эхний) дансыг харуулна
+    const { data: bank } = await adminFrom('sokh_bank_accounts').select('*').eq('sokh_id', sokhId);
+    const bankList = ((bank as unknown as BankRow[]) || [])
+      .slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
+    setBankRow(bankList[0] || null);
+    setBankCount(bankList.length);
 
     // Өр барагдуулах гэрээнүүд (/admin/residents дээр байгуулдаг)
     const { data: agr } = await adminFrom('debt_agreements')
@@ -345,7 +352,14 @@ export default function AdminPayments() {
                     <span className="text-lg">🏦</span>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">{bankRow.bank_name}</p>
+                    <p className="text-sm font-semibold">
+                      {bankRow.bank_name}
+                      {bankCount > 1 && (
+                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 align-middle">
+                          +{bankCount - 1} данс
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-gray-500">{bankRow.account_number} · {bankRow.account_holder}</p>
                   </div>
                 </div>

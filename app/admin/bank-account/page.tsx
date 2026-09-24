@@ -16,12 +16,17 @@ interface BankAccount {
   qr_image_url: string | null;
   note: string | null;
   is_active: boolean;
+  sort_order: number | null;
 }
 
 const BANKS = [
   'Хаан банк', 'Голомт банк', 'ХХБ', 'Төрийн банк', 'Хас банк',
   'Капитрон банк', 'Богд банк', 'Чингис хаан банк', 'М банк', 'Ард банк',
 ];
+
+// Оршин суугчид харагдах дараалал. sort_order байхгүй (миграц ажиллаагүй) бол id-гаар.
+const sortAccounts = (rows: BankAccount[]) =>
+  rows.slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
 
 const emptyForm = {
   bank_name: BANKS[0],
@@ -33,7 +38,11 @@ const emptyForm = {
 };
 
 export default function AdminBankAccount() {
-  const [account, setAccount] = useState<BankAccount | null>(null);
+  // СӨХ хэдэн ч данстай байж болно (жнь. Хаан + Төрийн) — оршин суугч
+  // өөрийн банкны дотор шилжүүлбэл шимтгэлгүй.
+  const [accounts, setAccounts] = useState<BankAccount[]>([]);
+  const [editing, setEditing] = useState<BankAccount | null>(null);  // null + showForm = шинэ данс
+  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [sokhId, setSokhId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,20 +57,56 @@ export default function AdminBankAccount() {
   const load = async () => {
     const id = await getAdminSokhId();
     setSokhId(id);
-    const { data } = await adminFrom('sokh_bank_accounts').select('*').eq('sokh_id', id).single();
-    const row = data as unknown as BankAccount | null;
-    if (row) {
-      setAccount(row);
-      setForm({
-        bank_name: row.bank_name || BANKS[0],
-        account_number: row.account_number || '',
-        account_holder: row.account_holder || '',
-        qr_image_url: row.qr_image_url || '',
-        note: row.note || '',
-        is_active: row.is_active !== false,
-      });
-    }
+    // ЖИЧ: sort_order-оор SQL талд эрэмбэлэхгүй — `supabase-sokh-bank-multi-migration.sql`
+    // ажиллаагүй байхад тэр багана байхгүй тул бүх мөр алга болно. Клиент талд эрэмбэлнэ.
+    const { data } = await adminFrom('sokh_bank_accounts').select('*').eq('sokh_id', id);
+    setAccounts(sortAccounts((data as unknown as BankAccount[]) || []));
     setLoading(false);
+  };
+
+  const openNew = () => {
+    setEditing(null);
+    setForm(emptyForm);
+    setShowForm(true);
+    setMessage('');
+    setError('');
+  };
+
+  const openEdit = (row: BankAccount) => {
+    setEditing(row);
+    setForm({
+      bank_name: row.bank_name || BANKS[0],
+      account_number: row.account_number || '',
+      account_holder: row.account_holder || '',
+      qr_image_url: row.qr_image_url || '',
+      note: row.note || '',
+      is_active: row.is_active !== false,
+    });
+    setShowForm(true);
+    setMessage('');
+    setError('');
+  };
+
+  const removeAccount = async (row: BankAccount) => {
+    if (!confirm(`${row.bank_name} · ${row.account_number}
+
+Энэ дансыг устгах уу? Оршин суугчид цаашид харагдахгүй болно.`)) return;
+    const { error: e } = await adminFrom('sokh_bank_accounts').delete().eq('id', row.id);
+    if (e) { setError(`Устгаж чадсангүй: ${e}`); return; }
+    setMessage('Данс устгалаа.');
+    if (editing?.id === row.id) setShowForm(false);
+    await load();
+  };
+
+  // Дарааллыг солих — эхний данс нь оршин суугчид анхны байдлаар харагдана
+  const move = async (row: BankAccount, dir: -1 | 1) => {
+    const i = accounts.findIndex(a => a.id === row.id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= accounts.length) return;
+    const other = accounts[j];
+    await adminFrom('sokh_bank_accounts').update({ sort_order: j }).eq('id', row.id);
+    await adminFrom('sokh_bank_accounts').update({ sort_order: i }).eq('id', other.id);
+    await load();
   };
 
   const uploadQr = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,16 +158,36 @@ export default function AdminBankAccount() {
       updated_at: new Date().toISOString(),
     };
 
-    const { error: dbErr } = account
-      ? await adminFrom('sokh_bank_accounts').update(payload).eq('id', account.id)
-      : await adminFrom('sokh_bank_accounts').insert([{ sokh_id: sokhId, ...payload }]);
+    let dbErr;
+    if (editing) {
+      ({ error: dbErr } = await adminFrom('sokh_bank_accounts').update(payload).eq('id', editing.id));
+    } else {
+      const base = { sokh_id: sokhId, ...payload };
+      ({ error: dbErr } = await adminFrom('sokh_bank_accounts')
+        .insert([{ ...base, sort_order: accounts.length }]));
+      // Миграц хараахан ажиллаагүй бол sort_order багана байхгүй — эрэмбэгүйгээр бичнэ
+      if (dbErr && /sort_order/i.test(String(dbErr))) {
+        ({ error: dbErr } = await adminFrom('sokh_bank_accounts').insert([base]));
+      }
+    }
 
     setSaving(false);
     if (dbErr) {
-      setError(`Хадгалж чадсангүй: ${dbErr}`);
+      const msg = String(dbErr);
+      if (/sokh_id/i.test(msg) && /unique|duplicate/i.test(msg)) {
+        // supabase-sokh-bank-multi-migration.sql ажиллаагүй байна
+        setError('Олон данс хадгалах боломж хараахан идэвхжээгүй байна. Хотолын багтай холбогдоно уу.');
+      } else if (/unique|duplicate/i.test(msg)) {
+        setError('Энэ дансны дугаар аль хэдийн бүртгэгдсэн байна.');
+      } else {
+        setError(`Хадгалж чадсангүй: ${msg}`);
+      }
       return;
     }
-    setMessage('Хадгаллаа. Оршин суугчид "Төлбөр" хэсгээсээ шууд харна.');
+    setMessage(editing
+      ? 'Хадгаллаа. Оршин суугчид "Төлбөр" хэсгээсээ шууд харна.'
+      : 'Шинэ данс нэмлээ. Оршин суугч төлөхдөө банкаа сонгоно.');
+    setShowForm(false);
     await load();
   };
 
@@ -137,7 +202,52 @@ export default function AdminBankAccount() {
         Хотол дундаа орохгүй, шимтгэл авахгүй.
       </p>
 
+      {/* Бүртгэсэн данснууд. Олон банктай байж болно — оршин суугч өөрийн
+          банкны дотор шилжүүлбэл шимтгэлгүй, шууд ордог. */}
+      <div className="space-y-2 mb-4">
+        {accounts.map((a, i) => (
+          <div
+            key={a.id}
+            className={`bg-white border rounded-xl p-4 flex items-center gap-3 ${a.is_active ? '' : 'opacity-60'}`}
+          >
+            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center shrink-0">
+              <span className="text-lg">🏦</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">
+                {a.bank_name}
+                {i === 0 && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 align-middle">үндсэн</span>}
+                {!a.is_active && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-600 align-middle">нуусан</span>}
+              </p>
+              <p className="text-xs text-gray-500 truncate">{a.account_number} · {a.account_holder}</p>
+            </div>
+            <span className="text-[11px] text-gray-400 shrink-0">{a.qr_image_url ? 'QR-тай ✓' : 'QR-гүй'}</span>
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => move(a, -1)} disabled={i === 0}
+                      title="Дээш" className="px-1.5 text-gray-400 hover:text-gray-700 disabled:text-gray-200">↑</button>
+              <button onClick={() => move(a, 1)} disabled={i === accounts.length - 1}
+                      title="Доош" className="px-1.5 text-gray-400 hover:text-gray-700 disabled:text-gray-200">↓</button>
+              <button onClick={() => openEdit(a)} className="text-xs text-blue-600 hover:underline px-1.5">Засах</button>
+              <button onClick={() => removeAccount(a)} className="text-xs text-red-400 hover:underline px-1.5">Устгах</button>
+            </div>
+          </div>
+        ))}
+        {!accounts.length && !showForm && (
+          <div className="bg-white border border-dashed rounded-xl p-6 text-center text-sm text-gray-400">
+            Данс бүртгээгүй байна. Оршин суугчид «Төлөх» товч харагдахгүй.
+          </div>
+        )}
+      </div>
+
+      {!showForm && (
+        <button onClick={openNew} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+          + Данс нэмэх
+        </button>
+      )}
+
+      {showForm && (
       <div className="bg-white border rounded-xl p-5 space-y-4">
+        <h2 className="font-semibold">{editing ? 'Данс засах' : 'Шинэ данс'}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Field label="Банк" required>
             <select
@@ -251,11 +361,18 @@ export default function AdminBankAccount() {
           >
             {saving ? 'Хадгалж байна...' : 'Хадгалах'}
           </button>
+          <button
+            onClick={() => { setShowForm(false); setError(''); }}
+            className="px-4 py-2.5 border rounded-lg text-sm"
+          >
+            Цуцлах
+          </button>
         </div>
       </div>
+      )}
 
       {/* Оршин суугчид яг ингэж харагдана */}
-      {form.account_number && (
+      {showForm && form.account_number && (
         <div className="mt-6">
           <p className="text-xs text-gray-400 mb-2">ОРШИН СУУГЧИД ИНГЭЖ ХАРАГДАНА</p>
           <div className="bg-white border rounded-xl p-4 max-w-xs">

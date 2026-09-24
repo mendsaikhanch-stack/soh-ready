@@ -22,6 +22,8 @@ interface QPayInvoice {
 }
 
 interface BankAccount {
+  id: number;
+  sort_order?: number | null;
   bank_name: string;
   account_number: string;
   account_holder: string;
@@ -82,7 +84,8 @@ export default function PaymentsPage() {
   const [paymentStep, setPaymentStep] = useState<'select' | 'qpay'>('select');
   const [receiptPayment, setReceiptPayment] = useState<any>(null);
   const [myInvoices, setMyInvoices] = useState<MyInvoice[]>([]);
-  const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [bankIdx, setBankIdx] = useState(0);
   const [copied, setCopied] = useState('');
   const [agreements, setAgreements] = useState<DebtAgreement[]>([]);
   const [signingId, setSigningId] = useState<string | null>(null);
@@ -234,11 +237,14 @@ export default function PaymentsPage() {
       //    RLS нь зөвхөн өөрийн СӨХ-ийн мөрийг л буцаана.
       const { data: bank } = await supabase
         .from('sokh_bank_accounts')
-        .select('bank_name, account_number, account_holder, qr_image_url, note')
+        .select('id, bank_name, account_number, account_holder, qr_image_url, note')
         .eq('sokh_id', params.id)
-        .eq('is_active', true)
-        .maybeSingle();
-      setBankAccount((bank as BankAccount) || null);
+        .eq('is_active', true);
+      // СӨХ олон данстай байж болно — оршин суугч өөрийн банкаа сонгоно.
+      // sort_order-оор SQL талд эрэмбэлбэл миграц ажиллаагүй үед бүх мөр алга
+      // болох тул эрэмбийг энд хийнэ (багана байхгүй бол id-гаар).
+      setBankAccounts(((bank as BankAccount[]) || [])
+        .slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id));
 
       // 6. Даргатай тохирсон өр төлөх гэрээ.
       //    RLS (debt_agreements_select_own) нь өөрийн мөрийг л буцаадаг ч,
@@ -300,6 +306,9 @@ export default function PaymentsPage() {
   const unpaidBills = bills.filter(b => !b.paid);
   const paidBills = bills.filter(b => b.paid);
   const unpaidTotal = unpaidBills.reduce((s, b) => s + b.amount, 0);
+
+  // Сонгосон данс. СӨХ ганц данстай бол сонголт харагдахгүй — өмнөхтэй адил.
+  const bankAccount = bankAccounts[Math.min(bankIdx, bankAccounts.length - 1)] || null;
 
   const startPay = (bill: BillItem) => {
     setPayingBill(bill);
@@ -695,6 +704,27 @@ export default function PaymentsPage() {
                 {/* СӨХ-ийн данс руу шууд шилжүүлэх — банкны QR */}
                 {bankAccount && (
                   <div className="border-2 border-green-200 bg-green-50/50 rounded-2xl p-4 mb-5">
+                    {/* СӨХ олон данстай бол банкаа сонгоно — өөрийн банкны
+                        дотор шилжүүлбэл шимтгэлгүй, шууд ордог. */}
+                    {bankAccounts.length > 1 && (
+                      <>
+                        <p className="text-[11px] text-gray-500 mb-1.5">Банкаа сонгоно уу</p>
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {bankAccounts.map((b, i) => (
+                            <button
+                              key={b.account_number}
+                              onClick={() => setBankIdx(i)}
+                              className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                                i === bankIdx
+                                  ? 'bg-green-600 text-white border-green-600'
+                                  : 'bg-white text-gray-600 border-gray-200'}`}
+                            >
+                              {b.bank_name}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                     {bankAccount.qr_image_url ? (
                       <>
                         <div className="bg-white rounded-xl p-3 mb-3">
