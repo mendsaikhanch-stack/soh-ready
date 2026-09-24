@@ -49,14 +49,45 @@ export default function AdminResidents() {
   const [agreementFor, setAgreementFor] = useState<number | null>(null);    // өрийн гэрээ байгуулах айл
   const [appById, setAppById] = useState<Record<number, AppUsageResident>>({}); // айл → апп-д нэвтэрсэн эсэх
   const [onlyNoApp, setOnlyNoApp] = useState(false);                        // зөвхөн апп-д ороогүй айлыг харуулах
+  const [buildingFilter, setBuildingFilter] = useState('');                 // '' = бүх байр
+  const [matchIdx, setMatchIdx] = useState(0);                              // олдсон айлуудын хэд дэх дээр зогсож байгаа
   const [showAgreement, setShowAgreement] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const rowRefs = useRef<Record<number, HTMLTableRowElement | null>>({});   // тоот → мөрийн DOM (хайлтаар гүйлгэхэд)
 
   // Айлын сарын төлбөр: тусгай тариф байвал түүнийг, үгүй бол СӨХ-ийн ерөнхий дүнг
   const feeOf = (r: Resident) => Number(r.monthly_fee ?? orgFee) || 0;
 
   // Тоотын доор зөвхөн байрны нэрийг харуулна (талбай нь өөрийн баганатай)
   const locationOf = (r: Resident) => (r.building || '').trim();
+
+  // ---- Хайлт ----------------------------------------------------------------
+  // СӨХ бүрийн дугаарлалт өөр өөр (Бадрах: 7 байранд 0–144 тоот ДАВТАГДДАГ,
+  // Өргөө-142: 801–1211 давхардалгүй). Тиймээс тогтсон загвар шаардахгүй:
+  // хайлтын мөрийг үг/тоо болгон хуваагаад, ХЭСЭГ БҮР нь аль нэг талбарт
+  // таарсан айлыг олдсонд тооцно. Ингэснээр «88-14», «88 14», «14 88» бүгд ажиллана.
+  const tokenize = (s: string) => s.toLowerCase().split(/[\s\-–—/,.]+/).filter(Boolean);
+  const norm = (v: unknown) => String(v ?? '').trim().toLowerCase();
+
+  // strict = цэвэр тоог ЯГ таарахаар нь шалгана («14» гэхэд 114, 140–144 гарахгүй).
+  const hitsToken = (r: Resident, t: string, strict: boolean) => {
+    const apt = norm(r.apartment);
+    const bld = norm(r.building);
+    if (strict && /^\d+$/.test(t)) {
+      return apt === t || bld === t || (t.length >= 3 && norm(r.phone).includes(t));
+    }
+    return apt.includes(t) || bld.includes(t) || norm(r.name).includes(t) ||
+      norm(r.phone).includes(t) || norm(r.block).includes(t) ||
+      norm(r.entrance).includes(t) || norm(r.floor).includes(t);
+  };
+
+  const findMatches = (list: Resident[], q: string) => {
+    const tokens = tokenize(q);
+    if (!tokens.length) return [];
+    const strict = list.filter(r => tokens.every(t => hitsToken(r, t, true)));
+    // Яг таарах нь олдоогүй бол сул шалгуураар дахин хайна (дутуу бичсэн байж болно)
+    return strict.length ? strict : list.filter(r => tokens.every(t => hitsToken(r, t, false)));
+  };
 
   // Апп: тухайн айл нэвтэрч үзсэн эсэх (auth-ийн өгөгдөл тул тусдаа API-аас)
   const appOf = (r: Resident) => appById[r.id] || null;
@@ -116,10 +147,20 @@ export default function AdminResidents() {
       adminFrom('sokh_organizations').select('monthly_fee').eq('id', sokhId).single(),
       adminFrom('parking_vehicles').select('plate_number, apartment, status').eq('sokh_id', sokhId),
     ]);
-    // Эрэмбэ нь ЗӨВХӨН тоотоос хамаарна. (Өмнө нь байр/орц/давхраар эрэмбэлдэг
-    // байсан тул тэдгээрийг бөглөсөн айл жагсаалтын хамгийн ард үсэрдэг байв.)
     const cmp = (a?: string, b?: string) => (a || '').localeCompare(b || '', undefined, { numeric: true });
-    const rows = ((data as unknown as Resident[]) || []).slice().sort((a, b) =>
+    const raw = ((data as unknown as Resident[]) || []).slice();
+
+    // Олон байртай СӨХ-д тоот байр бүрт дахин эхэлдэг (Бадрах: 6 байранд 0–144).
+    // Ийм үед байраар нь бүлэглэж эрэмбэлэхгүй бол жагсаалт 0,0,0,0,1,1,1… гэж
+    // сүлжилдээд айлаа олохын аргагүй болдог. Харин байраа цөөхөн айлдаа бөглөсөн
+    // СӨХ-д байраар эрэмбэлбэл тэр цөөхөн нь хамгийн ард үсэрдэг тул тоотоор нь
+    // хэвээр үлдээнэ.
+    const filled = raw.filter(r => (r.building || '').trim()).length;
+    const distinct = new Set(raw.map(r => (r.building || '').trim()).filter(Boolean)).size;
+    const groupByBuilding = distinct >= 2 && filled >= raw.length * 0.9;
+
+    const rows = raw.sort((a, b) =>
+      (groupByBuilding ? cmp(a.building, b.building) : 0) ||
       cmp(a.apartment, b.apartment) || a.id - b.id
     );
 
@@ -137,15 +178,34 @@ export default function AdminResidents() {
     setLoading(false);
   };
 
-  const filtered = residents.filter(r => {
+  // Жагсаалтаас мөр ХАСАХ нь зөвхөн эдгээр сонголт. Хайлт нь мөр нуудаггүй —
+  // олдсон айлыг тодруулж, түүн дээр нь аваачдаг (дарга хөршүүдийг нь хамт хардаг).
+  const visible = residents.filter(r => {
     if (onlyNoApp && signedIn(r)) return false;
-    const q = search.toLowerCase();
-    return r.name.toLowerCase().includes(q) ||
-      r.apartment.toLowerCase().includes(q) ||
-      (r.phone || '').includes(q) ||
-      (r.building || '').toLowerCase().includes(q);
+    if (buildingFilter && (r.building || '').trim() !== buildingFilter) return false;
+    return true;
     // Баталгаажуулах хүлээж буй мөрийг дээр гаргана — дарга анзаарахгүй өнгөрөх ёсгүй
   }).sort((a, b) => Number(b.pending_claim) - Number(a.pending_claim));
+
+  // Байрны шүүлтүүр — зөвхөн олон байртай СӨХ-д харагдана
+  const buildings = [...new Set(residents.map(r => (r.building || '').trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const countIn = (b: string) => residents.filter(r => (r.building || '').trim() === b).length;
+
+  const matches = findMatches(visible, search);
+  const matchIds = new Set(matches.map(m => m.id));
+  const safeIdx = matches.length ? Math.min(matchIdx, matches.length - 1) : 0;
+  const currentId = matches[safeIdx]?.id ?? null;
+  const stepMatch = (d: number) => {
+    if (matches.length) setMatchIdx((safeIdx + d + matches.length) % matches.length);
+  };
+
+  // Олдсон айлыг дэлгэцийн голд аваачна — 437 айлтай СӨХ-д дээш доош гүйлгэхгүй.
+  // (Хуучин мөрийн дараалал тогтвортой тул зөвхөн id-аас хамаарна.)
+  useEffect(() => {
+    if (currentId == null) return;
+    rowRefs.current[currentId]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [currentId]);
 
   const openAdd = () => {
     setEditId(null);
@@ -341,8 +401,8 @@ export default function AdminResidents() {
   const confirmed = residents.filter(r => !r.pending_claim);
   const pendingCount = residents.length - confirmed.length;
   const businessCount = confirmed.filter(isBusiness).length;
-  const totalDebt = filtered.filter(r => !r.pending_claim).reduce((s, r) => s + r.debt, 0);
-  const totalFee = filtered.filter(r => !r.pending_claim).reduce((s, r) => s + feeOf(r), 0);
+  const totalDebt = visible.filter(r => !r.pending_claim).reduce((s, r) => s + r.debt, 0);
+  const totalFee = visible.filter(r => !r.pending_claim).reduce((s, r) => s + feeOf(r), 0);
   const completedCount = confirmed.filter(isComplete).length;
   const completedPct = confirmed.length ? Math.round((completedCount / confirmed.length) * 100) : 0;
   // Апп татаж нэвтэрсэн айл (бүх мөрөөр — өөрөө бүртгүүлсэн нь ч аппаараа орсон)
@@ -389,18 +449,64 @@ export default function AdminResidents() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
-        <input
-          placeholder="Нэр, тоот, утас, байраар хайх..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 border rounded-lg px-4 py-2 text-sm"
-        />
+      <div className="flex items-center gap-3 mb-2">
+        <div className="flex-1 flex items-center gap-2 border rounded-lg px-3 py-1.5 focus-within:border-blue-400">
+          <span className="text-gray-400 text-sm">🔍</span>
+          <input
+            placeholder={buildings.length >= 2
+              ? `Нэр, утас, эсвэл «${buildings[0]}-101» гэж байр-тоотоор хайх...`
+              : 'Нэр, тоот, утас, байраар хайх...'}
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setMatchIdx(0); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); stepMatch(e.shiftKey ? -1 : 1); } }}
+            className="flex-1 py-0.5 text-sm outline-none"
+          />
+          {/* Хайлт мөр нууxгүй — олдсоныг нь тодруулж, дээр нь аваачна */}
+          {search.trim() && (matches.length ? (
+            <div className="flex items-center gap-1 whitespace-nowrap">
+              <span className="text-xs text-gray-500">{safeIdx + 1} / {matches.length}</span>
+              <button type="button" onClick={() => stepMatch(-1)} title="Өмнөх (Shift+Enter)"
+                      className="px-1.5 text-gray-500 hover:text-gray-800">‹</button>
+              <button type="button" onClick={() => stepMatch(1)} title="Дараах (Enter)"
+                      className="px-1.5 text-gray-500 hover:text-gray-800">›</button>
+              <button type="button" onClick={() => { setSearch(''); setMatchIdx(0); }} title="Цэвэрлэх"
+                      className="px-1 text-gray-400 hover:text-gray-700">✕</button>
+            </div>
+          ) : (
+            <span className="text-xs text-red-500 whitespace-nowrap">олдсонгүй</span>
+          ))}
+        </div>
         <label className="flex items-center gap-2 text-sm text-gray-600 whitespace-nowrap cursor-pointer">
-          <input type="checkbox" checked={onlyNoApp} onChange={e => setOnlyNoApp(e.target.checked)} />
+          <input type="checkbox" checked={onlyNoApp}
+                 onChange={e => { setOnlyNoApp(e.target.checked); setMatchIdx(0); }} />
           Зөвхөн апп татаагүй айл
         </label>
       </div>
+
+      {/* Байрны шүүлтүүр — зөвхөн олон байртай СӨХ-д. Тоот байр бүрт давтагддаг
+          тул эхлээд байраа сонгоод дараа нь тоотоо хайх нь хамгийн хурдан. */}
+      {buildings.length >= 2 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-4">
+          <span className="text-xs text-gray-400 mr-1">Байр:</span>
+          <button
+            onClick={() => { setBuildingFilter(''); setMatchIdx(0); }}
+            className={`px-2.5 py-1 rounded-full text-xs border ${
+              buildingFilter === '' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+          >
+            Бүгд ({residents.length})
+          </button>
+          {buildings.map(b => (
+            <button
+              key={b}
+              onClick={() => { setBuildingFilter(buildingFilter === b ? '' : b); setMatchIdx(0); }}
+              className={`px-2.5 py-1 rounded-full text-xs border ${
+                buildingFilter === b ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            >
+              {b} ({countIn(b)})
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
@@ -493,8 +599,16 @@ export default function AdminResidents() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r, i) => (
-                  <tr key={r.id} className={`border-t text-sm ${r.pending_claim ? 'bg-orange-50 hover:bg-orange-100' : 'hover:bg-gray-50'}`}>
+                {visible.map((r, i) => (
+                  <tr
+                    key={r.id}
+                    ref={el => { rowRefs.current[r.id] = el; }}
+                    className={`border-t text-sm ${
+                      currentId === r.id ? 'bg-amber-200 font-semibold'
+                      : matchIds.has(r.id) ? 'bg-amber-50'
+                      : r.pending_claim ? 'bg-orange-50 hover:bg-orange-100'
+                      : 'hover:bg-gray-50'}`}
+                  >
                     <td className="px-3 py-2.5 text-gray-400 text-xs">{i + 1}</td>
                     <td className="px-3 py-2.5 font-medium">
                       {r.name}
@@ -579,7 +693,7 @@ export default function AdminResidents() {
               </tbody>
             </table>
           </div>
-          {filtered.length === 0 && (
+          {visible.length === 0 && (
             <p className="text-gray-400 text-center py-6">Өгөгдөл байхгүй</p>
           )}
         </div>
