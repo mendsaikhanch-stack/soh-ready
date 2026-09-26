@@ -5,6 +5,21 @@ import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import AppUsagePanel, { fetchAppUsage, type AppUsage } from '@/app/components/admin/AppUsagePanel';
 
+// Хотолд төлөх ёстой нэхэмжлэх — SMS/имэйл хүрээгүй ч самбар нээхэд харагдана
+interface PlatformInvoice {
+  id: number;
+  kind: string;
+  amount: number;
+  due_on: string;
+  days_left: number;
+  level: 'soon' | 'overdue' | 'critical' | null;
+}
+interface PlatformBilling {
+  invoices: PlatformInvoice[];
+  bank?: { name: string; account: string; holder: string };
+  contact?: string;
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
     residents: 0,
@@ -20,6 +35,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   // Апп татаж нэвтэрсэн айлууд — auth-ийн өгөгдөл тул тусдаа API-аар ирнэ
   const [usage, setUsage] = useState<AppUsage | null>(null);
+  const [billing, setBilling] = useState<PlatformBilling | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -69,6 +85,10 @@ export default function AdminDashboard() {
   // удаан ирдэг. Тусад нь ачаалж, самбарын үлдсэн хэсгийг хүлээлгэхгүй.
   useEffect(() => {
     fetchAppUsage().then(setUsage);
+    fetch('/api/admin/platform-billing')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => setBilling(d))
+      .catch(() => setBilling(null));
   }, []);
 
   if (loading) return <div className="p-8 text-gray-400">Ачаалж байна...</div>;
@@ -95,6 +115,42 @@ export default function AdminDashboard() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">📊 Хянах самбар</h1>
+
+      {/* Хотолын нэхэмжлэх — төлөгдөөгүй бол хугацааныхаа хамт энд харагдана */}
+      {billing && billing.invoices.length > 0 && (() => {
+        const worst = billing.invoices.reduce((m, i) => Math.min(m, i.days_left), Infinity);
+        const late = worst < 0;
+        return (
+          <div className={`mb-6 rounded-xl border p-4 ${late ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+            <p className={`font-semibold ${late ? 'text-red-700' : 'text-amber-800'}`}>
+              💸 Хотол платформын төлбөр {late ? '— хугацаа хэтэрсэн' : ''}
+            </p>
+            <ul className="mt-2 space-y-1 text-sm">
+              {billing.invoices.map(i => (
+                <li key={i.id} className="flex justify-between gap-3">
+                  <span>
+                    {i.kind === 'setup' ? 'Суурилуулалт' : 'Сарын хураамж'} · {i.due_on.replace(/-/g, '.')} хүртэл
+                  </span>
+                  <span className={`font-medium ${i.days_left < 0 ? 'text-red-700' : 'text-gray-800'}`}>
+                    {i.amount.toLocaleString()}₮ ·{' '}
+                    {i.days_left < 0
+                      ? `${-i.days_left} хоног хэтэрсэн`
+                      : i.days_left === 0
+                        ? 'өнөөдөр'
+                        : `${i.days_left} хоногийн дараа`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {billing.bank && (
+              <p className="mt-2 text-xs text-gray-600">
+                Данс: {billing.bank.name} банк {billing.bank.account} ({billing.bank.holder}) · Гүйлгээний утга: СӨХ-ийн нэр
+                {billing.contact ? ` · Асуулт: ${billing.contact}` : ''}
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-4 gap-4 mb-8">
         {cards.map((c) => (

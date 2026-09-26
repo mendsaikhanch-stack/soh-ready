@@ -82,6 +82,7 @@ interface OverdueAlert {
   due_on: string;
   days_left: number;
   level: 'soon' | 'overdue' | 'critical';
+  reminders: { stage: string; label: string; sent_at: string; ok: boolean }[];
 }
 
 interface ErrorRow {
@@ -108,6 +109,10 @@ export default function SuperAdminDashboard() {
   // Төлөгдөөгүй нэхэмжлэх — хугацаа нь ойртсон эсвэл хэтэрсэн
   const [overdueAlerts, setOverdueAlerts] = useState<OverdueAlert[]>([]);
   const [noticeDays, setNoticeDays] = useState(30);
+  // Автомат сануулга — миграц ажиллаагүй бол false, самбарт анхааруулна
+  const [remindersReady, setRemindersReady] = useState(true);
+  const [remindBusy, setRemindBusy] = useState(false);
+  const [remindNote, setRemindNote] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -136,6 +141,7 @@ export default function SuperAdminDashboard() {
         const data = await res.json();
         setOverdueAlerts(data.alerts || []);
         if (data.notice_days) setNoticeDays(data.notice_days);
+        if (data.reminders_ready === false) setRemindersReady(false);
       } catch {
         // мөн адил — байхгүй бол хуудас хэвийн ажиллана
       }
@@ -170,6 +176,31 @@ export default function SuperAdminDashboard() {
 
   const real = customers.filter(c => !c.is_demo);
   const plusLabel = (n: number) => (n > 0 ? `+${n} энэ сард` : 'энэ сард 0');
+
+  // Cron-ыг хүлээлгүй одоо сануулга илгээх. Шат бүр нэг л удаа явдаг тул
+  // давхар дарахад давтагдахгүй.
+  const runReminders = async () => {
+    setRemindBusy(true);
+    setRemindNote(null);
+    try {
+      const res = await fetch('/api/superadmin/invoice-reminders', { method: 'POST' });
+      const data = await res.json();
+      if (!data.migrated) {
+        setRemindersReady(false);
+        setRemindNote('Сануулгын хүснэгт үүсээгүй — миграцыг ажиллуулна уу');
+      } else {
+        const n = (data.sent || []).length;
+        setRemindNote(n ? `${n} сануулга илгээлээ` : 'Шинээр илгээх сануулга алга — бүгд явсан');
+        const r = await fetch('/api/superadmin/overdue-invoices');
+        const d = await r.json();
+        setOverdueAlerts(d.alerts || []);
+      }
+    } catch {
+      setRemindNote('Илгээж чадсангүй');
+    } finally {
+      setRemindBusy(false);
+    }
+  };
 
   const statCards = totals
     ? [
@@ -314,11 +345,26 @@ export default function SuperAdminDashboard() {
                 <p className={`text-xs mt-0.5 ${hot ? 'text-red-200/60' : 'text-amber-200/60'}`}>
                   {noticeDays} хоногоос дээш хэтэрвэл гэрээний дагуу бичгээр мэдэгдэнэ
                 </p>
+                <p className="text-xs mt-0.5 text-gray-400">
+                  {remindersReady
+                    ? 'Өглөө бүр 09:30-д даргад автоматаар сануулна (дөхлөө → өнөөдөр → 3/10/20/30 хоног)'
+                    : '⚠️ Автомат сануулга ажиллахгүй байна — supabase-invoice-reminders-migration.sql ажиллуулна уу'}
+                </p>
               </div>
-              <a href="/mng-ctrl/customers" className="text-xs text-amber-300 hover:underline shrink-0">
-                Хэрэглэгч СӨХ →
-              </a>
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  onClick={runReminders}
+                  disabled={remindBusy || !remindersReady}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-amber-600/30 border border-amber-600/50 text-amber-200 hover:bg-amber-600/50 disabled:opacity-40"
+                >
+                  {remindBusy ? 'Илгээж байна…' : 'Сануулга одоо илгээх'}
+                </button>
+                <a href="/mng-ctrl/customers" className="text-xs text-amber-300 hover:underline">
+                  Хэрэглэгч СӨХ →
+                </a>
+              </div>
             </div>
+            {remindNote && <p className="text-xs text-amber-200 mb-2">{remindNote}</p>}
             <ul className="space-y-2">
               {overdueAlerts.map(a => {
                 const late = -a.days_left;
@@ -344,6 +390,16 @@ export default function SuperAdminDashboard() {
                       <p className="text-xs text-gray-400">
                         {a.kind === 'setup' ? 'Суурилуулалт' : 'Сарын хураамж'} ·{' '}
                         {a.due_on.replace(/-/g, '.')} хүртэл
+                      </p>
+                      {/* Илгээсэн сануулгууд — юу ч яваагүй бол шууд харагдана */}
+                      <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                        {a.reminders?.length
+                          ? 'Сануулсан: ' +
+                            [...a.reminders]
+                              .reverse()
+                              .map(r => `${r.label} ${r.sent_at.slice(5, 10).replace('-', '.')}${r.ok ? '' : ' (хүрээгүй)'}`)
+                              .join(' · ')
+                          : 'Сануулга илгээгээгүй'}
                       </p>
                     </div>
                     <div className="text-right shrink-0">

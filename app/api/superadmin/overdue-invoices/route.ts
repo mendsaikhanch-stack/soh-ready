@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { getAuthRole } from '@/app/lib/session-token';
 import { isDemoSokh } from '@/app/lib/demo-orgs';
+import { stageLabel, type ChannelResult } from '@/app/lib/platform-billing/invoice-reminders';
 import {
   OVERDUE_ALERT_LEAD_DAYS,
   OVERDUE_NOTICE_DAYS,
@@ -34,6 +35,8 @@ export interface OverdueAlert {
   /** 0 = яг өнөөдөр, эерэг = үлдсэн хоног, сөрөг = хэтэрсэн хоног */
   days_left: number;
   level: OverdueAlertLevel;
+  /** Энэ нэхэмжлэхэд илгээсэн автомат сануулгууд (сүүлийнх нь эхэнд) */
+  reminders: { stage: string; label: string; sent_at: string; ok: boolean }[];
 }
 
 export async function GET() {
@@ -68,6 +71,26 @@ export async function GET() {
     (orgs || []).map(o => [Number(o.id), String(o.name)])
   );
 
+  // Илгээсэн сануулгууд — миграц ажиллаагүй бол хоосон (reminders_ready=false)
+  const { data: remRows, error: remErr } = await supabaseAdmin
+    .from('platform_invoice_reminders')
+    .select('invoice_id, stage, channels, created_at')
+    .in('invoice_id', rows.map(i => Number(i.id)))
+    .order('created_at', { ascending: false });
+  const remByInvoice = new Map<number, OverdueAlert['reminders']>();
+  for (const r of remRows || []) {
+    const list = remByInvoice.get(Number(r.invoice_id)) || [];
+    const ch = (r.channels as ChannelResult[] | null) || [];
+    list.push({
+      stage: String(r.stage),
+      label: stageLabel(String(r.stage)),
+      sent_at: String(r.created_at),
+      // Хүлээн авагч огт олдоогүй бол «илгээгдээгүй» гэж харуулна
+      ok: ch.some(c => c.ok),
+    });
+    remByInvoice.set(Number(r.invoice_id), list);
+  }
+
   const now = new Date();
   const alerts: OverdueAlert[] = [];
   let unpaidTotal = 0;
@@ -93,6 +116,7 @@ export async function GET() {
       due_on: String(inv.due_date),
       days_left: daysLeft,
       level,
+      reminders: remByInvoice.get(Number(inv.id)) || [],
     });
   }
 
@@ -111,6 +135,8 @@ export async function GET() {
     unpaid_total: unpaidTotal,
     lead_days: OVERDUE_ALERT_LEAD_DAYS,
     notice_days: OVERDUE_NOTICE_DAYS,
+    /** false = supabase-invoice-reminders-migration.sql ажиллаагүй, автомат сануулга явахгүй */
+    reminders_ready: !remErr,
     today: ubDay(now),
   });
 }
