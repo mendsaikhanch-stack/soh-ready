@@ -190,7 +190,12 @@ export default function SuperAdminDashboard() {
         setRemindNote('Сануулгын хүснэгт үүсээгүй — миграцыг ажиллуулна уу');
       } else {
         const n = (data.sent || []).length;
-        setRemindNote(n ? `${n} сануулга илгээлээ` : 'Шинээр илгээх сануулга алга — бүгд явсан');
+        const made = (data.invoices?.created || []).length;
+        const parts = [
+          made ? `${made} сарын нэхэмжлэх үүсгэлээ` : '',
+          n ? `${n} сануулга илгээлээ` : 'шинээр илгээх сануулга алга',
+        ].filter(Boolean);
+        setRemindNote(parts.join(' · '));
         const r = await fetch('/api/superadmin/overdue-invoices');
         const d = await r.json();
         setOverdueAlerts(d.alerts || []);
@@ -347,7 +352,7 @@ export default function SuperAdminDashboard() {
                 </p>
                 <p className="text-xs mt-0.5 text-gray-400">
                   {remindersReady
-                    ? 'Өглөө бүр 09:30-д даргад автоматаар сануулна (дөхлөө → өнөөдөр → 3/10/20/30 хоног)'
+                    ? 'Өглөө бүр 09:30-д сарын нэхэмжлэх автоматаар үүсч, даргад сануулна (дөхлөө → өнөөдөр → 3/10/20/30 хоног)'
                     : '⚠️ Автомат сануулга ажиллахгүй байна — supabase-invoice-reminders-migration.sql ажиллуулна уу'}
                 </p>
               </div>

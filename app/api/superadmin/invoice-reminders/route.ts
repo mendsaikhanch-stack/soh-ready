@@ -1,10 +1,12 @@
 // Супер админ: нэхэмжлэхийн автомат сануулгын бүртгэл харах (GET),
-// cron-ыг хүлээлгүй одоо ажиллуулах (POST).
+// cron-ыг хүлээлгүй одоо ажиллуулах (POST) — cron-той ижил: эхлээд сарын
+// нэхэмжлэх үүсгэнэ, дараа нь сануулга явуулна.
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { getAuthRole } from '@/app/lib/session-token';
 import { runInvoiceReminders, stageLabel } from '@/app/lib/platform-billing/invoice-reminders';
+import { generateMonthlyInvoices } from '@/app/lib/platform-billing/monthly-invoices';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +40,7 @@ export async function POST() {
   if (!(await requireSuperadmin())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  const invoices = await generateMonthlyInvoices();
   const result = await runInvoiceReminders();
-  return NextResponse.json(result, { status: result.migrated ? 200 : 409 });
+  return NextResponse.json({ ...result, invoices }, { status: result.migrated ? 200 : 409 });
 }
