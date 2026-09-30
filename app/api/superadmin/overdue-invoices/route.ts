@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { getAuthRole } from '@/app/lib/session-token';
 import { isDemoSokh } from '@/app/lib/demo-orgs';
-import { stageLabel, type ChannelResult } from '@/app/lib/platform-billing/invoice-reminders';
+import {
+  buildReminderMessage,
+  dueStage,
+  isDelivered,
+  stageLabel,
+  type ChannelResult,
+} from '@/app/lib/platform-billing/invoice-reminders';
 import {
   OVERDUE_ALERT_LEAD_DAYS,
   OVERDUE_NOTICE_DAYS,
@@ -37,6 +43,11 @@ export interface OverdueAlert {
   level: OverdueAlertLevel;
   /** Энэ нэхэмжлэхэд илгээсэн автомат сануулгууд (сүүлийнх нь эхэнд) */
   reminders: { stage: string; label: string; sent_at: string; ok: boolean }[];
+  /** Гараар илгээхэд бэлэн SMS бичвэр (автомат сануулгатай ЯГ ижил) — SMS
+   *  провайдер холбогдоогүй, имэйлгүй СӨХ-д супер админ өөрөө утаснаасаа явуулна */
+  message: string;
+  /** Даргын гар утас(ууд) — admin_users.username + СӨХ-ийн утас */
+  phones: string[];
 }
 
 export async function GET() {
@@ -63,13 +74,29 @@ export async function GET() {
   }
 
   const ids = [...new Set(rows.map(i => Number(i.sokh_id)))];
-  const { data: orgs } = await supabaseAdmin
-    .from('sokh_organizations')
-    .select('id, name')
-    .in('id', ids);
+  const [{ data: orgs }, { data: admins }] = await Promise.all([
+    supabaseAdmin.from('sokh_organizations').select('id, name, phone').in('id', ids),
+    supabaseAdmin
+      .from('admin_users')
+      .select('sokh_id, username')
+      .in('sokh_id', ids)
+      .eq('role', 'admin')
+      .eq('status', 'active'),
+  ]);
   const nameById = new Map<number, string>(
     (orgs || []).map(o => [Number(o.id), String(o.name)])
   );
+  // Гар утас: 8 оронтой, 5/6/8/9-өөр эхэлнэ (суурин 7… SMS хүрэхгүй)
+  const digits = (v: unknown) => String(v ?? '').replace(/\D/g, '');
+  const isMobile = (v: unknown) => /^[5689]\d{7}$/.test(digits(v));
+  const phonesById = new Map<number, Set<string>>();
+  const addPhone = (id: number, v: unknown) => {
+    if (!isMobile(v)) return;
+    if (!phonesById.has(id)) phonesById.set(id, new Set());
+    phonesById.get(id)!.add(digits(v));
+  };
+  for (const a of admins || []) addPhone(Number(a.sokh_id), a.username);
+  for (const o of orgs || []) addPhone(Number(o.id), o.phone);
 
   // Илгээсэн сануулгууд — миграц ажиллаагүй бол хоосон (reminders_ready=false)
   const { data: remRows, error: remErr } = await supabaseAdmin
@@ -85,8 +112,8 @@ export async function GET() {
       stage: String(r.stage),
       label: stageLabel(String(r.stage)),
       sent_at: String(r.created_at),
-      // Хүлээн авагч огт олдоогүй бол «илгээгдээгүй» гэж харуулна
-      ok: ch.some(c => c.ok),
+      // Хүлээн авагч олдоогүй / stub бол «хүрээгүй» гэж харуулна
+      ok: isDelivered(ch),
     });
     remByInvoice.set(Number(r.invoice_id), list);
   }
@@ -107,16 +134,24 @@ export async function GET() {
     const level = overdueAlertLevel(daysLeft);
     if (!level) continue;
 
+    const name = nameById.get(Number(inv.sokh_id)) || `СӨХ #${inv.sokh_id}`;
+    const kind = String(inv.kind || 'monthly');
+    // Шат нь автомат сануулгынхтай ижил; шат болоогүй (7 хоногоос хол) бол soon-ий бичвэр
+    const stage = dueStage(daysLeft) || { key: 'soon', atDaysLeft: 7, label: 'Хугацаа дөхлөө' };
+    const msg = buildReminderMessage({ orgName: name, kind, amount, dueOn: String(inv.due_date), daysLeft, stage });
+
     alerts.push({
       invoice_id: Number(inv.id),
       sokh_id: Number(inv.sokh_id),
-      name: nameById.get(Number(inv.sokh_id)) || `СӨХ #${inv.sokh_id}`,
-      kind: String(inv.kind || 'monthly'),
+      name,
+      kind,
       amount,
       due_on: String(inv.due_date),
       days_left: daysLeft,
       level,
       reminders: remByInvoice.get(Number(inv.id)) || [],
+      message: msg.sms,
+      phones: [...(phonesById.get(Number(inv.sokh_id)) || [])],
     });
   }
 

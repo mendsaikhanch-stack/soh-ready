@@ -83,6 +83,8 @@ interface OverdueAlert {
   days_left: number;
   level: 'soon' | 'overdue' | 'critical';
   reminders: { stage: string; label: string; sent_at: string; ok: boolean }[];
+  message: string;
+  phones: string[];
 }
 
 interface ErrorRow {
@@ -113,6 +115,18 @@ export default function SuperAdminDashboard() {
   const [remindersReady, setRemindersReady] = useState(true);
   const [remindBusy, setRemindBusy] = useState(false);
   const [remindNote, setRemindNote] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  // Мессежийг хуулж утаснаасаа гараар илгээх — SMS провайдер холбогдох хүртэлх зам
+  const copyMessage = async (a: OverdueAlert) => {
+    try {
+      await navigator.clipboard.writeText(a.message);
+      setCopiedId(a.invoice_id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setRemindNote('Хуулж чадсангүй — бичвэрийг гараар сонгоно уу');
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -189,11 +203,17 @@ export default function SuperAdminDashboard() {
         setRemindersReady(false);
         setRemindNote('Сануулгын хүснэгт үүсээгүй — миграцыг ажиллуулна уу');
       } else {
-        const n = (data.sent || []).length;
+        const sent = (data.sent || []) as { delivered: boolean }[];
+        const ok = sent.filter(s => s.delivered).length;
+        const missed = sent.length - ok;
         const made = (data.invoices?.created || []).length;
         const parts = [
           made ? `${made} сарын нэхэмжлэх үүсгэлээ` : '',
-          n ? `${n} сануулга илгээлээ` : 'шинээр илгээх сануулга алга',
+          ok ? `${ok} сануулга хүрлээ` : '',
+          missed
+            ? `${missed} сануулга хэнд ч хүрсэнгүй (SMS провайдер холбогдоогүй, имэйл алга) — доорх «Хуулах»-аар утаснаасаа явуулна уу`
+            : '',
+          !sent.length ? 'шинээр илгээх сануулга алга' : '',
         ].filter(Boolean);
         setRemindNote(parts.join(' · '));
         const r = await fetch('/api/superadmin/overdue-invoices');
@@ -420,6 +440,14 @@ export default function SuperAdminDashboard() {
                         {when}
                       </p>
                       <p className="text-xs text-gray-400">{money(a.amount)}</p>
+                      <button
+                        onClick={() => copyMessage(a)}
+                        title={a.phones.length ? `Утас: ${a.phones.join(', ')}` : 'Даргын гар утас бүртгэлгүй'}
+                        className="mt-1 text-[11px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-gray-200"
+                      >
+                        {copiedId === a.invoice_id ? '✓ Хуулагдлаа' : '📋 Хуулах'}
+                        {a.phones.length ? ` · ${a.phones[0]}` : ''}
+                      </button>
                     </div>
                   </li>
                 );

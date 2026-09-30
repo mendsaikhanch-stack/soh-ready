@@ -16,6 +16,11 @@
 // Cron нэг өдөр хэд дуудагдсан ч, эсвэл хэд хоног алгассан ч зөвхөн ОДООГИЙН
 // шатыг илгээнэ — хоцорсон шатуудыг цувуулж явуулахгүй.
 //
+// «Илгээсэн» = ЯГ ХҮРСЭН. SMS провайдер холбогдоогүй (stub), имэйл байхгүй бол
+// хэнд ч хүрээгүй тул ok=false-аар бүртгэж, ДАРААГИЙН өдөр дахин оролдоно
+// (мөрийг нь шинэчилнэ). Өмнө нь stub-ыг ok=true гэж бичдэг байсан тул шат
+// «явсан» гэж түгжигдэж, провайдер холбогдсон ч дахин явахгүй байв.
+//
 // Хоногийг ЗААВАЛ `due_date`-ээс, Улаанбаатарын өдрөөр тоолно (ubDay).
 
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
@@ -58,17 +63,24 @@ export function dueStage(daysLeft: number): ReminderStage | null {
 export interface ChannelResult {
   channel: 'sms' | 'email';
   to: string;
+  /** true = бодитоор хүрсэн. stub (провайдер холбогдоогүй) бол false */
   ok: boolean;
-  /** 'stub' = провайдер/SMTP холбогдоогүй, зөвхөн console-д хэвлэсэн */
+  /** 'stub' = провайдер/SMTP холбогдоогүй, зөвхөн console-д хэвлэсэн;
+   *  'superadmin' = супер админд явсан хуулбар (даргад хүрсэнд тооцохгүй) */
   note?: string;
 }
+
+/** Даргад бодитоор хүрсэн суваг байна уу (супер админы хуулбар тооцохгүй) */
+export const isDelivered = (channels: ChannelResult[]) =>
+  channels.some(c => c.ok && c.note !== 'superadmin');
 
 export interface ReminderRunResult {
   ok: boolean;
   /** Миграц ажиллаагүй (хүснэгт байхгүй) бол false */
   migrated: boolean;
   checked: number;
-  sent: { invoice_id: number; sokh_id: number; name: string; stage: string; channels: ChannelResult[] }[];
+  /** Илгээхийг оролдсон бүх шат. delivered=false бол хэнд ч хүрээгүй (маргааш дахин оролдоно) */
+  sent: { invoice_id: number; sokh_id: number; name: string; stage: string; channels: ChannelResult[]; delivered: boolean }[];
   markedOverdue: number;
   errors: string[];
 }
@@ -152,7 +164,7 @@ export async function runInvoiceReminders(now: Date = new Date()): Promise<Remin
   const ids = rows.map(i => Number(i.id));
   const { data: sentRows, error: sentErr } = await supabaseAdmin
     .from('platform_invoice_reminders')
-    .select('invoice_id, stage')
+    .select('invoice_id, stage, channels')
     .in('invoice_id', ids);
   if (sentErr) {
     // Хүснэгт байхгүй (миграц ажиллаагүй). Юу ч илгээхгүй — бүртгэлгүй
@@ -164,11 +176,17 @@ export async function runInvoiceReminders(now: Date = new Date()): Promise<Remin
     );
     return result;
   }
-  const already = new Set((sentRows || []).map(r => `${r.invoice_id}:${r.stage}`));
+  // key → хүрсэн эсэх. Хүрээгүй мөр (stub, хүлээн авагчгүй) байвал дахин оролдоно.
+  const already = new Map<string, boolean>(
+    (sentRows || []).map(r => [
+      `${r.invoice_id}:${r.stage}`,
+      isDelivered(((r.channels as ChannelResult[] | null) || [])),
+    ])
+  );
 
   // Аль шат нь илгээгдэх ёстойг эхлээд тодорхойлно — СӨХ-ийн мэдээллийг
   // зөвхөн хэрэгтэй үед нь уншина.
-  const pending: { inv: OpenInvoice; daysLeft: number; stage: ReminderStage }[] = [];
+  const pending: { inv: OpenInvoice; daysLeft: number; stage: ReminderStage; retry: boolean }[] = [];
   for (const inv of rows) {
     const due = new Date(`${inv.due_date}T00:00:00+08:00`);
     if (isNaN(due.getTime())) continue;
@@ -187,8 +205,9 @@ export async function runInvoiceReminders(now: Date = new Date()): Promise<Remin
 
     const stage = dueStage(daysLeft);
     if (!stage) continue;
-    if (already.has(`${inv.id}:${stage.key}`)) continue;
-    pending.push({ inv, daysLeft, stage });
+    const prev = already.get(`${inv.id}:${stage.key}`);
+    if (prev === true) continue;
+    pending.push({ inv, daysLeft, stage, retry: prev === false });
   }
   if (!pending.length) return result;
 
@@ -210,7 +229,7 @@ export async function runInvoiceReminders(now: Date = new Date()): Promise<Remin
     ])
   );
 
-  for (const { inv, daysLeft, stage } of pending) {
+  for (const { inv, daysLeft, stage, retry } of pending) {
     const sokhId = Number(inv.sokh_id);
     const org = orgById.get(sokhId);
     const orgName = org?.name || `СӨХ #${sokhId}`;
@@ -234,16 +253,17 @@ export async function runInvoiceReminders(now: Date = new Date()): Promise<Remin
     const smsStub = !process.env.SMS_PROVIDER;
     for (const to of phones) {
       const r = await sendSms(to, msg.sms);
-      channels.push({ channel: 'sms', to, ok: r.ok, note: r.error || (smsStub ? 'stub' : undefined) });
+      channels.push({ channel: 'sms', to, ok: r.ok && !smsStub, note: r.error || (smsStub ? 'stub' : undefined) });
     }
     const email = org?.contact_email?.trim();
     if (email && email.includes('@')) {
       const r = await sendEmail({ to: email, subject: msg.subject, text: msg.text });
-      channels.push({ channel: 'email', to: email, ok: r.ok, note: r.error || (r.stub ? 'stub' : undefined) });
+      channels.push({ channel: 'email', to: email, ok: r.ok && !r.stub, note: r.error || (r.stub ? 'stub' : undefined) });
     }
     // 30 хоногийн босго — супер админд ч мэдэгдэнэ: гэрээний дагуу бичгээр
-    // мэдэгдэх, түр зогсоох шийдвэр нь хүний ажил.
-    if (stage.key === 'notice_30') {
+    // мэдэгдэх, түр зогсоох шийдвэр нь хүний ажил. Дахин оролдлого дээр
+    // давтахгүй — эхний удаад л мэдэгдсэн.
+    if (stage.key === 'notice_30' && !retry) {
       const delivered =
         channels
           .map(c => `${c.channel} ${c.to} ${c.ok ? 'OK' : 'алдаа'}${c.note ? ` (${c.note})` : ''}`)
@@ -266,20 +286,29 @@ export async function runInvoiceReminders(now: Date = new Date()): Promise<Remin
       });
     }
 
-    const { error: insErr } = await supabaseAdmin.from('platform_invoice_reminders').insert({
-      invoice_id: inv.id,
-      sokh_id: sokhId,
-      stage: stage.key,
-      days_left: daysLeft,
-      channels,
-      message: msg.sms,
-    });
+    const delivered = isDelivered(channels);
+    const row = { days_left: daysLeft, channels, message: msg.sms, created_at: new Date().toISOString() };
+    const { error: insErr } = retry
+      ? await supabaseAdmin
+          .from('platform_invoice_reminders')
+          .update(row)
+          .eq('invoice_id', inv.id)
+          .eq('stage', stage.key)
+      : await supabaseAdmin
+          .from('platform_invoice_reminders')
+          .insert({ invoice_id: inv.id, sokh_id: sokhId, stage: stage.key, ...row });
     // 23505 = зэрэг ажилласан хоёр cron нэг шатыг давхар бичсэн — хэвийн
     if (insErr && insErr.code !== '23505') {
       result.errors.push(`#${inv.id} ${orgName}: ${insErr.message}`);
       continue;
     }
-    result.sent.push({ invoice_id: Number(inv.id), sokh_id: sokhId, name: orgName, stage: stage.key, channels });
+    if (!delivered) {
+      result.errors.push(
+        `#${inv.id} ${orgName} (${stage.label}): хэнд ч хүрсэнгүй — ` +
+        (channels.length ? 'SMS провайдер холбогдоогүй / имэйл байхгүй' : 'гар утас, имэйл аль нь ч алга')
+      );
+    }
+    result.sent.push({ invoice_id: Number(inv.id), sokh_id: sokhId, name: orgName, stage: stage.key, channels, delivered });
   }
 
   result.ok = result.errors.length === 0;
