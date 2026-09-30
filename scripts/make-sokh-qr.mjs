@@ -49,10 +49,11 @@ const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABA
 const { data: org } = await sb.from('sokh_organizations').select('id, name').eq('id', sokhId).single();
 if (!org) { console.error(`❌ СӨХ #${sokhId} олдсонгүй`); process.exit(1); }
 
-const { data: units } = await sb.from('residents').select('apartment, building, unit_kind').eq('sokh_id', sokhId);
+const { data: units } = await sb.from('residents').select('apartment, building, unit_kind, pending_claim').eq('sokh_id', sokhId);
 // Гараж, дэлгүүр зэрэг айл бус нэгжийг тоонд оруулахгүй — самбар дээрх «N айл»
-// нь оршин суугчийн ойлгодог тоо байх ёстой.
-const homes = (units || []).filter(u => u.unit_kind !== 'business');
+// нь оршин суугчийн ойлгодог тоо байх ёстой. Мөн «баталгаажуулах хүлээж буй»
+// (pending_claim) мөр нь давхар бүртгэл тул айлын тоонд орохгүй.
+const homes = (units || []).filter(u => u.unit_kind !== 'business' && !u.pending_claim);
 const count = homes.length;
 if (count === 0) {
   console.error('❌ Энэ СӨХ дээр нэг ч айл бүртгэгдээгүй байна.');
