@@ -14,8 +14,18 @@ interface PlatformInvoice {
   days_left: number;
   level: 'soon' | 'overdue' | 'critical' | null;
 }
+// «Сарын хураамж N сараас эхэлнэ» — эхний сарын төлөх хугацаа дуустал харагдана
+interface StartNotice {
+  year: number;
+  month: number;
+  apartments: number;
+  per_unit: number;
+  amount: number;
+  first_due_on: string;
+}
 interface PlatformBilling {
   invoices: PlatformInvoice[];
+  notice?: StartNotice | null;
   bank?: { name: string; account: string; holder: string };
   contact?: string;
 }
@@ -115,6 +125,36 @@ export default function AdminDashboard() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">📊 Хянах самбар</h1>
+
+      {/* Сарын хураамж эхэлж буй тухай урьдчилсан мэдэгдэл */}
+      {billing?.notice && (() => {
+        const n = billing.notice;
+        return (
+          <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-gray-800">
+            <p className="font-semibold text-blue-800">
+              📢 Мэдэгдэл: Хотол платформын сарын хураамж {n.year} оны {n.month}-р сараас эхэлнэ
+            </p>
+            <p className="mt-2">
+              Хотол платформыг үнэгүй ашиглах хугацаа дуусч, {n.month}-р сараас эхлэн сарын хураамж
+              тооцогдож эхэлнэ. Хураамж нь айл тутамд сард {n.per_unit.toLocaleString()}₮ — танай СӨХ
+              ({n.apartments} айл) сард <b>{n.amount.toLocaleString()}₮</b> төлнө.
+            </p>
+            <p className="mt-1">
+              Сар бүрийн хураамжийг дараа сарын 15-ны дотор төлнө. {n.month}-р сарын төлбөрийн хугацаа:{' '}
+              <b>{n.first_due_on.replace(/-/g, '.')}</b>.
+            </p>
+            {billing.bank && (
+              <p className="mt-1">
+                Данс: {billing.bank.name} банк {billing.bank.account} ({billing.bank.holder}) · Гүйлгээний утга: СӨХ-ийн нэр
+              </p>
+            )}
+            <p className="mt-1 text-gray-600">
+              Хотолыг сонгон ашиглаж байгаад баярлалаа.
+              {billing.contact ? ` Асуух зүйл байвал: ${billing.contact}` : ''}
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Хотолын нэхэмжлэх — төлөгдөөгүй бол хугацааныхаа хамт энд харагдана */}
       {billing && billing.invoices.length > 0 && (() => {
