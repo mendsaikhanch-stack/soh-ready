@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
+import { residentDueDate } from '@/app/lib/resident-billing/due-date';
 import * as XLSX from 'xlsx';
 
 type Tab = 'overview' | 'income' | 'expenses' | 'budget' | 'invoices' | 'reserve' | 'debts' | 'payables' | 'annual';
@@ -288,7 +289,8 @@ export default function AdminFinanceHub() {
     setGenerating(true);
     setGenMessage('');
     const sokhId = await getAdminSokhId();
-    const dueDate = new Date(year, month - 1, 25).toISOString().slice(0, 10);
+    // Төлөх хугацаа = дараа сарын 5 (автомат замтай ижил дүрэм)
+    const dueDate = residentDueDate(year, month);
     const rows = residents.filter(r => feeOf(r) > 0).map(r => ({
       sokh_id: sokhId,
       resident_id: r.id,
