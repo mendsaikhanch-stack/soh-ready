@@ -16,8 +16,9 @@
 //
 // Зөвхөн `sokh_organizations.auto_invoice_from` бөглөгдсөн СӨХ-д ажиллана:
 // ихэнх СӨХ-д 50,000₮ жишиг хураамж байгаа тул бүгдэд асаавал буруу дүн очно.
-// Асаахдаа айл бүрт «Эхний үлдэгдэл» нэхэмжлэх үүсгэнэ (openingInvoiceRow) —
-// тэр мөчийн өр, түүнээс өмнөх төлбөрүүд тооцоонд ОРОХГҮЙ (аль хэдийн шингэсэн).
+// Асаахдаа айл бүрт «Эхний үлдэгдэл» нэхэмжлэх үүсгэнэ (openingInvoiceRow,
+// created_at = өрийн тайлангийн цаг) — түүнээс өмнө ТӨЛСӨН төлбөр тооцоонд
+// ОРОХГҮЙ (тайланд аль хэдийн шингэсэн).
 
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { residentDueDate } from '@/app/lib/resident-billing/due-date';
@@ -58,7 +59,7 @@ export function openingInvoiceRow(sokhId: number, residentId: number, debt: numb
 interface OrgRow { id: number; name: string; monthly_fee: number | null; auto_invoice_from: string }
 interface ResRow { id: number; debt: number | null; monthly_fee: number | null }
 interface InvRow { id: number; resident_id: number; year: number; month: number; amount: number; status: string; paid_amount: number | null; paid_at: string | null; due_date: string | null; created_at: string }
-interface PayRow { resident_id: number; amount: number; created_at: string }
+interface PayRow { resident_id: number; amount: number; paid_at: string }
 
 export interface ResidentInvoiceRunResult {
   ok: boolean;
@@ -139,7 +140,10 @@ export async function runResidentInvoices(now: Date = new Date()): Promise<Resid
     }
     if (!invByRes.size) continue;
 
-    // Айл бүрийн тооцоо эхэлсэн мөч = түүний хамгийн эхний нэхэмжлэх үүссэн цаг
+    // Айл бүрийн тооцоо эхэлсэн мөч = түүний хамгийн эхний нэхэмжлэхийн created_at
+    // («Эхний үлдэгдэл»-ийг тайлангийн огноогоор created_at-тай үүсгэнэ). Төлбөрийг
+    // ТӨЛСӨН огноогоор (paid_at) нь тооцно — хуучин хуулгыг хожим оруулахад
+    // тайланд аль хэдийн шингэсэн төлбөр давхар хасагдахгүй.
     const startOf = new Map<number, string>();
     for (const [rid, list] of invByRes) {
       startOf.set(rid, list.reduce((min, i) => (i.created_at < min ? i.created_at : min), list[0].created_at));
@@ -150,12 +154,12 @@ export async function runResidentInvoices(now: Date = new Date()): Promise<Resid
     for (let i = 0; i < resIds.length; i += 100) {
       const { data: payData, error: payErr } = await supabaseAdmin
         .from('payments')
-        .select('resident_id, amount, created_at')
+        .select('resident_id, amount, paid_at')
         .in('resident_id', resIds.slice(i, i + 100))
-        .gte('created_at', earliest);
+        .gte('paid_at', earliest);
       if (payErr) { result.errors.push(`${o.name}: төлбөр уншиж чадсангүй — ${payErr.message}`); continue; }
       for (const p of (payData || []) as PayRow[]) {
-        if (p.created_at < (startOf.get(p.resident_id) || '')) continue;
+        if (new Date(p.paid_at) < new Date(startOf.get(p.resident_id) || 0)) continue;
         paidByRes.set(p.resident_id, (paidByRes.get(p.resident_id) || 0) + Number(p.amount || 0));
       }
     }
