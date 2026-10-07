@@ -57,6 +57,11 @@ function RegisterInner() {
   const [showPassword, setShowPassword] = useState(false);
   const [consent, setConsent] = useState(false);
 
+  // Орц бүрийн постерын QR `?b=2-1` гэж байр/орцоо дагуулж ирдэг — олон орцтой
+  // СӨХ-д тоот давтагддаг тул оршин суугч байраа гараар бичихгүй, буруу бичихгүй.
+  const qrBuilding = (searchParams.get('b') || '').trim().slice(0, 20);
+  const buildingValue = qrBuilding || apartment;
+
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(false);
   const [error, setError] = useState('');
@@ -205,7 +210,7 @@ function RegisterInner() {
 
     setLoading(true);
 
-    const fullAddress = [apartment, entrance ? `${entrance}-р орц` : '', floor ? `${floor} давхар` : '', door].filter(Boolean).join(', ');
+    const fullAddress = [buildingValue, entrance ? `${entrance}-р орц` : '', floor ? `${floor} давхар` : '', door].filter(Boolean).join(', ');
 
     try {
       const res = await fetch('/api/auth/register', {
@@ -221,7 +226,7 @@ function RegisterInner() {
           unit: door.trim() || undefined,
           // Олон байртай СӨХ-д тоот давхцдаг тул байрыг нь бас илгээнэ —
           // сервер эхлээд тоотоор, олон таарвал байраар нь ялгана.
-          building: apartment.trim() || undefined,
+          building: buildingValue.trim() || undefined,
           sokh_id: selectedSokh?.id,
           sokh_name: !selectedSokh && customSokhName.trim() ? customSokhName.trim() : undefined,
           khoroo_id: !selectedSokh && customSokhName.trim() ? selectedKhoroo?.id : undefined,
@@ -474,11 +479,20 @@ function RegisterInner() {
 
               <div className="bg-white border rounded-xl p-3">
                 <label className="text-xs text-gray-500 mb-2 block">Хаяг</label>
+                {qrBuilding && (
+                  <p className="text-sm mb-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                    Байр / орц: <b>{qrBuilding}</b> <span className="text-xs text-gray-500">— QR-аас автоматаар бөглөгдсөн</span>
+                  </p>
+                )}
                 <div className="grid grid-cols-2 gap-2">
-                  <input placeholder="Байрны дугаар" value={apartment} onChange={e => setApartment(e.target.value)}
-                    className="border rounded-lg px-3 py-2 text-sm" />
-                  <input placeholder="Орц" value={entrance} onChange={e => setEntrance(e.target.value)}
-                    className="border rounded-lg px-3 py-2 text-sm" />
+                  {!qrBuilding && (
+                    <>
+                      <input placeholder="Байрны дугаар" value={apartment} onChange={e => setApartment(e.target.value)}
+                        className="border rounded-lg px-3 py-2 text-sm" />
+                      <input placeholder="Орц" value={entrance} onChange={e => setEntrance(e.target.value)}
+                        className="border rounded-lg px-3 py-2 text-sm" />
+                    </>
+                  )}
                   <input placeholder="Давхар" value={floor} onChange={e => setFloor(e.target.value)}
                     className="border rounded-lg px-3 py-2 text-sm" />
                   <input placeholder="Тоот" value={door} onChange={e => setDoor(e.target.value)}

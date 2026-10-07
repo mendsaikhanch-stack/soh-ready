@@ -1,0 +1,66 @@
+<!doctype html><html lang="mn"><head><meta charset="utf-8"><style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+         -webkit-font-smoothing: antialiased; background:#fff; }
+  .sheet { background:#fff; color:#0e1b30; display:flex; flex-direction:column; overflow:hidden; }
+  .brandbar { display:flex; align-items:center; gap:14px; }
+  .dot { background:#2563eb; color:#fff; display:grid; place-items:center; font-weight:800; }
+  .wordmark { font-weight:800; letter-spacing:-0.02em; }
+  .tag { color:#4a5b76; margin-left:auto; }
+  .entr { background:#0e1b30; color:#fff; display:flex; align-items:center; justify-content:space-between; }
+  .entr b { font-weight:800; letter-spacing:-0.02em; }
+  .entr span { background:#2563eb; border-radius:999px; font-weight:700; }
+  h1 { margin:0; font-weight:800; letter-spacing:-0.03em; line-height:1.08; }
+  h1 em { font-style:normal; color:#2563eb; }
+  .lede { color:#4a5b76; margin:0; }
+  .qrframe { background:#fff; border:3px solid #d9e1ee; border-radius:24px; display:grid; place-items:center; }
+  .url { color:#2563eb; font-weight:700; word-break:break-all; }
+  .steps { list-style:none; margin:0; padding:0; counter-reset:s; }
+  /* display:block — flex байхад <b> ба текст тусдаа багана болж хуваагддаг */
+  .steps li { counter-increment:s; display:block; position:relative; }
+  .steps li::before { content:counter(s); background:#2563eb; color:#fff; font-weight:800;
+    border-radius:50%; display:grid; place-items:center; position:absolute; left:0; top:-2px; }
+  .warn { background:#fff7e6; border:2px solid #f5c26b; border-radius:16px; color:#5c3d00; }
+  .note { background:#f3f6fc; border:1px solid #d9e1ee; border-radius:16px; color:#31405c; }
+
+  @page { size: A4; margin: 0; }
+  .sheet { width:210mm; height:297mm; padding:12mm 15mm 10mm; }
+  .dot { width:46px; height:46px; font-size:25px; border-radius:15px; }
+  .wordmark { font-size:28px; } .tag { font-size:16px; }
+  .entr { margin-top:16px; padding:14px 20px; border-radius:18px; }
+  .entr b { font-size:34px; } .entr span { font-size:20px; padding:6px 16px; }
+  h1 { font-size:32px; margin-top:14px; }
+  .lede { font-size:17px; margin-top:8px; line-height:1.45; }
+  .qrwrap { text-align:center; margin:12px 0 10px; }
+  .qrframe { width:270px; height:270px; margin:0 auto; }
+  .qrframe svg { width:230px; height:230px; }
+  .scan { font-size:15px; color:#4a5b76; margin:8px 0 2px; }
+  .steps li { font-size:16px; margin-bottom:9px; line-height:1.4; padding-left:42px; }
+  .steps li::before { width:28px; height:28px; font-size:15px; }
+  .warn { font-size:15px; padding:12px 16px; margin-top:6px; line-height:1.5; }
+  .note { font-size:13.5px; padding:10px 16px; margin-top:10px; line-height:1.5; }
+  .foot { margin-top:auto; padding-top:10px; border-top:2px solid #d9e1ee; font-size:14px; color:#4a5b76; }
+</style></head><body><div class="sheet">
+  <div class="brandbar"><div class="dot">Х</div><div class="wordmark">Хотол</div><div class="tag">АйСиТаун СӨХ</div></div>
+  <div class="entr"><b>2-р блок 1-р орц</b><span>Код 2-1</span></div>
+  <h1>Байрныхаа мэдээллийг <em>утаснаасаа</em> хараарай</h1>
+  <p class="lede">Манай СӨХ Хотол системд шилжлээ. <b>Энэ орцны 112 айл</b> бүртгэгдсэн байгаа — та зөвхөн өөрийгөө холбоно.</p>
+  <div class="qrwrap">
+    <div class="qrframe"><svg height="230" width="230" viewBox="0 0 33 33" role="img"><path fill="#ffffff" d="M0,0 h33v33H0z" shape-rendering="crispEdges"></path><path fill="#0e1b30" d="M0 0h7v1H0zM10 0h2v1H10zM16 0h1v1H16zM18 0h4v1H18zM23 0h1v1H23zM26,0 h7v1H26zM0 1h1v1H0zM6 1h1v1H6zM9 1h1v1H9zM12 1h1v1H12zM15 1h1v1H15zM18 1h1v1H18zM20 1h1v1H20zM26 1h1v1H26zM32,1 h1v1H32zM0 2h1v1H0zM2 2h3v1H2zM6 2h1v1H6zM8 2h1v1H8zM10 2h1v1H10zM12 2h1v1H12zM14 2h3v1H14zM19 2h3v1H19zM23 2h2v1H23zM26 2h1v1H26zM28 2h3v1H28zM32,2 h1v1H32zM0 3h1v1H0zM2 3h3v1H2zM6 3h1v1H6zM8 3h1v1H8zM15 3h1v1H15zM18 3h2v1H18zM23 3h1v1H23zM26 3h1v1H26zM28 3h3v1H28zM32,3 h1v1H32zM0 4h1v1H0zM2 4h3v1H2zM6 4h1v1H6zM8 4h2v1H8zM12 4h1v1H12zM14 4h4v1H14zM20 4h1v1H20zM23 4h2v1H23zM26 4h1v1H26zM28 4h3v1H28zM32,4 h1v1H32zM0 5h1v1H0zM6 5h1v1H6zM8 5h1v1H8zM10 5h1v1H10zM12 5h1v1H12zM14 5h1v1H14zM19 5h1v1H19zM21 5h1v1H21zM26 5h1v1H26zM32,5 h1v1H32zM0 6h7v1H0zM8 6h1v1H8zM10 6h1v1H10zM12 6h1v1H12zM14 6h1v1H14zM16 6h1v1H16zM18 6h1v1H18zM20 6h1v1H20zM22 6h1v1H22zM24 6h1v1H24zM26,6 h7v1H26zM8 7h3v1H8zM12 7h1v1H12zM14 7h1v1H14zM16 7h1v1H16zM19 7h3v1H19zM0 8h1v1H0zM2 8h5v1H2zM11 8h4v1H11zM16 8h4v1H16zM22 8h3v1H22zM26 8h5v1H26zM0 9h2v1H0zM5 9h1v1H5zM7 9h1v1H7zM10 9h5v1H10zM16 9h5v1H16zM23 9h1v1H23zM26 9h2v1H26zM29 9h2v1H29zM32,9 h1v1H32zM0 10h2v1H0zM3 10h2v1H3zM6 10h1v1H6zM9 10h1v1H9zM12 10h6v1H12zM20 10h3v1H20zM24 10h2v1H24zM28 10h1v1H28zM30 10h2v1H30zM0 11h2v1H0zM5 11h1v1H5zM10 11h2v1H10zM13 11h1v1H13zM17 11h3v1H17zM21 11h3v1H21zM26 11h1v1H26zM28,11 h5v1H28zM1 12h2v1H1zM4 12h1v1H4zM6 12h3v1H6zM12 12h1v1H12zM14 12h3v1H14zM20 12h1v1H20zM23 12h1v1H23zM28 12h2v1H28zM0 13h1v1H0zM8 13h2v1H8zM13 13h1v1H13zM15 13h1v1H15zM17 13h2v1H17zM22 13h6v1H22zM29 13h1v1H29zM31,13 h2v1H31zM0 14h3v1H0zM4 14h1v1H4zM6 14h3v1H6zM11 14h7v1H11zM20 14h1v1H20zM22 14h1v1H22zM24 14h6v1H24zM31 14h1v1H31zM2 15h2v1H2zM10 15h1v1H10zM12 15h4v1H12zM21 15h7v1H21zM29 15h2v1H29zM1 16h1v1H1zM4 16h3v1H4zM8 16h3v1H8zM12 16h1v1H12zM14 16h4v1H14zM22 16h1v1H22zM24 16h2v1H24zM27 16h2v1H27zM32,16 h1v1H32zM0 17h6v1H0zM12 17h2v1H12zM16 17h1v1H16zM19 17h9v1H19zM29,17 h4v1H29zM0 18h2v1H0zM6 18h1v1H6zM9 18h1v1H9zM13 18h1v1H13zM15 18h2v1H15zM18 18h1v1H18zM21 18h1v1H21zM26 18h3v1H26zM30 18h2v1H30zM2 19h1v1H2zM4 19h1v1H4zM7 19h1v1H7zM14 19h2v1H14zM19 19h5v1H19zM25 19h1v1H25zM27,19 h6v1H27zM2 20h6v1H2zM18 20h2v1H18zM21 20h1v1H21zM24 20h1v1H24zM28 20h2v1H28zM31,20 h2v1H31zM0 21h2v1H0zM7 21h1v1H7zM9 21h8v1H9zM20 21h2v1H20zM23 21h1v1H23zM25 21h3v1H25zM32,21 h1v1H32zM0 22h1v1H0zM2 22h2v1H2zM5 22h3v1H5zM10 22h1v1H10zM13 22h1v1H13zM17 22h3v1H17zM21 22h2v1H21zM24 22h2v1H24zM29 22h1v1H29zM31 22h1v1H31zM0 23h1v1H0zM2 23h3v1H2zM10 23h1v1H10zM16 23h1v1H16zM18 23h4v1H18zM23 23h1v1H23zM25 23h2v1H25zM28,23 h5v1H28zM0 24h1v1H0zM2 24h2v1H2zM6 24h2v1H6zM10 24h3v1H10zM14 24h1v1H14zM17 24h1v1H17zM19 24h1v1H19zM22 24h1v1H22zM24 24h5v1H24zM31,24 h2v1H31zM8 25h2v1H8zM11 25h1v1H11zM13 25h1v1H13zM16 25h4v1H16zM23 25h2v1H23zM28 25h1v1H28zM30,25 h3v1H30zM0 26h7v1H0zM11 26h1v1H11zM13 26h5v1H13zM22 26h3v1H22zM26 26h1v1H26zM28 26h1v1H28zM30 26h1v1H30zM0 27h1v1H0zM6 27h1v1H6zM8 27h6v1H8zM16 27h3v1H16zM20 27h1v1H20zM23 27h2v1H23zM28 27h3v1H28zM32,27 h1v1H32zM0 28h1v1H0zM2 28h3v1H2zM6 28h1v1H6zM8 28h1v1H8zM10 28h1v1H10zM15 28h2v1H15zM19 28h4v1H19zM24 28h6v1H24zM0 29h1v1H0zM2 29h3v1H2zM6 29h1v1H6zM8 29h3v1H8zM12 29h1v1H12zM15 29h1v1H15zM18 29h1v1H18zM23 29h1v1H23zM25 29h1v1H25zM28 29h1v1H28zM32,29 h1v1H32zM0 30h1v1H0zM2 30h3v1H2zM6 30h1v1H6zM8 30h2v1H8zM11 30h1v1H11zM13 30h4v1H13zM20 30h1v1H20zM22 30h6v1H22zM30 30h1v1H30zM0 31h1v1H0zM6 31h1v1H6zM9 31h1v1H9zM12 31h1v1H12zM15 31h1v1H15zM21 31h2v1H21zM25 31h1v1H25zM28 31h1v1H28zM30 31h1v1H30zM0 32h7v1H0zM8 32h1v1H8zM10 32h1v1H10zM14 32h2v1H14zM17 32h1v1H17zM22 32h1v1H22zM24 32h1v1H24zM27 32h1v1H27zM29 32h1v1H29zM31 32h1v1H31z" shape-rendering="crispEdges"></path></svg></div>
+    <p class="scan">Утасныхаа камераар уншуулна уу</p>
+    <p class="url" style="font-size:14px">https://www.khotol.com/register?sokh=2694&amp;b=2-1</p>
+  </div>
+  <ol class="steps">
+    <li>QR кодыг утасныхаа камераар уншуулна</li>
+    <li><b>Байр, орц автоматаар бөглөгдөнө</b> (2-р блок 1-р орц) — та бичих шаардлагагүй</li>
+    <li><b>Тоот</b> хэсэгт зөвхөн хаалганыхаа дугаарыг бичнэ (101–1607)</li>
+    <li>Нэр, утасны дугаараа бичээд өөрийн нууц үгээ тохируулна</li>
+    <li>Болоо. Төлбөр, зарлал, засварын хүсэлт бүгд утсанд тань байна</li>
+  </ol>
+  <div class="warn"><b>⚠️ Энэ QR зөвхөн 2-р блок 1-р орцны айлуудад.</b> Өөр орцонд амьдардаг бол өөрийн орцны
+    самбар дээрх QR-ыг уншуулна уу — эс бөгөөс өөр орцны айлд бүртгэгдэнэ.</div>
+  <div class="note"><b>Апп татах шаардлагагүй</b> — QR-аар шууд нээгдэнэ. Утасны дугаар нь таны нэвтрэх нэр болно.
+    Нэг тоотод нэг хүн бүртгүүлнэ. Дараа нь хөтчийн цэснээс «Нүүр хуудсанд нэмэх» дарвал апп шиг нээгдэнэ.
+    Асуудал гарвал СӨХ-ийн даргад хандана уу.</div>
+  <div class="foot">АйСиТаун СӨХ · 2-р блок 1-р орц · Хотол — www.khotol.com</div>
+</div></body></html>
