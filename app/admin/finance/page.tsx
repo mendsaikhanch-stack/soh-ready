@@ -6,6 +6,7 @@ import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import { residentDueDate } from '@/app/lib/resident-billing/due-date';
 import * as XLSX from 'xlsx';
+import { isIncomeItem } from '@/app/lib/budget-items';
 
 type Tab = 'overview' | 'income' | 'expenses' | 'budget' | 'invoices' | 'reserve' | 'debts' | 'payables' | 'annual';
 
@@ -332,9 +333,9 @@ export default function AdminFinanceHub() {
 
   // ===== Тооцоо =====
   // Сарын зардал = жилийн жагсаалтаас тухайн сарынх (нэмэлт хүсэлт хийхгүй)
-  // budget_items нь одоо ЗАРДАЛ ба БУСАД ОРЛОГО хоёуланг агуулна — type-аар салгана
-  const yearExpenseItems = yearBudgetItems.filter(i => i.type !== 'income');
-  const yearIncomeItems = yearBudgetItems.filter(i => i.type === 'income');
+  // budget_items нь одоо ЗАРДАЛ ба БУСАД ОРЛОГО хоёуланг агуулна — type эсвэл *_income ангиллаар салгана
+  const yearExpenseItems = yearBudgetItems.filter(i => !isIncomeItem(i));
+  const yearIncomeItems = yearBudgetItems.filter(isIncomeItem);
   const budgetItems = yearExpenseItems
     .filter(i => i.month === month)
     .sort((a, b) => Number(b.amount) - Number(a.amount));

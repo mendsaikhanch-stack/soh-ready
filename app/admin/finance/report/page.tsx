@@ -18,6 +18,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
+import { isIncomeItem } from '@/app/lib/budget-items';
 
 interface BudgetItem { id: number; category: string; amount: number; month: number; year: number; description: string; type?: string; name?: string; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
@@ -29,7 +30,8 @@ interface Org { name: string; address: string | null; phone: string | null; mont
 const categoryLabels: Record<string, string> = {
   cleaning: 'Цэвэрлэгээ', elevator: 'Лифт', security: 'Харуул', repair: 'Засвар',
   electricity: 'Цахилгаан', water: 'Ус', heating: 'Дулаан', garden: 'Тохижилт',
-  reserve: 'Нөөц сан', insurance: 'Даатгал', salary: 'Цалин', other: 'Бусад',
+  reserve: 'Нөөц сан', insurance: 'Даатгал', salary: 'Цалин', garbage: 'Хог ачуулалт',
+  parking_income: 'Зогсоолын орлого', other: 'Бусад',
 };
 const months = ['1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар','7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар'];
 const money = (n: number) => `${Math.round(n).toLocaleString()}₮`;
@@ -96,9 +98,9 @@ function ReportContent() {
   const feeOf = (r: Resident) => Number(r.monthly_fee ?? org?.monthly_fee ?? 0) || 0;
   const expectedMonthly = residents.reduce((s, r) => s + feeOf(r), 0);
 
-  // budget_items нь зардал ба бусад орлого хоёуланг агуулна — type-аар салгана
-  const expenseItems = budgetItems.filter(i => i.type !== 'income');
-  const incomeItems = budgetItems.filter(i => i.type === 'income');
+  // budget_items нь зардал ба бусад орлого хоёуланг агуулна — type эсвэл *_income ангиллаар салгана
+  const expenseItems = budgetItems.filter(i => !isIncomeItem(i));
+  const incomeItems = budgetItems.filter(isIncomeItem);
 
   const rows = Array.from({ length: 12 }, (_, i) => {
     const m = i + 1;

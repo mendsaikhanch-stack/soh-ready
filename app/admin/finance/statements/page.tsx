@@ -22,6 +22,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
+import { isIncomeItem } from '@/app/lib/budget-items';
 
 interface BudgetItem { id: number; category: string; amount: number; month: number; year: number; description: string; type?: string; name?: string; }
 interface Payment { id: number; resident_id: number; amount: number; paid_at: string; }
@@ -37,7 +38,8 @@ interface Org {
 const categoryLabels: Record<string, string> = {
   cleaning: 'Цэвэрлэгээ', elevator: 'Лифт', security: 'Харуул', repair: 'Засвар',
   electricity: 'Цахилгаан', water: 'Ус', heating: 'Дулаан', garden: 'Тохижилт',
-  reserve: 'Нөөц сан', insurance: 'Даатгал', salary: 'Цалин', other: 'Бусад',
+  reserve: 'Нөөц сан', insurance: 'Даатгал', salary: 'Цалин', garbage: 'Хог ачуулалт',
+  parking_income: 'Зогсоолын орлого', other: 'Бусад',
 };
 const months = ['1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар','7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар'];
 const money = (n: number) => `${Math.round(n).toLocaleString()}₮`;
@@ -131,8 +133,8 @@ function StatementsContent() {
   };
 
   // ===== Тооцоо =====
-  const expenseItems = items.filter(i => i.type !== 'income');
-  const incomeItems = items.filter(i => i.type === 'income');
+  const expenseItems = items.filter(i => !isIncomeItem(i));
+  const incomeItems = items.filter(isIncomeItem);
 
   const feeIncome = payments
     .filter(p => new Date(p.paid_at).getFullYear() === year)

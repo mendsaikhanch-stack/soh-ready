@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
+import { isIncomeItem } from '@/app/lib/budget-items';
 
 interface BudgetItem {
   id: number;
@@ -25,6 +26,8 @@ const categoryMap: Record<string, { label: string; icon: string; color: string }
   garden: { label: 'Тохижилт', icon: '🌳', color: '#22C55E' },
   reserve: { label: 'Нөөц сан', icon: '🏦', color: '#6366F1' },
   insurance: { label: 'Даатгал', icon: '🛡', color: '#EC4899' },
+  garbage: { label: 'Хог ачуулалт', icon: '🗑️', color: '#22C55E' },
+  parking_income: { label: 'Зогсоолын орлого', icon: '🚗', color: '#10B981' },
   other: { label: 'Бусад', icon: '📋', color: '#9CA3AF' },
 };
 
@@ -52,12 +55,12 @@ export default function FinancePage() {
       .from('budget_items')
       .select('*')
       .eq('sokh_id', params.id)
-      // 'income' мөрүүд нь СӨХ-ийн бусад орлого — зардлын задаргаанд орох ёсгүй
+      // Орлогын мөрүүд (type='income' эсвэл *_income ангилал) зардлын задаргаанд орох ёсгүй
       .eq('type', 'expense')
       .eq('year', selectedYear);
     if (mode === 'month') q = q.eq('month', selectedMonth);
     const { data } = await q.order('amount', { ascending: false });
-    setItems(data || []);
+    setItems((data || []).filter(i => !isIncomeItem(i)));
 
     const { data: org } = await supabase.from('sokh_organizations').select('monthly_fee').eq('id', params.id).single();
     if (org?.monthly_fee) setMonthlyFee(org.monthly_fee);
