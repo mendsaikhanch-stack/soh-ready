@@ -48,11 +48,15 @@ async function graph(method, endpoint, body) {
   return json;
 }
 
+// fetch-ийн дараа process.exit() дуудвал Windows дээр libuv assert унадаг —
+// тиймээс --check-ийн дараа exit хийхгүй, үлдсэн хэсгийг алгасна.
 if (flag('--check')) {
   const page = await graph('GET', FB_PAGE_ID, { fields: 'id,name,link' });
   console.log('✓ Page:', page.name, page.id, page.link || '');
-  process.exit(0);
-}
+  const { data: t } = await graph('GET', 'debug_token', { input_token: FB_PAGE_TOKEN });
+  console.log('✓ Токен:', t.type, '· хугацаа:', t.expires_at ? new Date(t.expires_at * 1000).toISOString() : 'дуусахгүй',
+    '· эрх:', (t.scopes || []).join(', '));
+} else {
 
 const dir = args.find((a) => !a.startsWith('--') && a !== opt('--schedule'));
 if (!dir) {
@@ -123,3 +127,4 @@ const logFile = path.join(absDir, 'posted.json');
 const log = fs.existsSync(logFile) ? JSON.parse(fs.readFileSync(logFile, 'utf8')) : [];
 log.push({ postId, page: FB_PAGE_ID, at: new Date().toISOString(), scheduledFor: scheduleAt ? new Date(scheduleAt * 1000).toISOString() : null });
 fs.writeFileSync(logFile, JSON.stringify(log, null, 2) + '\n');
+}
