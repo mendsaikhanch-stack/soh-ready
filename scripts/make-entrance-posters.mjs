@@ -115,7 +115,7 @@ function posterHtml({ code, label, url, count, range }) {
   <div class="brandbar"><div class="dot">Х</div><div class="wordmark">Хотол</div><div class="tag">${esc(org.name)}</div></div>
   <div class="entr"><b>${esc(label)}</b><span>Код ${esc(code)}</span></div>
   <h1>Байрныхаа мэдээллийг <em>утаснаасаа</em> хараарай</h1>
-  <p class="lede">Манай СӨХ Хотол системд шилжлээ. <b>Энэ орцны ${count} айл</b> бүртгэгдсэн байгаа — та зөвхөн өөрийгөө холбоно.</p>
+  <p class="lede">Манай СӨХ Хотол системд шилжлээ. <b>Энэ орцны айлууд</b> бүртгэгдсэн байгаа — та зөвхөн өөрийгөө холбоно.</p>
   <div class="qrwrap">
     <div class="qrframe">${qr(url, 230)}</div>
     <p class="scan">Утасныхаа камераар уншуулна уу</p>
@@ -164,7 +164,7 @@ function postHtml({ code, label, url, count }) {
     </ol>
     <div class="qrframe">${qr(url, 280)}</div>
   </div>
-  <div class="warn"><b>⚠️ Зөвхөн ${esc(label)}ны ${count} айлд.</b> Өөр орцных бол өөрийн орцны QR-ыг уншуулна уу.</div>
+  <div class="warn"><b>⚠️ Зөвхөн ${esc(label)}ны айлуудад.</b> Өөр орцных бол өөрийн орцны QR-ыг уншуулна уу.</div>
 </div></body></html>`;
 }
 
