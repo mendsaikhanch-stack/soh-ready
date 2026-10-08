@@ -6,7 +6,7 @@
 //   node scripts/fb-post.mjs docs/fb-posts/carousel-02-hurlyn-irts --yes      # шууд нийтлэх
 //   node scripts/fb-post.mjs <dir> --schedule "2026-10-10 09:00" --yes        # УБ цагаар товлох
 //
-// .env.local:  FB_PAGE_ID=...  FB_PAGE_TOKEN=...  (FB_GRAPH_VERSION=v23.0)
+// .env.local:  FB_PAGE_ID=...  FB_PAGE_TOKEN=...  (FB_GRAPH_VERSION=v26.0)
 // --yes байхгүй бол юу ч илгээхгүй — зөвхөн юу хийхийг хэвлэнэ.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 try { process.loadEnvFile(path.join(root, '.env.local')); } catch {}
 
-const { FB_PAGE_ID, FB_PAGE_TOKEN, FB_GRAPH_VERSION = 'v23.0' } = process.env;
+const { FB_PAGE_ID, FB_PAGE_TOKEN, FB_GRAPH_VERSION = 'v26.0' } = process.env;
 const API = `https://graph.facebook.com/${FB_GRAPH_VERSION}`;
 
 const args = process.argv.slice(2);
