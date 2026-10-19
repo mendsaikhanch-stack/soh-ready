@@ -57,7 +57,7 @@ export default function QRLoginPage() {
 
       // BarcodeDetector API (Chrome/Edge/Safari)
       if ('BarcodeDetector' in window) {
-        // @ts-ignore
+        // @ts-expect-error BarcodeDetector нь TS lib-д байхгүй
         const detector = new BarcodeDetector({ formats: ['qr_code'] });
         detector.detect(canvas).then((barcodes: any[]) => {
           if (barcodes.length > 0) {

@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run lint && npm run build",
     "auto-save": "bash scripts/auto-save.sh",
     "squash-wip": "bash scripts/squash-wip.sh",
     "contract:pdf": "node --import ./scripts/lib/alias-register.mjs scripts/make-contract-pdf.mjs",

@@ -227,7 +227,7 @@ export default function ImportPage() {
     setActiveSheet(0);
 
     try {
-      let results: SheetResult[] = [];
+      const results: SheetResult[] = [];
 
       if (file.name.match(/\.csv$|\.txt$/i)) {
         const text = await file.text();
