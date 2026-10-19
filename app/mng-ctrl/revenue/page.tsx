@@ -16,9 +16,11 @@ export default function RevenuePage() {
     Promise.all([
       fetch('/api/superadmin/invoices').then(r => r.json()),
       fetch('/api/superadmin/subscriptions').then(r => r.json()),
-    ]).then(([inv, subs]) => {
+      fetch('/api/superadmin/transactions').then(r => r.json()),
+    ]).then(([inv, subs, txns]) => {
       setInvoices(Array.isArray(inv) ? inv : []);
       setSubscriptions(Array.isArray(subs) ? subs : []);
+      setTransactions(Array.isArray(txns) ? txns : []);
       setLoading(false);
     });
   }, []);

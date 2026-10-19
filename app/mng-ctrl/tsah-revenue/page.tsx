@@ -3,6 +3,20 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
 
+interface UtilityBill {
+  sokh_id: number | null;
+  amount: number | string;
+  consumption: number | string | null;
+  status: string;
+  year: number;
+  month: number;
+}
+
+interface SokhRow {
+  id: number;
+  address: string | null;
+}
+
 interface TsahBranch {
   id: number;
   name: string;
@@ -12,77 +26,115 @@ interface TsahBranch {
   paid: number;
   unpaid: number;
   meterReadings: number;
-  avgConsumption: number;
-  repairCount: number;
-  repairDone: number;
+  avgConsumption: number | null;
+}
+
+type Period = 'month' | 'quarter' | 'year';
+
+const DISTRICTS = ['Баянгол', 'Чингэлтэй', 'Сүхбаатар', 'Хан-Уул', 'Баянзүрх', 'Сонгинохайрхан'];
+
+// Сонгосон хугацаанд (одоогийн сар / сүүлийн 3 сар / энэ жил) хамаарах эсэх
+function inPeriod(b: UtilityBill, period: Period, now: Date) {
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  if (period === 'month') return b.year === y && b.month === m;
+  if (period === 'year') return b.year === y;
+  const idx = b.year * 12 + b.month;
+  const cur = y * 12 + m;
+  return idx > cur - 3 && idx <= cur;
+}
+
+function buildBranch(id: number, name: string, district: string, sokhs: SokhRow[], bills: UtilityBill[]): TsahBranch {
+  const paidBills = bills.filter(b => b.status === 'paid');
+  const unpaidBills = bills.filter(b => b.status !== 'paid');
+  const withConsumption = bills.filter(b => b.consumption !== null && b.consumption !== '');
+  return {
+    id,
+    name,
+    district,
+    sokhCount: sokhs.length,
+    totalBills: bills.reduce((s, b) => s + Number(b.amount), 0),
+    paid: paidBills.reduce((s, b) => s + Number(b.amount), 0),
+    unpaid: unpaidBills.reduce((s, b) => s + Number(b.amount), 0),
+    meterReadings: bills.length,
+    avgConsumption: withConsumption.length > 0
+      ? Math.round(withConsumption.reduce((s, b) => s + Number(b.consumption), 0) / withConsumption.length)
+      : null,
+  };
 }
 
 export default function TsahRevenuePage() {
-  const [branches, setBranches] = useState<TsahBranch[]>([]);
+  const [bills, setBills] = useState<UtilityBill[]>([]);
+  const [sokhs, setSokhs] = useState<SokhRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>('month');
 
   useEffect(() => {
-    fetchData();
+    (async () => {
+      const [{ data: billData }, { data: sokhData }] = await Promise.all([
+        supabase
+          .from('utility_bills')
+          .select('sokh_id, amount, consumption, status, year, month')
+          .eq('utility_type', 'electricity'),
+        supabase.from('sokh_organizations').select('id, address'),
+      ]);
+      setBills((billData as UtilityBill[]) || []);
+      setSokhs((sokhData as SokhRow[]) || []);
+      setLoading(false);
+    })();
   }, []);
 
-  const fetchData = async () => {
-    const { data: billData } = await supabase
-      .from('utility_bills')
-      .select('*')
-      .eq('utility_type', 'electricity');
-
-    const { data: sokhs } = await supabase.from('sokh_organizations').select('*');
-
-    const districts = ['Баянгол', 'Чингэлтэй', 'Сүхбаатар', 'Хан-Уул', 'Баянзүрх', 'Сонгинохайрхан'];
-
-    const branchList: TsahBranch[] = districts.map((d, i) => {
-      const distSokhs = (sokhs || []).filter((s: any) => {
-        const addr = (s.address || '').toLowerCase();
-        return addr.includes(d.toLowerCase()) || (i === 0 && !districts.some(dd => addr.includes(dd.toLowerCase())));
-      });
-
-      const sokhIds = distSokhs.map((s: any) => s.id);
-      const distBills = (billData || []).filter((b: any) => sokhIds.includes(b.sokh_id) || (!b.sokh_id && i === 0));
-      const paidBills = distBills.filter((b: any) => b.status === 'paid');
-      const unpaidBills = distBills.filter((b: any) => b.status !== 'paid');
-
-      return {
-        id: i + 1,
-        name: `УБЦТГ ${d} нэгж`,
-        district: d,
-        sokhCount: distSokhs.length || Math.floor(Math.random() * 8) + 5,
-        totalBills: distBills.reduce((s: number, b: any) => s + Number(b.amount), 0),
-        paid: paidBills.reduce((s: number, b: any) => s + Number(b.amount), 0),
-        unpaid: unpaidBills.reduce((s: number, b: any) => s + Number(b.amount), 0),
-        meterReadings: distBills.length || Math.floor(Math.random() * 200) + 100,
-        avgConsumption: Math.floor(Math.random() * 150) + 80,
-        repairCount: Math.floor(Math.random() * 12) + 3,
-        repairDone: Math.floor(Math.random() * 10) + 2,
-      };
-    });
-
-    setBranches(branchList);
-    setLoading(false);
-  };
-
   if (loading) return <div className="p-8 text-gray-500">Ачаалж байна...</div>;
+
+  const now = new Date();
+  const periodBills = bills.filter(b => inPeriod(b, selectedPeriod, now));
+
+  // СӨХ-ийг хаягаар нь дүүрэгт хуваарилна; аль ч дүүрэгт таарахгүй бол "Бусад"
+  const districtOf = (s: SokhRow) => {
+    const addr = (s.address || '').toLowerCase();
+    return DISTRICTS.find(d => addr.includes(d.toLowerCase())) ?? null;
+  };
+  const sokhDistrict = new Map(sokhs.map(s => [s.id, districtOf(s)]));
+  const billDistrict = (b: UtilityBill) => (b.sokh_id != null ? sokhDistrict.get(b.sokh_id) ?? null : null);
+
+  const branches: TsahBranch[] = DISTRICTS.map((d, i) =>
+    buildBranch(
+      i + 1,
+      `УБЦТГ ${d} нэгж`,
+      d,
+      sokhs.filter(s => sokhDistrict.get(s.id) === d),
+      periodBills.filter(b => billDistrict(b) === d),
+    ),
+  );
+  const otherSokhs = sokhs.filter(s => sokhDistrict.get(s.id) === null);
+  const otherBills = periodBills.filter(b => billDistrict(b) === null);
+  if (otherSokhs.length > 0 || otherBills.length > 0) {
+    branches.push(buildBranch(DISTRICTS.length + 1, 'Бусад', 'Хаяг тодорхойгүй', otherSokhs, otherBills));
+  }
 
   const totalBills = branches.reduce((s, b) => s + b.totalBills, 0);
   const totalPaid = branches.reduce((s, b) => s + b.paid, 0);
   const totalUnpaid = branches.reduce((s, b) => s + b.unpaid, 0);
-  const avgKwh = branches.length > 0 ? Math.round(branches.reduce((s, b) => s + b.avgConsumption, 0) / branches.length) : 120;
-  const collectionRate = totalBills > 0 ? Math.round((totalPaid / totalBills) * 100) : 0;
+  const withConsumption = periodBills.filter(b => b.consumption !== null && b.consumption !== '');
+  const avgKwh = withConsumption.length > 0
+    ? Math.round(withConsumption.reduce((s, b) => s + Number(b.consumption), 0) / withConsumption.length)
+    : null;
+  const collectionRate = totalBills > 0 ? Math.round((totalPaid / totalBills) * 100) : null;
+
+  const rateClass = (rate: number) =>
+    rate >= 80 ? 'bg-green-900/50 text-green-400' :
+    rate >= 60 ? 'bg-yellow-900/50 text-yellow-400' :
+    'bg-red-900/50 text-red-400';
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">⚡ Цахилгаан орлого & хяналт</h1>
-          <p className="text-gray-400 text-sm mt-1">УБЦТГ салбар нэгж бүрийн орлого, хэрэглээ, засвар</p>
+          <p className="text-gray-400 text-sm mt-1">УБЦТГ салбар нэгж бүрийн орлого, хэрэглээ</p>
         </div>
         <div className="flex gap-2">
-          {['month', 'quarter', 'year'].map(p => (
+          {(['month', 'quarter', 'year'] as const).map(p => (
             <button
               key={p}
               onClick={() => setSelectedPeriod(p)}
@@ -100,28 +152,28 @@ export default function TsahRevenuePage() {
       <div className="grid grid-cols-5 gap-4 mb-6">
         <div className="bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-2xl p-5">
           <p className="text-yellow-200 text-xs">⚡ Нийт нэхэмжлэх</p>
-          <p className="text-xl font-bold mt-1">{totalBills > 0 ? totalBills.toLocaleString() : '8,740,000'}₮</p>
+          <p className="text-xl font-bold mt-1">{totalBills.toLocaleString()}₮</p>
         </div>
         <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-5">
           <p className="text-green-200 text-xs">✅ Цуглуулсан</p>
-          <p className="text-xl font-bold mt-1">{totalPaid > 0 ? totalPaid.toLocaleString() : '7,230,000'}₮</p>
+          <p className="text-xl font-bold mt-1">{totalPaid.toLocaleString()}₮</p>
         </div>
         <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-2xl p-5">
           <p className="text-red-200 text-xs">⏳ Төлөгдөөгүй</p>
-          <p className="text-xl font-bold mt-1">{totalUnpaid > 0 ? totalUnpaid.toLocaleString() : '1,510,000'}₮</p>
+          <p className="text-xl font-bold mt-1">{totalUnpaid.toLocaleString()}₮</p>
         </div>
         <div className="bg-gray-800/50 border border-gray-800 rounded-2xl p-5">
           <p className="text-gray-400 text-xs">📊 Цуглуулалт</p>
-          <p className="text-xl font-bold mt-1 text-green-400">{collectionRate || 83}%</p>
+          <p className="text-xl font-bold mt-1 text-green-400">{collectionRate !== null ? `${collectionRate}%` : '—'}</p>
         </div>
         <div className="bg-gray-800/50 border border-gray-800 rounded-2xl p-5">
           <p className="text-gray-400 text-xs">⚡ Дундаж хэрэглээ</p>
-          <p className="text-xl font-bold mt-1">{avgKwh} кВт·ц</p>
+          <p className="text-xl font-bold mt-1">{avgKwh !== null ? `${avgKwh} кВт·ц` : '—'}</p>
         </div>
       </div>
 
       {/* Нэгж бүрийн хүснэгт */}
-      <div className="bg-gray-800/50 border border-gray-800 rounded-2xl p-5 mb-6">
+      <div className="bg-gray-800/50 border border-gray-800 rounded-2xl p-5">
         <h2 className="font-semibold mb-4">Салбар нэгж бүрийн байдал</h2>
         <table className="w-full">
           <thead>
@@ -133,86 +185,39 @@ export default function TsahRevenuePage() {
               <th className="text-right pb-3">Нэхэмжлэх</th>
               <th className="text-right pb-3">Төлсөн</th>
               <th className="text-right pb-3">Өртэй</th>
-              <th className="text-center pb-3">Засвар</th>
               <th className="text-center pb-3">Цуглуулалт</th>
             </tr>
           </thead>
           <tbody>
             {branches.map(b => {
-              const rate = b.totalBills > 0 ? Math.round((b.paid / b.totalBills) * 100) : Math.floor(Math.random() * 20) + 75;
+              const rate = b.totalBills > 0 ? Math.round((b.paid / b.totalBills) * 100) : null;
               return (
                 <tr key={b.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
                   <td className="py-3">
                     <p className="text-sm font-medium">{b.name}</p>
-                    <p className="text-xs text-gray-500">{b.district} дүүрэг</p>
+                    <p className="text-xs text-gray-500">{b.name === 'Бусад' ? b.district : `${b.district} дүүрэг`}</p>
                   </td>
                   <td className="text-center text-sm">{b.sokhCount}</td>
                   <td className="text-center text-sm">{b.meterReadings}</td>
-                  <td className="text-center text-sm text-yellow-400">{b.avgConsumption}</td>
-                  <td className="text-right text-sm">{b.totalBills > 0 ? b.totalBills.toLocaleString() : (Math.floor(Math.random() * 2000) + 800).toLocaleString() + 'к'}₮</td>
-                  <td className="text-right text-sm text-green-400">{b.paid > 0 ? b.paid.toLocaleString() : (Math.floor(Math.random() * 1500) + 600).toLocaleString() + 'к'}₮</td>
-                  <td className="text-right text-sm text-red-400">{b.unpaid > 0 ? b.unpaid.toLocaleString() : (Math.floor(Math.random() * 400) + 50).toLocaleString() + 'к'}₮</td>
-                  <td className="text-center text-sm">
-                    <span className="text-green-400">{b.repairDone}</span>
-                    <span className="text-gray-600">/{b.repairCount}</span>
-                  </td>
+                  <td className="text-center text-sm text-yellow-400">{b.avgConsumption ?? '—'}</td>
+                  <td className="text-right text-sm">{b.totalBills.toLocaleString()}₮</td>
+                  <td className="text-right text-sm text-green-400">{b.paid.toLocaleString()}₮</td>
+                  <td className="text-right text-sm text-red-400">{b.unpaid.toLocaleString()}₮</td>
                   <td className="text-center">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      rate >= 80 ? 'bg-green-900/50 text-green-400' :
-                      rate >= 60 ? 'bg-yellow-900/50 text-yellow-400' :
-                      'bg-red-900/50 text-red-400'
-                    }`}>
-                      {rate}%
-                    </span>
+                    {rate !== null ? (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${rateClass(rate)}`}>{rate}%</span>
+                    ) : (
+                      <span className="text-xs text-gray-600">—</span>
+                    )}
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-      </div>
-
-      {/* Доод хэсэг */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gray-800/50 border border-gray-800 rounded-2xl p-5">
-          <h2 className="font-semibold mb-4">⚡ Цахилгаанчин засвар</h2>
-          <div className="space-y-3">
-            {branches.slice(0, 4).map(b => (
-              <div key={b.id} className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm">{b.district}</p>
-                  <p className="text-xs text-gray-500">{b.repairDone}/{b.repairCount} гүйцэтгэсэн</p>
-                </div>
-                <div className="w-24 bg-gray-700 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${b.repairDone / b.repairCount > 0.7 ? 'bg-green-500' : 'bg-yellow-500'}`}
-                    style={{ width: `${(b.repairDone / b.repairCount) * 100}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-gray-800/50 border border-gray-800 rounded-2xl p-5">
-          <h2 className="font-semibold mb-4">📈 Тоолуурын заалтын статус</h2>
-          <div className="space-y-3">
-            {branches.slice(0, 4).map(b => {
-              const readingRate = Math.floor(Math.random() * 25) + 70;
-              return (
-                <div key={b.id}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-400">{b.district}</span>
-                    <span>{readingRate}% оруулсан</span>
-                  </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div className="bg-yellow-500 h-2 rounded-full" style={{ width: `${readingRate}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {periodBills.length === 0 && (
+          <p className="text-sm text-gray-500 mt-4">Сонгосон хугацаанд цахилгааны нэхэмжлэх бүртгэгдээгүй байна.</p>
+        )}
       </div>
     </div>
   );
