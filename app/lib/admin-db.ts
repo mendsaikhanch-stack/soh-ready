@@ -8,6 +8,8 @@ interface QueryParams {
   eq?: Record<string, DbValue>;
   in?: Record<string, DbValue[]>;
   not?: Record<string, DbValue>;
+  gte?: Record<string, DbValue>;
+  lte?: Record<string, DbValue>;
   order?: { column: string; ascending?: boolean }[];
   limit?: number;
   single?: boolean;
@@ -79,6 +81,16 @@ class AdminQueryBuilder<T = Rows> {
 
   not(column: string, _operator: string, value: DbValue) {
     this.params.not = { ...this.params.not, [column]: value };
+    return this;
+  }
+
+  gte(column: string, value: DbValue) {
+    this.params.gte = { ...this.params.gte, [column]: value };
+    return this;
+  }
+
+  lte(column: string, value: DbValue) {
+    this.params.lte = { ...this.params.lte, [column]: value };
     return this;
   }
 

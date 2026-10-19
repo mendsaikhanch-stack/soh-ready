@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { useInspector } from '../layout';
 
@@ -24,19 +23,17 @@ export default function InspectorRoute() {
   }, [inspector]);
 
   const fetchData = async () => {
-    const { data: assigns } = await supabase
-      .from('inspector_assignments')
+    const { data: assigns } = await adminFrom('inspector_assignments')
       .select('*')
       .eq('inspector_id', inspector!.id)
       .eq('assigned_date', today)
-      .order('created_at');
+      .order('created_at', { ascending: true });
 
     const aList = assigns || [];
 
     // СӨХ нэрс
     const sokhIds = aList.map(a => a.sokh_id);
-    const { data: orgs } = await supabase
-      .from('sokh_organizations')
+    const { data: orgs } = await adminFrom('sokh_organizations')
       .select('id, name')
       .in('id', sokhIds.length > 0 ? sokhIds : [0]);
 
@@ -47,11 +44,10 @@ export default function InspectorRoute() {
     // Шалгалтууд
     const inspMap: Record<number, Inspection[]> = {};
     for (const a of aList) {
-      const { data: insp } = await supabase
-        .from('inspections')
+      const { data: insp } = await adminFrom('inspections')
         .select('id, apartment, status')
         .eq('assignment_id', a.id)
-        .order('apartment');
+        .order('apartment', { ascending: true });
       inspMap[a.id] = insp || [];
     }
     setInspections(inspMap);
@@ -64,11 +60,10 @@ export default function InspectorRoute() {
 
   // Шалгалт үүсгэх (assignment-д оршин суугчдыг нэмэх)
   const generateInspections = async (assignment: Assignment) => {
-    const { data: residents } = await supabase
-      .from('residents')
+    const { data: residents } = await adminFrom('residents')
       .select('id, name, apartment')
       .eq('sokh_id', assignment.sokh_id)
-      .order('apartment');
+      .order('apartment', { ascending: true });
 
     if (!residents || residents.length === 0) return;
 

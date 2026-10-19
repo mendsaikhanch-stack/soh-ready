@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 import { useInspector } from './layout';
 
 export default function InspectorDashboard() {
@@ -15,20 +15,17 @@ export default function InspectorDashboard() {
   useEffect(() => {
     if (!inspector?.id) { setLoading(false); return; }
     const fetch = async () => {
-      const { data: insp } = await supabase
-        .from('inspections')
+      const { data: insp } = await adminFrom('inspections')
         .select('id, status')
         .eq('inspector_id', inspector.id)
         .eq('inspection_date', today);
 
       const all = insp || [];
-      const { count: vCount } = await supabase
-        .from('inspection_violations')
+      const { count: vCount } = await adminFrom('inspection_violations')
         .select('*', { count: 'exact', head: true })
         .in('inspection_id', all.map(i => i.id).length > 0 ? all.map(i => i.id) : [0]);
 
-      const { count: rCount } = await supabase
-        .from('inspection_readings')
+      const { count: rCount } = await adminFrom('inspection_readings')
         .select('*', { count: 'exact', head: true })
         .in('inspection_id', all.map(i => i.id).length > 0 ? all.map(i => i.id) : [0]);
 

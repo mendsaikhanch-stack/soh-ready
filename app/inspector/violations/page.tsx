@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { useInspector } from '../layout';
 
@@ -34,16 +33,14 @@ export default function InspectorViolations() {
 
   const fetchViolations = async () => {
     // Байцаагчийн шалгалтуудын зөрчлүүд
-    const { data: inspections } = await supabase
-      .from('inspections')
+    const { data: inspections } = await adminFrom('inspections')
       .select('id, apartment')
       .eq('inspector_id', inspector!.id);
 
     if (!inspections || inspections.length === 0) { setLoading(false); return; }
 
     const inspMap = new Map(inspections.map(i => [i.id, i.apartment]));
-    const { data: viols } = await supabase
-      .from('inspection_violations')
+    const { data: viols } = await adminFrom('inspection_violations')
       .select('*')
       .in('inspection_id', inspections.map(i => i.id))
       .order('created_at', { ascending: false });

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { useInspector } from '../layout';
 
@@ -34,15 +33,14 @@ export default function InspectorReadings() {
       // Байцаагчийн даалгаварт байгаа СӨХ-үүд
       if (!inspector?.id) { setLoading(false); return; }
       const today = new Date().toISOString().split('T')[0];
-      const { data: assigns } = await supabase
-        .from('inspector_assignments')
+      const { data: assigns } = await adminFrom('inspector_assignments')
         .select('sokh_id')
         .eq('inspector_id', inspector.id)
         .eq('assigned_date', today);
 
       const sokhIds = (assigns || []).map(a => a.sokh_id);
       if (sokhIds.length > 0) {
-        const { data: o } = await supabase.from('sokh_organizations').select('id, name').in('id', sokhIds);
+        const { data: o } = await adminFrom('sokh_organizations').select('id, name').in('id', sokhIds);
         setOrgs(o || []);
         if (o && o.length > 0) setSelectedOrg(String(o[0].id));
       }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 import { useInspector } from '../layout';
 
 export default function InspectorReports() {
@@ -32,8 +32,7 @@ export default function InspectorReports() {
       fromDate = d.toISOString().split('T')[0];
     }
 
-    const { data: inspections } = await supabase
-      .from('inspections')
+    const { data: inspections } = await adminFrom('inspections')
       .select('id, status')
       .eq('inspector_id', inspector!.id)
       .gte('inspection_date', fromDate);
@@ -43,9 +42,9 @@ export default function InspectorReports() {
     const safeIds = ids.length > 0 ? ids : [0];
 
     const [{ count: rCount }, { count: vCount }, { count: aCount }] = await Promise.all([
-      supabase.from('inspection_readings').select('*', { count: 'exact', head: true }).in('inspection_id', safeIds),
-      supabase.from('inspection_violations').select('*', { count: 'exact', head: true }).in('inspection_id', safeIds),
-      supabase.from('inspection_acts').select('*', { count: 'exact', head: true }).in('inspection_id', safeIds),
+      adminFrom('inspection_readings').select('*', { count: 'exact', head: true }).in('inspection_id', safeIds),
+      adminFrom('inspection_violations').select('*', { count: 'exact', head: true }).in('inspection_id', safeIds),
+      adminFrom('inspection_acts').select('*', { count: 'exact', head: true }).in('inspection_id', safeIds),
     ]);
 
     setStats({

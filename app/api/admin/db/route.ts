@@ -61,10 +61,15 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
   ]),
   inspector: new Set([
     'sokh_organizations', 'residents', 'utility_usage', 'meter_readings',
+    'inspections', 'inspection_readings', 'inspection_violations', 'inspection_acts',
+    'inspector_assignments',
   ]),
 };
 
-const INSPECTOR_WRITE_TABLES = new Set(['utility_usage', 'meter_readings']);
+const INSPECTOR_WRITE_TABLES = new Set([
+  'utility_usage', 'meter_readings',
+  'inspections', 'inspection_readings', 'inspection_violations',
+]);
 
 const BLOCKED_COLUMNS = new Set(['password', 'password_hash', 'secret', 'token']);
 
@@ -76,6 +81,9 @@ const PLATFORM_ONLY_TABLES = new Set([
 
 // resident_id-аар хязгаарлагддаг хүснэгтүүд (sokh_id шууд байхгүй)
 const VIA_RESIDENT_TABLES = new Set(['payments', 'poll_votes']);
+
+// inspection_id → inspections.sokh_id-аар хязгаарлагддаг хүснэгтүүд
+const VIA_INSPECTION_TABLES = new Set(['inspection_readings', 'inspection_violations', 'inspection_acts']);
 
 // "Хэн үүсгэсэн" талбарыг сешнээс тамгалдаг хүснэгтүүд.
 // Клиентээс ирсэн created_by_admin_id-г үл тоомсорлоно — эс бөгөөс нэг СӨХ-ийн
@@ -159,6 +167,54 @@ async function enforceTenantScope(
       if (Number(r.sokh_id) !== sokhId) {
         return { ok: false, error: 'Cross-tenant resident access denied', status: 403 };
       }
+    }
+    return { ok: true, params };
+  }
+
+  // inspection_*: inspection_id-аар (эсвэл id-аар мөрийг олж) шалгах
+  if (VIA_INSPECTION_TABLES.has(table)) {
+    const inspectionIds: number[] = [];
+    const eq = params.eq as Record<string, unknown> | undefined;
+    const inn = params.in as Record<string, unknown[]> | undefined;
+    if (action === 'select' || action === 'update' || action === 'delete') {
+      if (eq?.inspection_id !== undefined) inspectionIds.push(Number(eq.inspection_id));
+      if (Array.isArray(inn?.inspection_id)) for (const v of inn.inspection_id) inspectionIds.push(Number(v));
+      if (inspectionIds.length === 0 && eq?.id !== undefined) {
+        // Жнь: зөрчлийг id-аар нь шинэчлэх — мөрийн inspection_id-г уншина
+        const { data: row } = await supabaseAdmin.from(table).select('inspection_id').eq('id', eq.id as string | number).maybeSingle();
+        if (!row) return { ok: false, error: 'Мөр олдсонгүй', status: 404 };
+        inspectionIds.push(Number(row.inspection_id));
+      }
+      if (inspectionIds.length === 0) {
+        return { ok: false, error: 'inspection_id шаардлагатай', status: 400 };
+      }
+    } else {
+      const dataIn = params.data as Record<string, unknown> | Record<string, unknown>[] | undefined;
+      const dataArr = Array.isArray(dataIn) ? dataIn : dataIn ? [dataIn] : [];
+      if (dataArr.length === 0) return { ok: false, error: 'data шаардлагатай', status: 400 };
+      for (const d of dataArr) {
+        if (!d || d.inspection_id === undefined) {
+          return { ok: false, error: 'inspection_id шаардлагатай', status: 400 };
+        }
+        inspectionIds.push(Number(d.inspection_id));
+      }
+    }
+    // [0] гэх мэт «хоосон» шүүлтүүрийг (байхгүй id) зөвшөөрнө — үр дүн хоосон
+    const ids = [...new Set(inspectionIds)].filter(id => id > 0);
+    if (ids.length > 0) {
+      const { data: rows } = await supabaseAdmin.from('inspections').select('id, sokh_id').in('id', ids);
+      for (const r of rows || []) {
+        if (Number(r.sokh_id) !== sokhId) {
+          return { ok: false, error: 'Cross-tenant inspection access denied', status: 403 };
+        }
+      }
+      // Эзэнгүй (inspections-д байхгүй) id-ийн мөрийг ч харуулахгүй
+      if ((rows || []).length !== ids.length) {
+        return { ok: false, error: 'Үзлэг олдсонгүй', status: 404 };
+      }
+    }
+    if (action === 'update' && params.data && Object.prototype.hasOwnProperty.call(params.data, 'inspection_id')) {
+      return { ok: false, error: 'inspection_id-г өөрчлөх боломжгүй', status: 403 };
     }
     return { ok: true, params };
   }
@@ -293,6 +349,16 @@ export async function POST(request: NextRequest) {
         if (params?.not) {
           for (const [key, value] of Object.entries(params.not as Record<string, unknown>)) {
             query = query.not(key, 'is', value);
+          }
+        }
+        if (params?.gte) {
+          for (const [key, value] of Object.entries(params.gte as Record<string, unknown>)) {
+            query = query.gte(key, value);
+          }
+        }
+        if (params?.lte) {
+          for (const [key, value] of Object.entries(params.lte as Record<string, unknown>)) {
+            query = query.lte(key, value);
           }
         }
         if (!params?.count) {

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 
 interface Inspection { id: number; apartment: string; resident_id: number; sokh_id: number; status: string; notes: string; gps_lat: number; gps_lng: number; }
@@ -55,8 +54,7 @@ export default function InspectPage() {
   }, [inspectionId]);
 
   const fetchData = async () => {
-    const { data: insp } = await supabase
-      .from('inspections')
+    const { data: insp } = await adminFrom('inspections')
       .select('*')
       .eq('id', inspectionId)
       .single();
@@ -90,8 +88,7 @@ export default function InspectPage() {
     }
 
     // Зөрчлүүд
-    const { data: viols } = await supabase
-      .from('inspection_violations')
+    const { data: viols } = await adminFrom('inspection_violations')
       .select('*')
       .eq('inspection_id', inspectionId);
     setViolations(viols || []);
@@ -176,7 +173,7 @@ export default function InspectPage() {
       severity: vSeverity,
     }]);
     setVDesc('');
-    const { data } = await supabase.from('inspection_violations').select('*').eq('inspection_id', inspectionId);
+    const { data } = await adminFrom('inspection_violations').select('*').eq('inspection_id', inspectionId);
     setViolations(data || []);
     setSaving(false);
   };
