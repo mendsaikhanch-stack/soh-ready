@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
@@ -42,14 +41,13 @@ export default function AdminUtilities() {
 
   const fetchUsages = async () => {
     const sokhId = await getAdminSokhId();
-    const { data } = await supabase
-      .from('utility_usage')
+    const { data } = await adminFrom('utility_usage')
       .select('*')
       .eq('sokh_id', sokhId)
       .eq('year', filterYear)
       .order('month', { ascending: false });
 
-    setUsages(data || []);
+    setUsages((data as unknown as Usage[]) || []);
     setLoading(false);
   };
 
