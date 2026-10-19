@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface OsnaaBranch {
   id: number;
@@ -30,11 +31,11 @@ export default function OsnaaRevenuePage() {
 
   const fetchData = async () => {
     // Utility bills (water + heating)
-    const { data: billData } = await supabase
-      .from('utility_bills')
+    const { data } = await adminFrom('utility_bills')
       .select('*')
       .in('utility_type', ['water', 'heating']);
-    setBills(billData || []);
+    const billData = (data as any[] | null) || [];
+    setBills(billData);
 
     // СӨХ байгууллагууд — контор бүрээр бүлэглэх
     const { data: sokhs } = await supabase.from('sokh_organizations').select('*');

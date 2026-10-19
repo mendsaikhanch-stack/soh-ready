@@ -26,6 +26,8 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'proposals', 'proposal_voters', 'proposal_votes',
     'debt_agreements', 'maintenance_works', 'payables', 'payroll_entries',
     'staff_salaries',
+    // mng-ctrl/*-revenue — ОСНАА, цахилгааны нэхэмжлэх
+    'utility_bills',
   ]),
   admin: new Set([
     // Admin өөрийн СӨХ-д холбогдох хүснэгтүүд

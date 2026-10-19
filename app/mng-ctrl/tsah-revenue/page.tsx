@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface UtilityBill {
   sokh_id: number | null;
@@ -72,13 +73,12 @@ export default function TsahRevenuePage() {
   useEffect(() => {
     (async () => {
       const [{ data: billData }, { data: sokhData }] = await Promise.all([
-        supabase
-          .from('utility_bills')
+        adminFrom('utility_bills')
           .select('sokh_id, amount, consumption, status, year, month')
           .eq('utility_type', 'electricity'),
         supabase.from('sokh_organizations').select('id, address'),
       ]);
-      setBills((billData as UtilityBill[]) || []);
+      setBills((billData as unknown as UtilityBill[]) || []);
       setSokhs((sokhData as SokhRow[]) || []);
       setLoading(false);
     })();
