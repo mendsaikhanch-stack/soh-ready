@@ -67,7 +67,7 @@ export default function InspectPage() {
 
     // Оршин суугч
     if (insp.resident_id) {
-      const { data: res } = await supabase.from('residents').select('*').eq('id', insp.resident_id).single();
+      const { data: res } = await adminFrom('residents').select('*').eq('id', insp.resident_id).single();
       if (res) setResident(res);
     }
 
@@ -75,8 +75,7 @@ export default function InspectPage() {
     if (insp.resident_id) {
       const prevReadings = { ...readings };
       for (const ut of utilityTypes) {
-        const { data: prev } = await supabase
-          .from('meter_readings')
+        const { data: prev } = await adminFrom('meter_readings')
           .select('current_reading')
           .eq('resident_id', insp.resident_id)
           .eq('utility_type', ut.value)
@@ -128,8 +127,7 @@ export default function InspectPage() {
       if (!r.current) continue;
 
       // meter_readings руу бичнэ (оршин суугчийн нэр дээр)
-      const { data: existing } = await supabase
-        .from('meter_readings')
+      const { data: existing } = await adminFrom('meter_readings')
         .select('id')
         .eq('resident_id', inspection.resident_id)
         .eq('utility_type', ut.value)

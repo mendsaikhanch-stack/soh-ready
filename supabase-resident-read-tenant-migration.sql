@@ -7,21 +7,24 @@
 -- бүх СӨХ-ийн ажилтны утас, лифт/хаалганы бүртгэл, илгээмжийн код г.м.
 -- уншиж чадаж байв.
 --
--- Эдгээрийг зөвхөн (mobile)/sokh/[id]/* хуудсууд уншдаг бөгөөд тэр
--- хуудсууд layout-доо Supabase Auth нэвтрэлт шаарддаг (authenticated).
--- Админ хуудсууд /api/admin/db proxy (service_role)-оор уншдаг:
---   app/admin/utilities/page.tsx — энэ migration-тэй хамт adminFrom руу шилжсэн.
+-- Эдгээрийг anon key-ээр зөвхөн (mobile)/sokh/[id]/* хуудсууд уншдаг бөгөөд
+-- тэр хуудсууд layout-доо Supabase Auth нэвтрэлт шаарддаг (authenticated).
+-- Бусад нь /api/admin/db proxy (service_role)-оор уншдаг болсон:
+--   admin/utilities, mng-ctrl/*-revenue, osnaa/*, inspector/readings,
+--   inspector/inspect/[id] — энэ migration-тэй хамт adminFrom руу шилжсэн.
+--   ОСНАА, байцаагч session-ийн нэг СӨХ-ээр хязгаарлагдана.
 --
 -- Хийх зүйл (хүснэгт бүрд):
 --   1) `USING (true)` бүх SELECT policy-г устгана (_read_legacy орно)
 --   2) Нэвтэрсэн оршин суугч зөвхөн өөрийн СӨХ-ийн мөрийг уншина:
 --      sokh_id IN (SELECT current_user_sokh_ids())
 --
--- utility_bills, meter_readings энд ОРООГҮЙ — osnaa/*, inspector/* хуудсууд
--- anon key-ээр уншсаар байгаа (дараагийн шат).
+-- inspection_* хүснэгтүүд энд ОРООГҮЙ — sokh_id баганагүй, inspector/*
+-- хуудсууд anon key-ээр уншсаар байгаа (дараагийн шат).
 --
--- ⚠️ Deploy-ийн ДАРАА ажиллуулна: admin/utilities хуудасны шинэ хувилбар
---    production-д гарсан байх ёстой, эс бөгөөс тэр хуудас хоосон харагдана.
+-- ⚠️ Deploy-ийн ДАРАА ажиллуулна: дээрх хуудсуудын шинэ хувилбар
+--    production-д гарсан байх ёстой, эс бөгөөс тэд хоосон харагдана.
+-- ⚠️ Байцаагч дахин нэвтрэх ёстой — хуучин session-д sokh_id байхгүй.
 --
 -- Шаардлага: current_user_sokh_ids() (supabase-tenant-scope-migration.sql).
 -- Давтан ажиллуулахад аюулгүй. Нэг transaction.
@@ -43,7 +46,8 @@ DECLARE
 BEGIN
   FOREACH t IN ARRAY ARRAY[
     'elevator_calls', 'gate_events', 'staff',
-    'billing_items', 'packages', 'utility_usage'
+    'billing_items', 'packages', 'utility_usage',
+    'utility_bills', 'meter_readings', 'utility_tariffs'
   ] LOOP
     IF to_regclass('public.' || t) IS NULL THEN
       RAISE NOTICE '% алга — алгаслаа', t;
@@ -81,6 +85,7 @@ COMMIT;
 --   SELECT tablename, policyname, cmd, roles::text, qual FROM pg_policies
 --    WHERE schemaname = 'public'
 --      AND tablename IN ('elevator_calls','gate_events','staff',
---                        'billing_items','packages','utility_usage')
+--                        'billing_items','packages','utility_usage',
+--                        'utility_bills','meter_readings','utility_tariffs')
 --      AND cmd IN ('SELECT','ALL')
 --    ORDER BY tablename;

@@ -56,7 +56,7 @@ export default function InspectorReadings() {
   }, [selectedOrg]);
 
   const fetchResidents = async () => {
-    const { data } = await supabase.from('residents').select('id, name, apartment').eq('sokh_id', selectedOrg).order('apartment');
+    const { data } = await adminFrom('residents').select('id, name, apartment').eq('sokh_id', selectedOrg).order('apartment', { ascending: true });
     setResidents(data || []);
     setEntries({});
   };
@@ -72,8 +72,7 @@ export default function InspectorReadings() {
       if (!res) continue;
 
       // Өмнөх заалт
-      const { data: prev } = await supabase
-        .from('meter_readings')
+      const { data: prev } = await adminFrom('meter_readings')
         .select('current_reading')
         .eq('resident_id', residentId)
         .eq('utility_type', selectedType)
@@ -83,8 +82,7 @@ export default function InspectorReadings() {
 
       const prevVal = prev && prev.length > 0 ? Number(prev[0].current_reading) : 0;
 
-      const { data: existing } = await supabase
-        .from('meter_readings')
+      const { data: existing } = await adminFrom('meter_readings')
         .select('id')
         .eq('resident_id', residentId)
         .eq('utility_type', selectedType)

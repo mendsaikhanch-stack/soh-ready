@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 
 interface Tariff {
@@ -40,8 +39,8 @@ export default function OsnaaTariffs() {
 
   const fetchData = async () => {
     const [{ data: t }, { data: o }] = await Promise.all([
-      supabase.from('utility_tariffs').select('*').order('effective_from', { ascending: false }),
-      supabase.from('sokh_organizations').select('id, name').order('name'),
+      adminFrom('utility_tariffs').select('*').order('effective_from', { ascending: false }),
+      adminFrom('sokh_organizations').select('id, name').order('name', { ascending: true }),
     ]);
     setTariffs(t || []);
     setOrgs(o || []);

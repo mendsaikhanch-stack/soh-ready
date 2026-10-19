@@ -54,15 +54,17 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     // Цалингийн тооцоо — хувийн мэдээлэл, sokh_id-тэй тул tenant scope хамгаална
     'payroll_entries', 'staff_salaries',
   ]),
+  // ОСНАА, байцаагч — session-ийн нэг СӨХ-ээр хязгаарлагдана (enforceTenantScope)
   osnaa: new Set([
     'sokh_organizations', 'residents', 'utility_usage', 'payments', 'announcements',
+    'utility_bills', 'meter_readings', 'utility_tariffs',
   ]),
   inspector: new Set([
-    'sokh_organizations', 'residents', 'utility_usage',
+    'sokh_organizations', 'residents', 'utility_usage', 'meter_readings',
   ]),
 };
 
-const INSPECTOR_WRITE_TABLES = new Set(['utility_usage']);
+const INSPECTOR_WRITE_TABLES = new Set(['utility_usage', 'meter_readings']);
 
 const BLOCKED_COLUMNS = new Set(['password', 'password_hash', 'secret', 'token']);
 
@@ -295,8 +297,12 @@ export async function POST(request: NextRequest) {
         }
         if (!params?.count) {
           if (params?.order) {
-            const ord = params.order as { column: string; ascending?: boolean };
-            query = query.order(ord.column, { ascending: ord.ascending ?? false });
+            // Хуучин клиент нэг object, шинэ нь массив илгээнэ
+            type Ord = { column: string; ascending?: boolean };
+            const ords = (Array.isArray(params.order) ? params.order : [params.order]) as Ord[];
+            for (const ord of ords) {
+              query = query.order(ord.column, { ascending: ord.ascending ?? false });
+            }
           }
           if (params?.limit) {
             query = query.limit(params.limit as number);

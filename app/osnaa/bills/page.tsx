@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 
 interface Bill { id: number; resident_id: number; apartment: string; utility_type: string; consumption: number; rate: number; amount: number; status: string; month: number; year: number; }
@@ -29,7 +28,7 @@ export default function OsnaaBills() {
 
   useEffect(() => {
     const fetchOrgs = async () => {
-      const { data } = await supabase.from('sokh_organizations').select('id, name').order('name');
+      const { data } = await adminFrom('sokh_organizations').select('id, name').order('name', { ascending: true });
       setOrgs(data || []);
       if (data && data.length > 0) setSelectedOrg(String(data[0].id));
       setLoading(false);
@@ -43,13 +42,12 @@ export default function OsnaaBills() {
 
   const fetchBills = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('utility_bills')
+    const { data } = await adminFrom('utility_bills')
       .select('*')
       .eq('sokh_id', selectedOrg)
       .eq('year', selectedYear)
       .eq('month', selectedMonth)
-      .order('apartment');
+      .order('apartment', { ascending: true });
     setBills(data || []);
     setLoading(false);
   };
@@ -61,8 +59,7 @@ export default function OsnaaBills() {
     setGenResult('');
 
     // Тарифууд
-    const { data: tariffs } = await supabase
-      .from('utility_tariffs')
+    const { data: tariffs } = await adminFrom('utility_tariffs')
       .select('*')
       .eq('sokh_id', selectedOrg)
       .order('effective_from', { ascending: false });
@@ -85,11 +82,10 @@ export default function OsnaaBills() {
     // === ДУЛААН: мкв × тариф ===
     const heatingRate = getRate('heating');
     if (heatingRate > 0) {
-      const { data: residents } = await supabase
-        .from('residents')
+      const { data: residents } = await adminFrom('residents')
         .select('id, apartment, area_sqm')
         .eq('sokh_id', selectedOrg)
-        .order('apartment');
+        .order('apartment', { ascending: true });
 
       if (residents) {
         for (const res of residents) {
@@ -98,8 +94,7 @@ export default function OsnaaBills() {
 
           const amount = Math.round(sqm * heatingRate);
 
-          const { data: existing } = await supabase
-            .from('utility_bills')
+          const { data: existing } = await adminFrom('utility_bills')
             .select('id')
             .eq('resident_id', res.id)
             .eq('utility_type', 'heating')
@@ -131,8 +126,7 @@ export default function OsnaaBills() {
     }
 
     // === УС, ЦАХИЛГААН: тоолуурын заалт × тариф ===
-    const { data: readings } = await supabase
-      .from('meter_readings')
+    const { data: readings } = await adminFrom('meter_readings')
       .select('*')
       .eq('sokh_id', selectedOrg)
       .eq('year', selectedYear)
@@ -147,8 +141,7 @@ export default function OsnaaBills() {
         const consumption = Number(reading.current_reading) - Number(reading.previous_reading || 0);
         const amount = Math.round(consumption * rate);
 
-        const { data: existing } = await supabase
-          .from('utility_bills')
+        const { data: existing } = await adminFrom('utility_bills')
           .select('id')
           .eq('resident_id', reading.resident_id)
           .eq('utility_type', reading.utility_type)

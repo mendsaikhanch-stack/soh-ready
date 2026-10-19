@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     if (type === 'inspector') {
       const { data: inspector } = await sb
         .from('inspectors')
-        .select('id, username, password, name, kontor_number')
+        .select('id, username, password, name, kontor_number, sokh_org_id')
         .eq('username', username)
         .eq('status', 'active')
         .single();
@@ -50,7 +50,8 @@ export async function POST(request: Request) {
       if (!inspector || !passwordMatch) return rateLimitFail(ip, now);
 
       attempts.delete(ip);
-      const token = createSessionToken({ userId: inspector.id, role: 'inspector' });
+      // sokh_org_id — /api/admin/db proxy байцаагчийг энэ СӨХ-ээр хязгаарлана
+      const token = createSessionToken({ userId: inspector.id, sokhId: inspector.sokh_org_id || 0, role: 'inspector' });
       const response = NextResponse.json({
         success: true, role: 'inspector', inspectorId: inspector.id, name: inspector.name,
         kontorNumber: inspector.kontor_number || null,

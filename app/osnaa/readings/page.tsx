@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
 import { adminFrom } from '@/app/lib/admin-db';
 
 interface Resident { id: number; name: string; apartment: string; area_sqm?: number; }
@@ -38,7 +37,7 @@ export default function OsnaaReadings() {
 
   useEffect(() => {
     const fetchOrgs = async () => {
-      const { data } = await supabase.from('sokh_organizations').select('id, name').order('name');
+      const { data } = await adminFrom('sokh_organizations').select('id, name').order('name', { ascending: true });
       setOrgs(data || []);
       if (data && data.length > 0) setSelectedOrg(String(data[0].id));
       setLoading(false);
@@ -54,8 +53,8 @@ export default function OsnaaReadings() {
   const fetchResidentsAndReadings = async () => {
     setLoading(true);
     const [{ data: res }, { data: rd }] = await Promise.all([
-      supabase.from('residents').select('id, name, apartment, area_sqm').eq('sokh_id', selectedOrg).order('apartment'),
-      supabase.from('meter_readings').select('*')
+      adminFrom('residents').select('id, name, apartment, area_sqm').eq('sokh_id', selectedOrg).order('apartment', { ascending: true }),
+      adminFrom('meter_readings').select('*')
         .eq('sokh_id', selectedOrg)
         .eq('utility_type', selectedType)
         .eq('year', selectedYear)
@@ -67,8 +66,7 @@ export default function OsnaaReadings() {
 
     // Дулааны тариф авах
     if (selectedType === 'heating' && selectedOrg) {
-      const { data: tariffs } = await supabase
-        .from('utility_tariffs')
+      const { data: tariffs } = await adminFrom('utility_tariffs')
         .select('*')
         .eq('sokh_id', selectedOrg)
         .eq('utility_type', 'heating')
@@ -88,8 +86,7 @@ export default function OsnaaReadings() {
     let prevYear = selectedYear;
     if (prevMonth === 0) { prevMonth = 12; prevYear--; }
 
-    const { data } = await supabase
-      .from('meter_readings')
+    const { data } = await adminFrom('meter_readings')
       .select('current_reading')
       .eq('resident_id', residentId)
       .eq('utility_type', selectedType)

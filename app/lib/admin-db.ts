@@ -8,15 +8,22 @@ interface QueryParams {
   eq?: Record<string, DbValue>;
   in?: Record<string, DbValue[]>;
   not?: Record<string, DbValue>;
-  order?: { column: string; ascending?: boolean };
+  order?: { column: string; ascending?: boolean }[];
   limit?: number;
   single?: boolean;
   count?: boolean;
   data?: Record<string, unknown> | Record<string, unknown>[];
 }
 
-interface QueryResult {
-  data: Record<string, unknown>[] | Record<string, unknown> | null;
+// Төрөлгүй supabase client (app/lib/supabase)-тэй адил: select → any[],
+// single() → any. supabase.from()-оос шилжүүлсэн код cast-гүй ажиллана.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Rows = any[];
+type Row = any;
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+interface QueryResult<T = Row> {
+  data: T;
   error: string | null;
   count?: number;
 }
@@ -41,7 +48,9 @@ async function adminQuery(table: string, action: string, params?: QueryParams): 
 // supabase.from() шиг interface
 export function adminFrom(table: string) {
   return {
-    select: (columns?: string) => new AdminQueryBuilder(table, 'select', { select: columns }),
+    // { count: 'exact', head: true } — supabase-тэй адил зөвхөн тоог буцаана
+    select: (columns?: string, opts?: { count?: 'exact'; head?: boolean }) =>
+      new AdminQueryBuilder(table, 'select', { select: columns, count: opts?.count === 'exact' || undefined }),
     insert: (data: Record<string, unknown> | Record<string, unknown>[]) => adminQuery(table, 'insert', { data: data as Record<string, unknown>[] }),
     upsert: (data: Record<string, unknown> | Record<string, unknown>[]) => adminQuery(table, 'upsert', { data: data as Record<string, unknown>[] }),
     update: (data: Record<string, unknown>) => new AdminUpdateBuilder(table, data),
@@ -49,7 +58,7 @@ export function adminFrom(table: string) {
   };
 }
 
-class AdminQueryBuilder {
+class AdminQueryBuilder<T = Rows> {
   private table: string;
   private params: QueryParams;
 
@@ -73,8 +82,9 @@ class AdminQueryBuilder {
     return this;
   }
 
+  // Дараалан дуудвал (.order('year').order('month')) бүгд хэрэгжинэ
   order(column: string, opts?: { ascending?: boolean }) {
-    this.params.order = { column, ascending: opts?.ascending };
+    this.params.order = [...(this.params.order || []), { column, ascending: opts?.ascending }];
     return this;
   }
 
@@ -83,15 +93,15 @@ class AdminQueryBuilder {
     return this;
   }
 
-  single() {
+  single(): AdminQueryBuilder<Row> {
     this.params.single = true;
-    return this;
+    return this as AdminQueryBuilder<Row>;
   }
 
-  async then(resolve: (value: QueryResult) => void, reject?: (reason: unknown) => void) {
+  async then(resolve: (value: QueryResult<T>) => void, reject?: (reason: unknown) => void) {
     try {
       const result = await adminQuery(this.table, 'select', this.params);
-      resolve(result);
+      resolve(result as QueryResult<T>);
     } catch (err) {
       if (reject) reject(err);
     }

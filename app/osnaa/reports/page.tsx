@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 interface Org { id: number; name: string; }
 
@@ -31,7 +31,7 @@ export default function OsnaaReports() {
 
   useEffect(() => {
     const fetchOrgs = async () => {
-      const { data } = await supabase.from('sokh_organizations').select('id, name').order('name');
+      const { data } = await adminFrom('sokh_organizations').select('id, name').order('name', { ascending: true });
       setOrgs(data || []);
       if (data && data.length > 0) setSelectedOrg(String(data[0].id));
       setLoading(false);
@@ -45,8 +45,7 @@ export default function OsnaaReports() {
 
   const fetchReport = async () => {
     setLoading(true);
-    const { data: bills } = await supabase
-      .from('utility_bills')
+    const { data: bills } = await adminFrom('utility_bills')
       .select('*')
       .eq('sokh_id', selectedOrg)
       .eq('year', selectedYear);

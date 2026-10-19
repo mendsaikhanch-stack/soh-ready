@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { adminFrom } from '@/app/lib/admin-db';
 
 export default function OsnaaDashboard() {
   const [stats, setStats] = useState({
@@ -23,8 +23,7 @@ export default function OsnaaDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       // Энэ сарын нэхэмжлэхүүд
-      const { data: bills } = await supabase
-        .from('utility_bills')
+      const { data: bills } = await adminFrom('utility_bills')
         .select('*')
         .eq('year', currentYear)
         .eq('month', currentMonth);
@@ -37,8 +36,7 @@ export default function OsnaaDashboard() {
       const byType = (type: string) => allBills.filter(b => b.utility_type === type).reduce((s, b) => s + Number(b.amount), 0);
 
       // Тоолуурын заалт тоо
-      const { count: readingsCount } = await supabase
-        .from('meter_readings')
+      const { count: readingsCount } = await adminFrom('meter_readings')
         .select('*', { count: 'exact', head: true })
         .eq('year', currentYear)
         .eq('month', currentMonth);
