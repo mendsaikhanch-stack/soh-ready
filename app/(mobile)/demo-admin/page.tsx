@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { meetings, meetingRules, meetingAgenda, meetingUnitStats } from '@/app/lib/demo/admin-mock';
+import MeetingStatusBadge from '@/app/admin/meetings/MeetingStatusBadge';
 
 // ====== MOCK DATA — СӨХ-ийн админ нүднээс ======
 const sokh = {
@@ -84,6 +86,7 @@ const pages = [
   { id: 'residents', label: 'Айлууд', icon: '👥' },
   { id: 'payments', label: 'Төлбөр', icon: '💰' },
   { id: 'announcements', label: 'Зарлал', icon: '📢' },
+  { id: 'meetings', label: 'Хурал', icon: '🏛' },
   { id: 'maintenance', label: 'Засвар', icon: '🔧' },
   { id: 'parking', label: 'Зогсоол', icon: '🚗' },
   { id: 'reports', label: 'Тайлан', icon: '📈' },
@@ -582,7 +585,87 @@ export default function DemoAdminPage() {
           </div>
         </section>
 
-        {/* ====== PAGE 5: MAINTENANCE ====== */}
+        {/* ====== PAGE 5: MEETINGS ====== */}
+        <section className="w-full flex-shrink-0 snap-start overflow-y-auto bg-gray-50">
+          <div className="bg-gray-900 text-white px-4 py-4">
+            <h1 className="text-lg font-bold">🏛 Гишүүдийн хурал</h1>
+            <p className="text-xs text-white/60">Хурал зарлах · дүрэм · санал өгөх эрхтэй сууц</p>
+          </div>
+          <div className="px-4 py-4 pb-24 space-y-4">
+            <button className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium text-sm shadow-md">
+              + Шинэ хурал
+            </button>
+
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 mb-2">ХУРЛУУД</h3>
+              <div className="space-y-2">
+                {meetings.map(m => (
+                  <div key={m.id} className="bg-white rounded-xl p-3 shadow-sm">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="font-semibold text-sm">{m.title}</h3>
+                      <MeetingStatusBadge status={m.status} />
+                    </div>
+                    <p className="text-[11px] text-gray-400">
+                      {m.kind} · {m.scheduledAt} · {m.agendaCount} асуудал{m.unitCount ? ` · ${m.unitCount} сууц` : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Зарлагдсан хурлын товч мэдээлэл */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-blue-200">
+              <p className="text-xs font-semibold text-blue-700 mb-1">ЗАРЛАГДСАН ХУРАЛ</p>
+              <h3 className="font-bold text-sm mb-0.5">{meetings[0].title}</h3>
+              <p className="text-[11px] text-gray-500 mb-3">{meetings[0].scheduledAt} · {meetings[0].location}</p>
+              <div className="space-y-1.5 text-xs">
+                {meetingRules.filter(r => ['Ирцийн шаардлага', 'Санал тоолох', 'Зар хүргэх хугацаа'].includes(r.k)).map(r => (
+                  <div key={r.k} className="flex justify-between gap-3">
+                    <span className="text-gray-500">{r.k}</span>
+                    <span className="font-medium text-right">{r.v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-gray-500 mb-2">ХЭЛЭЛЦЭХ АСУУДАЛ</h3>
+              <ol className="space-y-2">
+                {meetingAgenda.map((a, i) => (
+                  <li key={a.title} className="text-sm">
+                    <p className="font-medium">{i + 1}. {a.title}</p>
+                    <p className="text-[11px] text-gray-400">Батлагдах босго: {a.threshold}{a.prevote ? ' · урьдчилсан санал' : ''}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-gray-500 mb-1">САНАЛ ӨГӨХ ЭРХТЭЙ СУУЦ</h3>
+              <p className="text-[11px] text-gray-400 mb-3">Зарласан өдрийн бүртгэлээс хадгалсан жагсаалт</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-gray-50 rounded-lg p-2.5">
+                  <p className="text-[11px] text-gray-500">Нийт сууц</p>
+                  <p className="text-lg font-bold">{meetingUnitStats.total}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2.5">
+                  <p className="text-[11px] text-gray-500">Саналын жин</p>
+                  <p className="text-lg font-bold">{meetingUnitStats.totalWeight}</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-2.5">
+                  <p className="text-[11px] text-amber-700">Өмчлөгч тодорхойгүй</p>
+                  <p className="text-lg font-bold text-amber-700">{meetingUnitStats.unconfirmed}</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-2.5">
+                  <p className="text-[11px] text-amber-700">Олон өмчлөгчтэй</p>
+                  <p className="text-lg font-bold text-amber-700">{meetingUnitStats.multi}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====== PAGE 6: MAINTENANCE ====== */}
         <section className="w-full flex-shrink-0 snap-start overflow-y-auto bg-gray-50">
           <div className="bg-gray-900 text-white px-4 py-4">
             <h1 className="text-lg font-bold">🔧 Засварын хүсэлтүүд</h1>
@@ -1031,8 +1114,8 @@ export default function DemoAdminPage() {
       </div>
 
       {/* Bottom dots indicator */}
-      <div className="bg-gray-800 border-t border-gray-700 px-4 py-3 flex-shrink-0">
-        <div className="flex items-center justify-center gap-3">
+      <div className="bg-gray-800 border-t border-gray-700 px-4 py-3 flex-shrink-0 overflow-x-auto">
+        <div className="flex items-center justify-center gap-3 min-w-max mx-auto">
           {pages.map((p, i) => (
             <button
               key={p.id}
