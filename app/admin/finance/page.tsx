@@ -76,7 +76,7 @@ export default function AdminFinanceHub() {
 
   const [showIncForm, setShowIncForm] = useState(false);
   const [incName, setIncName] = useState('');
-  const [incCat, setIncCat] = useState('other');
+  const [incCat] = useState('other');
   const [incAmount, setIncAmount] = useState('');
 
   const [showPlanForm, setShowPlanForm] = useState(false);

@@ -69,7 +69,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (u: User) => {
     // user metadata-с утас/имэйл-р resident хайх
-    const email = u.email;
     const phone = u.user_metadata?.phone;
 
     let query = supabase.from('residents').select('*');

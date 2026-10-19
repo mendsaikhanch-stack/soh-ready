@@ -103,7 +103,7 @@ export default function HoaManualSignup({
     <div className="space-y-3">
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800">
         💡 Хэрэв та өөрийн СӨХ-ийг үндсэн жагсаалтаас олоогүй бол доор гараар оруулна уу.
-        Таны бүртгэл албан ёсны "Khotol-ийг идэвхжүүлэх" хүсэлт болж тоологдоно.
+        Таны бүртгэл албан ёсны &quot;Khotol-ийг идэвхжүүлэх&quot; хүсэлт болж тоологдоно.
       </div>
 
       <div>

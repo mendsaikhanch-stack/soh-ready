@@ -9,7 +9,7 @@ interface HotolLogoProps {
   className?: string;
 }
 
-export default function HotolLogo({ size = 48, showText = false, className = '' }: HotolLogoProps) {
+export default function HotolLogo({ size = 48, className = '' }: HotolLogoProps) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <Image

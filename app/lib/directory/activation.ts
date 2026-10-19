@@ -30,7 +30,7 @@ interface IncrementArgs {
 
 // Activation summary-г аюулгүйгээр нэмэх (idempotent биш — дуудсан болгонд тоолуур нэмнэ).
 // Барилга өвөрмөц гэж тооцох замаар building_count-ыг тооцоолно.
-export async function incrementActivationSummary({ directoryId, provisionalId, building }: IncrementArgs): Promise<void> {
+export async function incrementActivationSummary({ directoryId, provisionalId }: IncrementArgs): Promise<void> {
   if (!directoryId && !provisionalId) return;
 
   // 1) Хамгийн сүүлийн request building-уудаас өвөрмөц барилгуудын тоог тооцох

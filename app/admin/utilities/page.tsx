@@ -34,7 +34,7 @@ export default function AdminUtilities() {
   // Form
   const [formType, setFormType] = useState('electricity');
   const [formMonth, setFormMonth] = useState(new Date().getMonth() + 1);
-  const [formYear, setFormYear] = useState(new Date().getFullYear());
+  const [formYear] = useState(new Date().getFullYear());
   const [formAmount, setFormAmount] = useState('');
   const [formCost, setFormCost] = useState('');
 

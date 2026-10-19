@@ -96,13 +96,12 @@ export default function AnalyticsPage() {
     (payments || []).forEach(p => {
       const d = new Date(p.created_at);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
-      const label = `${monthNames[d.getMonth()]}`;
       const existing = monthMap.get(key) || { count: 0, total: 0 };
       monthMap.set(key, { count: existing.count + 1, total: existing.total + Number(p.amount || 0) });
     });
     const monthly = Array.from(monthMap.entries())
       .map(([key, val]) => {
-        const [year, month] = key.split('-');
+        const [, month] = key.split('-');
         return { month: monthNames[Number(month)], count: val.count, total: val.total };
       })
       .slice(0, 6);

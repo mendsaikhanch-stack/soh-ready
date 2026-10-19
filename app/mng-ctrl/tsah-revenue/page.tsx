@@ -71,7 +71,6 @@ export default function TsahRevenuePage() {
   const totalBills = branches.reduce((s, b) => s + b.totalBills, 0);
   const totalPaid = branches.reduce((s, b) => s + b.paid, 0);
   const totalUnpaid = branches.reduce((s, b) => s + b.unpaid, 0);
-  const totalReadings = branches.reduce((s, b) => s + b.meterReadings, 0);
   const avgKwh = branches.length > 0 ? Math.round(branches.reduce((s, b) => s + b.avgConsumption, 0) / branches.length) : 120;
   const collectionRate = totalBills > 0 ? Math.round((totalPaid / totalBills) * 100) : 0;
 

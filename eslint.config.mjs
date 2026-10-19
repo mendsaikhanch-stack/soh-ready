@@ -26,6 +26,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Нэг удаагийн Node скриптүүд (CommonJS require ашигладаг)
     "scripts/**",
+    // Android build-ийн үүсгэсэн файлууд
+    "android/**/build/**",
   ]),
 ]);
 

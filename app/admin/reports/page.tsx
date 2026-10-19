@@ -34,7 +34,6 @@ export default function AdminReports() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntrance, setSelectedEntrance] = useState<number | null>(null);
-  const [view, setView] = useState<'overview' | 'entrance'>('overview');
 
   useEffect(() => {
     const fetchData = async () => {

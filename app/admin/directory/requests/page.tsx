@@ -34,7 +34,7 @@ export default function RequestsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [statusFilter]);
+  useEffect(() => { load(); }, [statusFilter]);
 
   const updateStatus = async (id: number, status: SignupRequest['status']) => {
     await fetch('/api/admin/directory/requests', {
@@ -50,7 +50,7 @@ export default function RequestsPage() {
       <div className="mb-4">
         <Link href="/admin/directory" className="text-sm text-blue-600 hover:underline">← СӨХ Directory</Link>
         <h1 className="text-2xl font-bold mt-1">📨 Хэрэглэгчийн хүсэлтүүд</h1>
-        <p className="text-sm text-gray-500">"СӨХ олдсонгүй" хүсэлтүүдийг шалгах</p>
+        <p className="text-sm text-gray-500">&quot;СӨХ олдсонгүй&quot; хүсэлтүүдийг шалгах</p>
       </div>
 
       <div className="flex gap-2 mb-4">
@@ -87,7 +87,7 @@ export default function RequestsPage() {
                 <td className="px-3 py-2">
                   <p className="font-medium">{r.requested_name}</p>
                   {r.address && <p className="text-xs text-gray-500">{r.address}</p>}
-                  {r.note && <p className="text-xs text-gray-400 italic mt-1">"{r.note}"</p>}
+                  {r.note && <p className="text-xs text-gray-400 italic mt-1">&quot;{r.note}&quot;</p>}
                 </td>
                 <td className="px-3 py-2 text-xs">
                   <p>{r.full_name || '—'}</p>

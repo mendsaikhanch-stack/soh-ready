@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
-import { useAuth } from '@/app/lib/auth-context';
 import { safeLocal } from '@/app/lib/safe-storage';
 
 interface Poll {
@@ -21,7 +20,6 @@ interface Poll {
 export default function VotingPage() {
   const params = useParams();
   const router = useRouter();
-  const { profile } = useAuth();
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [myVotes, setMyVotes] = useState<Record<number, string>>({});

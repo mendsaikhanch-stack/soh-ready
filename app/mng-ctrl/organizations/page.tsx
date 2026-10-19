@@ -366,7 +366,7 @@ ${activationLink(r)}
       const headers = data[headerIdx].map((h: any) => String(h).toLowerCase().trim());
 
       // Баганууд таних
-      let colName = -1, colDistrict = -1, colKhoroo = -1, colAddress = -1, colPhone = -1, colContact = -1, colCombined = -1;
+      let colName = -1, colDistrict = -1, colKhoroo = -1, colAddress = -1, colPhone = -1, colCombined = -1;
       headers.forEach((h, i) => {
         if ((h.includes('нэр') || h.includes('name') || h.includes('сөх') || h.includes('байгууллага')) && colName === -1) colName = i;
         else if ((h.includes('дүүрэг') && h.includes('хороо')) || h === 'дүүрэг/хороо') colCombined = i;
@@ -374,7 +374,6 @@ ${activationLink(r)}
         else if (h.includes('хороо') || h.includes('khoroo')) colKhoroo = i;
         else if (h.includes('хаяг') || h.includes('address') || h.includes('байр')) colAddress = i;
         else if (h.includes('утас') || h.includes('phone') || h.includes('дугаар')) colPhone = i;
-        else if (h.includes('холбоо') || h.includes('contact') || h.includes('хүн')) colContact = i;
       });
 
       if (colName === -1) {
@@ -599,18 +598,6 @@ ${activationLink(r)}
   const getOrgStats = (id: number) => {
     const org = residents.filter(r => r.sokh_id === id);
     return { count: org.length, debt: org.reduce((s, r) => s + Number(r.debt || 0), 0) };
-  };
-
-  const getLocation = (s: Sokh) => {
-    const k = firstOrSelf(s.khoroos);
-    if (!k) return '';
-    const d = firstOrSelf(k.districts);
-    const c = firstOrSelf(d?.cities);
-    const parts: string[] = [];
-    if (c?.name) parts.push(c.name);
-    if (d?.name) parts.push(d.name);
-    if (k.name) parts.push(k.name);
-    return parts.join(' · ');
   };
 
   const matchedCount = parsedRows.filter(r => r.matched).length;
@@ -1561,7 +1548,7 @@ ${activationLink(r)}
         <div className="text-center py-12 text-gray-500">
           <p className="text-4xl mb-3">🏢</p>
           <p>СӨХ бүртгэлгүй байна</p>
-          <p className="text-sm mt-1">Дээрх "+ СӨХ нэмэх" товч дарж эхлэнэ үү</p>
+          <p className="text-sm mt-1">Дээрх &quot;+ СӨХ нэмэх&quot; товч дарж эхлэнэ үү</p>
         </div>
       ) : (
         <>

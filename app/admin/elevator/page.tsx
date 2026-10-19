@@ -90,8 +90,6 @@ export default function ElevatorPage() {
   const upcoming = tasks.filter(t => t.status === 'scheduled' || t.status === 'in_progress');
   const past = tasks.filter(t => t.status === 'completed' || t.status === 'cancelled');
 
-  const isOverdue = (date: string) => new Date(date) < new Date() && !['completed', 'cancelled'].includes(tasks.find(t => t.scheduled_date === date)?.status || '');
-
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">🛗 Лифт засвар хуваарь</h1>

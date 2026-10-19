@@ -69,7 +69,7 @@ export default function ReviewPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [jobId]);
+  useEffect(() => { load(); }, [jobId]);
 
   const setOverride = (rowId: number, value: Override | null) => {
     setOverrides((prev) => {

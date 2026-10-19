@@ -122,7 +122,7 @@ export default function SokhDashboard() {
   const router = useRouter();
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const { dark, toggle: toggleDark } = useDarkMode();
-  const { locale, setLocale, t } = useI18n();
+  const { locale, setLocale } = useI18n();
   const [sokh, setSokh] = useState<SokhOrg | null>(null);
   const [stats, setStats] = useState({ residents: 0, totalDebt: 0, announcements: 0 });
   const [notifCount, setNotifCount] = useState(0);

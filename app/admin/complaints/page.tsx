@@ -84,7 +84,6 @@ export default function AdminComplaints() {
   if (filter !== 'all') filtered = filtered.filter(c => c.status === filter);
   if (categoryFilter !== 'all') filtered = filtered.filter(c => c.category === categoryFilter);
 
-  const getStatus = (s: string) => statusOptions.find(o => o.value === s) || statusOptions[0];
   const getCategory = (c: string) => categoryMap[c] || categoryMap.complaint;
 
   return (
@@ -130,7 +129,6 @@ export default function AdminComplaints() {
       ) : (
         <div className="space-y-3">
           {filtered.map(c => {
-            const st = getStatus(c.status);
             const cat = getCategory(c.category);
 
             return (
