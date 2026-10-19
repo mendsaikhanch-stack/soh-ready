@@ -461,3 +461,86 @@ export const boardProposals = [
     autoApprove: false,
   },
 ];
+
+// ── Гишүүдийн хурал (1-р шат: ноорог → зарлах → сууцны жагсаалт хадгалах) ──
+export const meetings = [
+  {
+    id: 1,
+    title: '2026 оны ээлжит хурал',
+    kind: 'Ээлжит',
+    status: 'noticed' as const,
+    scheduledAt: '2026.11.08 18:00',
+    location: 'A блокийн 1 давхрын заал',
+    agendaCount: 3,
+    unitCount: 124,
+  },
+  {
+    id: 2,
+    title: 'Дээврийн их засварын санхүүжилт',
+    kind: 'Ээлжит бус',
+    status: 'draft' as const,
+    scheduledAt: '2026.12.05 19:00',
+    location: 'Цахимаар (Zoom)',
+    agendaCount: 1,
+    unitCount: null,
+  },
+  {
+    id: 3,
+    title: 'Харуулын үйлчилгээний гэрээ',
+    kind: 'Ээлжит бус',
+    status: 'cancelled' as const,
+    scheduledAt: '2026.09.20 18:00',
+    location: 'A блокийн 1 давхрын заал',
+    agendaCount: 1,
+    unitCount: 121,
+  },
+];
+
+export const meetingRules = [
+  { k: 'Зарлан хуралдуулагч', v: 'Ц. Цэрэндулам (СӨХ-ийн дарга)' },
+  { k: 'Санаачилга', v: 'Удирдах зөвлөлийн шийдвэр' },
+  { k: 'Зарласан', v: '2026.10.17 10:24' },
+  { k: 'Санал тоолох', v: 'Нэг сууц — нэг санал' },
+  { k: 'Ирцийн шаардлага', v: '50%-иас дээш' },
+  { k: 'Зар хүргэх хугацаа', v: 'Хурлаас 14 хоногийн өмнө' },
+  { k: 'Урьдчилсан санал ирцэд', v: 'Тооцно' },
+  { k: 'Цахим холбоос', v: 'zoom.us/j/•••••' },
+];
+
+export const meetingAgenda = [
+  {
+    title: '2025 оны санхүүгийн тайлан батлах',
+    decision: 'Тайланг хүлээн авч баталсугай.',
+    threshold: '50%-иас дээш',
+    prevote: true,
+  },
+  {
+    title: '2027 оны төсөв, сарын хураамжийг 5,000₮-өөр нэмэх',
+    decision: '2027.01.01-нээс сарын хураамжийг 30,000₮ болгосугай.',
+    threshold: '67%-иас багагүй',
+    prevote: true,
+  },
+  {
+    title: 'Удирдах зөвлөлийн гишүүн нөхөн сонгох',
+    decision: null,
+    threshold: '50%-иас дээш',
+    prevote: false,
+  },
+];
+
+export const meetingUnitStats = { total: 124, totalWeight: 124, unconfirmed: 3, multi: 2 };
+
+export const meetingUnitsSample = [
+  { unit: 'A-101', name: 'Б. Батболд', weight: 1, note: '' },
+  { unit: 'A-203', name: 'Д. Сараа', weight: 1, note: '' },
+  { unit: 'A-305', name: '—', weight: 1, note: 'Өмчлөгч тодорхойгүй' },
+  { unit: 'B-105', name: 'Г. Ганбаатар, Г. Болор', weight: 1, note: 'Олон өмчлөгчтэй' },
+  { unit: 'B-301', name: 'О. Оюунаа', weight: 1, note: '' },
+  { unit: 'C-402', name: 'Н. Нарантуяа', weight: 1, note: '' },
+];
+
+export const meetingHistory = [
+  { at: '2026.10.17 10:24', text: 'Хурал зарлав (сууцны жагсаалт хадгалагдав) (124 сууц)' },
+  { at: '2026.10.16 16:02', text: 'Ноорог засав' },
+  { at: '2026.10.14 11:40', text: 'Ноорог үүсгэв' },
+];

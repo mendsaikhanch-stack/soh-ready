@@ -7,7 +7,9 @@ import {
   polls, messageThreads, marketplaceItems, bookableSpaces, bookings, financeSummary, financeLedger,
   packages, shops, cameras, importHistory, directoryStats, directorySample, demandStats, demandFeed,
   elevators, workflowRules, reviewQueue, featureToggles, boardMembers, boardProposals,
+  meetings, meetingRules, meetingAgenda, meetingUnitStats, meetingUnitsSample, meetingHistory,
 } from '@/app/lib/demo/admin-mock';
+import MeetingStatusBadge from '@/app/admin/meetings/MeetingStatusBadge';
 
 const fmt = (n: number) => n.toLocaleString();
 const debtCount = residents.filter((r) => r.debt > 0).length;
@@ -373,6 +375,122 @@ export function Board() {
               </Card>
             );
           })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Meetings() {
+  const noticed = meetings.find((m) => m.status === 'noticed')!;
+  const s = meetingUnitStats;
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">Сууц өмчлөгчдийн бүх гишүүдийн хурлыг зарлах — дүрэм, хэлэлцэх асуудал, санал өгөх эрхтэй сууцны жагсаалт</p>
+        <Btn primary>+ Шинэ хурал</Btn>
+      </div>
+
+      <div className="grid grid-cols-3 gap-6">
+        {/* Хурлын жагсаалт */}
+        <div className="space-y-3">
+          <Title>ХУРЛУУД</Title>
+          {meetings.map((m) => (
+            <Card key={m.id} className={`p-4 ${m.id === noticed.id ? 'border-blue-300 ring-1 ring-blue-200' : ''}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-sm text-gray-900 truncate">{m.title}</h3>
+                <MeetingStatusBadge status={m.status} />
+              </div>
+              <p className="text-xs text-gray-400">
+                {m.kind} · {m.scheduledAt} · {m.location} · {m.agendaCount} асуудал{m.unitCount ? ` · ${m.unitCount} сууц` : ''}
+              </p>
+            </Card>
+          ))}
+        </div>
+
+        {/* Зарлагдсан хурлын дэлгэрэнгүй */}
+        <div className="col-span-2 space-y-4">
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-lg font-bold text-gray-900">{noticed.title}</h2>
+              <MeetingStatusBadge status={noticed.status} />
+            </div>
+            <p className="text-sm text-gray-500 mb-4">{noticed.kind} · {noticed.scheduledAt} · {noticed.location}</p>
+            <Title>ХУРЛЫН МЭДЭЭЛЭЛ БА ДҮРЭМ</Title>
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              {meetingRules.map((r) => (
+                <div key={r.k} className="flex justify-between gap-3">
+                  <dt className="text-gray-500">{r.k}</dt>
+                  <dd className="text-gray-900 text-right">{r.v}</dd>
+                </div>
+              ))}
+            </dl>
+          </Card>
+
+          <Card className="p-5">
+            <Title>ХЭЛЭЛЦЭХ АСУУДАЛ</Title>
+            <ol className="space-y-3">
+              {meetingAgenda.map((a, i) => (
+                <li key={a.title} className="text-sm">
+                  <p className="font-medium text-gray-900">{i + 1}. {a.title}</p>
+                  {a.decision && <p className="text-gray-500 italic">Шийдвэрийн төсөл: {a.decision}</p>}
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Батлагдах босго: {a.threshold}{a.prevote ? ' · урьдчилсан санал авна' : ''}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </Card>
+
+          <Card className="p-5">
+            <Title>САНАЛ ӨГӨХ ЭРХТЭЙ СУУЦ</Title>
+            <p className="text-xs text-gray-500 mb-3">Хурал зарласан өдрийн оршин суугчийн бүртгэлээс хадгалсан жагсаалт — дараа нь өөрчлөгдөхгүй.</p>
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {[
+                { label: 'Нийт сууц', value: s.total },
+                { label: 'Нийт саналын жин', value: s.totalWeight },
+                { label: 'Өмчлөгч тодорхойгүй', value: s.unconfirmed, warn: true },
+                { label: 'Олон өмчлөгчтэй', value: s.multi, warn: true },
+              ].map((x) => (
+                <div key={x.label} className={`rounded-xl border p-3 ${x.warn && x.value > 0 ? 'bg-amber-50 border-amber-200' : 'bg-gray-50'}`}>
+                  <p className="text-xs text-gray-500">{x.label}</p>
+                  <p className={`text-lg font-bold ${x.warn && x.value > 0 ? 'text-amber-700' : 'text-gray-900'}`}>{x.value}</p>
+                </div>
+              ))}
+            </div>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 text-xs">
+                <tr>
+                  <th className="text-left px-3 py-2">Байр-тоот</th>
+                  <th className="text-left px-3 py-2">Нэр</th>
+                  <th className="text-right px-3 py-2">Жин</th>
+                  <th className="text-left px-3 py-2">Тэмдэглэл</th>
+                </tr>
+              </thead>
+              <tbody>
+                {meetingUnitsSample.map((u) => (
+                  <tr key={u.unit} className="border-t">
+                    <td className="px-3 py-2 font-medium">{u.unit}</td>
+                    <td className="px-3 py-2">{u.name}</td>
+                    <td className="px-3 py-2 text-right">{u.weight}</td>
+                    <td className="px-3 py-2 text-xs text-amber-700">{u.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="text-xs text-gray-400 mt-2">… нийт {s.total} сууц</p>
+          </Card>
+
+          <Card className="p-5">
+            <Title>ТҮҮХ</Title>
+            <div className="space-y-1.5">
+              {meetingHistory.map((h) => (
+                <p key={h.at} className="text-sm text-gray-600">
+                  <span className="text-gray-400 mr-2">{h.at}</span>{h.text}
+                </p>
+              ))}
+            </div>
+          </Card>
         </div>
       </div>
     </div>
