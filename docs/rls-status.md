@@ -20,6 +20,13 @@ Production-д ажилласан RLS migration-ууд, тэдгээрийн да
 | Migration | Ажилласан | Юу хийв |
 |---|---|---|
 | `supabase-inspection-rls-close-migration.sql` | ✅ | inspections, inspection_readings/violations/acts, inspector_assignments-ийн `true` policy-г устгав — зөвхөн service_role |
+| `supabase-packages-own-unit-migration.sql` | ✅ (deploy `6158b77`-оос өмнө) | packages: оршин суугч зөвхөн өөрийн тоотын илгээмж; өөрийнхөө илгээмжийг delivered → picked_up |
+
+**Шалгалт (демо оршин суугч, 12 тоот):** зөвхөн өөрийн тоотын илгээмж харагдана;
+өөр тоотынхыг шинэчлэх оролдлого 0 мөр; өөрийнхөө «Авсан» ажиллана.
+
+**Демо өгөгдөл:** СӨХ 2678-ийн 12 тоотод жишээ илгээмж нэмэв (packages.id = 10,
+delivered) — Play review-д илгээмжийн хуудас хоосон харагдахгүйн тулд.
 
 inspector/* хуудсууд /api/admin/db proxy-гоор уншина (байцаагчийн нэг СӨХ).
 Хүснэгтүүд хоосон тул anon шалгалт хаагдсаныг батлахгүй — SQL Editor дахь
@@ -27,6 +34,6 @@ inspector/* хуудсууд /api/admin/db proxy-гоор уншина (байц
 
 ## Үлдсэн ажил
 
-- `packages` — нэг СӨХ-ийн оршин суугчид бие биеийнхээ `pickup_code`-ийг харна.
+- `packages` — байр (building) баганагүй тул олон байртай СӨХ-д ижил дугаартай тоотууд бие биеийнхээ илгээмжийг харна.
 - `osnaa/organizations` — олон СӨХ удирдах хуудас, «нэг СӨХ» proxy загварт тохирохгүй.
 - ОСНАА, байцаагчийн бичих үйлдлийг production-д нэвтэрч туршаагүй.
