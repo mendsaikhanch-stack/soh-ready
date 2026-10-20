@@ -54,6 +54,10 @@ const DISTRICT_ID = 2;          // Баянзүрх
 const KHOROO_NAME = '42-р хороо';
 const SOKH_ID = process.env.SOKH_ID ? Number(process.env.SOKH_ID) : null;
 
+// Задаргаа буруу, 10 сарын нэхэмжлэл зөв (зогсоолын бүртгэлээр шалгав, 2026-10-20):
+// 33Б/85 зогсоолгүй, 33Г/15 хоёр зогсоолтой (Р-29, Р-43) → нэхэмжлэлийн дүнг авна.
+const FEE_FROM_CHARGE = new Set(['33Б|85', '33Г|15']);
+
 const ENTRANCES = ['А', 'Б', 'В', 'Г'];
 const CORPUS = { 1: 'А', 3: 'Б', 4: 'В', 5: 'Г' };
 const EXPECT = { А: 40, Б: 88, В: 88, Г: 66 };
@@ -139,6 +143,9 @@ function readUnits() {
     const u = units.get(key);
     if (!u) { console.error(`❌ Задаргаанд бүртгэлд байхгүй тоот: ${key}`); process.exit(1); }
     u.monthly_fee = num(r[32]);
+  }
+  for (const u of units.values()) {
+    if (FEE_FROM_CHARGE.has(`${u.building}|${u.apartment}`)) u.monthly_fee = u.charge;
   }
 
   return [...units.values()];
