@@ -47,8 +47,9 @@ const SRC = process.env.SRC || 'E:/Downloads/Нэгдсэн_бүртгэл.xlsx'
 
 const ORG_NAME = 'Аман хуур дижитал СӨХ';
 const ORG_ADDRESS = 'Баянзүрх дүүрэг, 42-р хороо, 33-р байр';
-// 2026-05-04-ний лавлахын «Аман хуур дижитал» (#2218, БЗД 14-р хороо гэж буруу) мөрийн утас.
-const ORG_PHONE = '99254053';
+// Даргын утас (PII) репод бичихгүй — `docs/sokh-access.local.md`-д бий. СӨХ аль хэдийн үүссэн тул
+// энэ нь зөвхөн дахин шинээр үүсгэх үед хэрэглэгдэнэ.
+const ORG_PHONE = process.env.ORG_PHONE || null;
 const DISTRICT_ID = 2;          // Баянзүрх
 const KHOROO_NAME = '42-р хороо';
 const SOKH_ID = process.env.SOKH_ID ? Number(process.env.SOKH_ID) : null;
@@ -213,7 +214,7 @@ async function run() {
   if (org) {
     console.log(`\n🏢 Байгаа СӨХ: #${org.id} — ${org.name} (${org.claim_status}, хороо ${org.khoroo_id ?? '—'})`);
   } else {
-    console.log(`\n🏢 СӨХ шинээр үүсгэнэ: "${ORG_NAME}" · ${ORG_ADDRESS} · утас ${ORG_PHONE}`);
+    console.log(`\n🏢 СӨХ шинээр үүсгэнэ: "${ORG_NAME}" · ${ORG_ADDRESS} · утас ${ORG_PHONE || '—'}`);
     if (COMMIT) {
       const { data, error } = await sb.from('sokh_organizations').insert([{
         name: ORG_NAME,
