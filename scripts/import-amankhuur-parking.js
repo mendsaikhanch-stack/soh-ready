@@ -38,6 +38,9 @@ const COMMIT = process.argv.includes('--commit');
 const SRC = process.env.SRC || 'E:/Downloads/Нэгдсэн_бүртгэл (1).xlsx';
 const SHEET = 'зогсоолын бүртгэл2';
 const SOKH_ID = 2696;
+// Даргаас нэмэлтээр ирсэн машины дугаар/марк (git-д ордоггүй — scripts/*.local.js)
+const LOCAL_FILE = path.join(__dirname, 'amankhuur-parking.local.js');
+const LOCAL = fs.existsSync(LOCAL_FILE) ? require(LOCAL_FILE) : {};
 
 for (const line of fs.readFileSync(path.join(ROOT, '.env.local'), 'utf8').split('\n')) {
   const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
@@ -72,12 +75,15 @@ function readSpots() {
     const bair = clean(r[0]);
     const name = clean(r[2]);
     if (/аваарын гарц/i.test(name) && !r[8]) continue; // төлбөргүй гарц
+    // Р-64 (аваарын гарц), Р-99 (мотоциклын зогсоол болсон) — дарга «ийм зогсоол байхгүй» гэв (2026-10-20)
+    if (spotNo === 64 || spotNo === 99) continue;
     // «Байгууллага — КЭЙ энд ТИ» = 33Г/66 (хэрэглэгч 2026-10-20). Задаргаанд 33Г/6 ч «K and T»
     // гэж бичигдсэн нь тэр тоотын эзэмшигч нэрээ солиулаагүйгээс — зогсоол нь 66-гийнх.
     // Харин Р-57 нь «КЭЙ энд ТИ» гэж бичигдсэн ч утас нь 33В/55-ынх, тэр айл гаражийн
     // хураамж төлдөг атлаа өөр зогсоолгүй → 33В/55-д холбоно.
     const isKT = /^байгуул/i.test(bair) && /к[эе]й\s*энд\s*ти/i.test(name);
-    const fixed = spotNo === 57 ? ['', 'В', 55] : isKT ? ['', 'Г', 66] : null;
+    // Р-39 эх файлд 33А/26-д бичигдсэн ч 33А/35 айл саяхан худалдаж авсан (дарга, 2026-10-20)
+    const fixed = spotNo === 57 ? ['', 'В', 55] : spotNo === 39 ? ['', 'А', 35] : isKT ? ['', 'Г', 66] : null;
     const m = fixed || bair.match(/^33\s*([АБВГ])/i);
     const apt = fixed ? fixed[2] : Number(r[1]) || null;
     // «Аваарын гарц» 64 — тэмдэглэлд «33в 11тоот» гэж ашиглагчийг бичсэн
@@ -87,7 +93,9 @@ function readSpots() {
       building: m ? `33${m[1].toUpperCase()}` : note ? `33${note[1].toUpperCase()}` : null,
       apartment: m && apt ? String(apt) : note ? note[2] : null,
       srcName: name || bair,
-      plates: platesOf(r[5]),
+      // Эх файлд байхгүй, даргаас ирсэн дугаар/марк — LOCAL файлд (хувийн мэдээлэл)
+      plates: LOCAL.plates?.[spotNo] || platesOf(r[5]),
+      carModel: LOCAL.carModels?.[spotNo] || null,
     });
   }
   return spots;
@@ -112,6 +120,7 @@ async function run() {
       parking_type: 'garage',
       apartment: s.building ? `${s.building}-${s.apartment}` : null,
       resident_name: res ? res.name : s.srcName,
+      car_model: s.carModel,
       status: 'active',
     };
     const plates = s.plates.length ? s.plates : ['—'];
