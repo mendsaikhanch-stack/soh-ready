@@ -457,8 +457,10 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex">
-      <aside className="w-60 bg-gray-950 border-r border-gray-800 flex-shrink-0 min-h-screen flex flex-col">
+    // Цэс дэлгэцэнд бэхлэгдэнэ — зөвхөн <main> гүйлгэгдэнэ, урт хуудсан дээр
+    // цэс дээшээ гарч алга болохгүй.
+    <div className="h-screen bg-gray-950 flex overflow-hidden">
+      <aside className="w-60 bg-gray-950 border-r border-gray-800 flex-shrink-0 h-screen flex flex-col">
         <div className="p-4 border-b border-gray-800">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm font-bold">S</div>
