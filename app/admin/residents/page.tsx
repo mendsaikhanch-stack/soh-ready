@@ -39,6 +39,14 @@ const LOOKALIKE: Record<string, string> = {
 const isPlaceholderName = (n: string) => /тоот\s*$/i.test(n || '') || /-р\s*байр/i.test(n || '');
 const isComplete = (r: Resident) => !!r.resident_type && !isPlaceholderName(r.name);
 
+// Машины `apartment` нь «12» эсвэл олон орц/байртай СӨХ-д байртай нь «33Г-12» байж болно —
+// тоот нь байр бүрд 1-ээс эхэлдэг бол зөвхөн тоогоор нь холбохоор өөр байрны айлд харагдана.
+const aptKey = (v: unknown) => String(v ?? '').toLowerCase().replace(/\s+/g, '');
+const platesOf = (plates: Record<string, string[]>, r: Resident) => [
+  ...(r.building ? plates[aptKey(`${r.building}-${r.apartment}`)] || [] : []),
+  ...(plates[aptKey(r.apartment)] || []),
+];
+
 export default function AdminResidents() {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,8 +183,9 @@ export default function AdminResidents() {
     // Машины бүртгэлийг тоотоор нь бүлэглэнэ (хассан машиныг оруулахгүй)
     const plates: Record<string, string[]> = {};
     for (const c of (cars as unknown as { plate_number: string; apartment: string; status: string }[]) || []) {
-      if (!c.apartment || c.status === 'removed') continue;
-      const key = String(c.apartment).trim();
+      // «—» = машины дугаар бүртгэгдээгүй зогсоол — машин биш
+      if (!c.apartment || c.status === 'removed' || !/[\p{L}\p{N}]/u.test(c.plate_number)) continue;
+      const key = aptKey(c.apartment);
       (plates[key] = plates[key] || []).push(c.plate_number);
     }
 
@@ -396,7 +405,7 @@ export default function AdminResidents() {
   const exportCSV = () => {
     const header = 'name,apartment,phone,building,block,entrance,floor,area_sqm,debt,monthly_fee,unit_kind,plates\n';
     const rows = residents.map(r =>
-      `"${r.name}","${r.apartment}","${r.phone || ''}","${r.building || ''}","${r.block || ''}","${r.entrance || ''}","${r.floor || ''}",${r.area_sqm || 0},${r.debt},${r.monthly_fee ?? ''},"${isBusiness(r) ? 'ААН' : 'айл'}","${(platesByApt[String(r.apartment).trim()] || []).join(' ')}"`
+      `"${r.name}","${r.apartment}","${r.phone || ''}","${r.building || ''}","${r.block || ''}","${r.entrance || ''}","${r.floor || ''}",${r.area_sqm || 0},${r.debt},${r.monthly_fee ?? ''},"${isBusiness(r) ? 'ААН' : 'айл'}","${platesOf(platesByApt, r).join(' ')}"`
     ).join('\n');
     const blob = new Blob(['\ufeff' + header + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -656,8 +665,8 @@ export default function AdminResidents() {
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-gray-500">
-                      {(platesByApt[String(r.apartment).trim()] || []).length
-                        ? platesByApt[String(r.apartment).trim()].join(', ')
+                      {platesOf(platesByApt, r).length
+                        ? platesOf(platesByApt, r).join(', ')
                         : <span className="text-gray-300">-</span>}
                     </td>
                     <td className={`px-3 py-2.5 text-right font-semibold ${r.debt > 0 ? 'text-red-500' : 'text-green-500'}`}>
