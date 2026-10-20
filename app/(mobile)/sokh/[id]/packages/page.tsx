@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
-import { safeLocal } from '@/app/lib/safe-storage';
+import { useAuth } from '@/app/lib/auth-context';
 
 interface Package {
   id: number;
@@ -26,17 +26,16 @@ const statusMap: Record<string, { label: string; color: string; icon: string }> 
 export default function PackagesPage() {
   const params = useParams();
   const router = useRouter();
+  const { profile } = useAuth();
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
-  const [name, setName] = useState('');
-  const [unit, setUnit] = useState('');
 
   useEffect(() => {
-    const saved = safeLocal.getItem(`pkg-info-${params.id}`);
-    if (saved) { const d = JSON.parse(saved); setName(d.name); setUnit(d.unit); }
     fetchPackages();
   }, [params.id]);
 
+  // RLS (packages_select_own_unit) зөвхөн нэвтэрсэн оршин суугчийн
+  // тоотын илгээмжийг буцаана — клиент дээр шүүх шаардлагагүй.
   const fetchPackages = async () => {
     const { data } = await supabase
       .from('packages')
@@ -55,46 +54,16 @@ export default function PackagesPage() {
     await fetchPackages();
   };
 
-  const saveName = () => {
-    if (!name || !unit) return;
-    safeLocal.setItem(`pkg-info-${params.id}`, JSON.stringify({ name, unit }));
-  };
-
-  const myPackages = packages.filter(p => p.unit_number === unit || p.resident_name === name);
+  const myPackages = packages;
   const pending = myPackages.filter(p => p.status === 'delivered');
   const getSt = (s: string) => statusMap[s] || statusMap.delivered;
-
-  if (!name || !unit) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-orange-600 text-white px-4 py-4">
-          <button onClick={() => router.push(`/sokh/${params.id}`)} className="text-white/80 text-sm mb-1">← Буцах</button>
-          <h1 className="text-lg font-bold">📦 Илгээмж</h1>
-        </div>
-        <div className="px-4 py-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm text-center">
-            <p className="text-3xl mb-3">📦</p>
-            <p className="font-semibold mb-3">Мэдээлэл оруулна уу</p>
-            <input placeholder="Нэр" value={name} onChange={e => setName(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 mb-2 text-sm text-center" />
-            <input placeholder="Тоот (жнь: 301)" value={unit} onChange={e => setUnit(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 mb-3 text-sm text-center" />
-            <button onClick={saveName} disabled={!name || !unit}
-              className="w-full bg-orange-600 text-white py-2.5 rounded-xl font-medium disabled:opacity-50">
-              Нэвтрэх
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-orange-600 text-white px-4 py-4">
         <button onClick={() => router.push(`/sokh/${params.id}`)} className="text-white/80 text-sm mb-1">← Буцах</button>
         <h1 className="text-lg font-bold">📦 Илгээмж</h1>
-        <p className="text-xs text-white/70">{name} · {unit} тоот</p>
+        {profile && <p className="text-xs text-white/70">{profile.name} · {profile.apartment} тоот</p>}
       </div>
 
       <div className="px-4 py-4">
