@@ -175,7 +175,13 @@ console.log(`\n✅ ${org.name} (#${sokhId}) — ${homes.length} айл, ${codes.
 for (const code of codes) {
   const mine = homes.filter(u => (u.building || '').trim() === code);
   const nums = mine.map(u => String(u.apartment ?? '').trim()).filter(s => /^\d+$/.test(s)).map(Number);
-  const range = nums.length ? `${Math.min(...nums)}–${Math.max(...nums)}` : '';
+  // Орцнууд тоотоо үргэлжлүүлдэг (2-1: 101–107, 2-2: 108–114) тул min–max биш
+  // эхний ба сүүлийн давхрын мужийг харуулна: «108–114 … 1608–1614»
+  const floorRange = (f) => { const a = nums.filter(n => Math.floor(n / 100) === f); return `${Math.min(...a)}–${Math.max(...a)}`; };
+  const floors = nums.map(n => Math.floor(n / 100));
+  const range = !nums.length ? ''
+    : Math.min(...floors) === Math.max(...floors) ? floorRange(floors[0])
+    : `${floorRange(Math.min(...floors))} … ${floorRange(Math.max(...floors))}`;
   const blk = mine.find(u => u.block)?.block;
   const ent = mine.find(u => u.entrance)?.entrance;
   const label = blk && ent ? `${blk}-р блок ${ent}-р орц` : ent ? `${code}, ${ent}-р орц` : `${code} байр`;
