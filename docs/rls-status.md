@@ -15,11 +15,18 @@ Production-д ажилласан RLS migration-ууд, тэдгээрийн да
 **Шалгалт (демо оршин суугч, СӨХ 2678):** `staff`, `billing_items`, `packages`,
 `utility_usage`, `utility_bills` — зөвхөн өөрийн СӨХ-ийн мөр харагдана.
 
+## 2026-10-20
+
+| Migration | Ажилласан | Юу хийв |
+|---|---|---|
+| `supabase-inspection-rls-close-migration.sql` | ✅ | inspections, inspection_readings/violations/acts, inspector_assignments-ийн `true` policy-г устгав — зөвхөн service_role |
+
+inspector/* хуудсууд /api/admin/db proxy-гоор уншина (байцаагчийн нэг СӨХ).
+Хүснэгтүүд хоосон тул anon шалгалт хаагдсаныг батлахгүй — SQL Editor дахь
+шалгах query-гоор баталгаажуулна.
+
 ## Үлдсэн ажил
 
-- `inspection_*` хүснэгтүүд `sokh_id` баганагүй — inspector/* хуудсууд anon-оор
-  уншсаар байна (`_read_legacy`). Proxy-д inspection_id → inspections.sokh_id
-  замаар хязгаарлах шаардлагатай.
 - `packages` — нэг СӨХ-ийн оршин суугчид бие биеийнхээ `pickup_code`-ийг харна.
 - `osnaa/organizations` — олон СӨХ удирдах хуудас, «нэг СӨХ» proxy загварт тохирохгүй.
 - ОСНАА, байцаагчийн бичих үйлдлийг production-д нэвтэрч туршаагүй.
