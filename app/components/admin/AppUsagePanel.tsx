@@ -122,8 +122,12 @@ export default function AppUsagePanel({ usage }: { usage: AppUsage }) {
 
       {summary.no_phone > 0 && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
-          ⚠️ {summary.no_phone} тоотод утасны дугаар бүртгэгдээгүй байна — тэд нэвтэрч чадахгүй.
-          Оршин суугчид хэсгээс дугаарыг нь оруулаад «Нууц үг сэргээх» дарна уу.
+          ⚠️ {summary.no_phone} тоотод утасны дугаар бүртгэгдээгүй байна
+          ({residents.filter(r => !(r.phone || '').trim())
+            .map(r => (multi && r.building ? `${r.building}-${r.apartment || '—'}` : r.apartment || '—'))
+            .join(', ')}).
+          Тэд аппаар өөрсдөө бүртгүүлбэл утас нь автоматаар нэмэгдэнэ. Та нэвтрэлтийг нь
+          үүсгэж өгөх бол Оршин суугчид хэсгээс дугаарыг нь оруулаад «Нууц үг сэргээх» дарна уу.
         </p>
       )}
 

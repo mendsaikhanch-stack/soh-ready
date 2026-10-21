@@ -48,6 +48,7 @@ const MOVES = [
   [3314, '33В', '72'], // #2699
   [3319, '33В', '63'], // #2700
   [3316, '33Б', '68'], // #2700
+  [3317, '33В', '11'], // «33-11», 10-21-нд баталгаажуулав
 ];
 const CARRY = ['name', 'phone', 'auth_user_id', 'resident_type', 'household_size', 'move_in_date', 'profile_completed_at'];
 
