@@ -19,6 +19,17 @@
 //   ... 2111 --amount=91500       # дүнг гараар дарж өгнө
 //   ... 2111 --due=2026-10-14     # төлөх эцсийн хугацаа
 //   ... 2111 --no-seal            # тамга, гарын үсэггүй (гараар дарах бол)
+//   ... 2696 --provider=binder --amount=423000   # Биндэр Эй Ай Софт ХХК-иар нэхэмжилнэ
+//
+// --provider=binder үед Төгс Орчины тамгыг ХЭЗЭЭ Ч ашиглахгүй. Биндэрийн бэх, лого
+// нь дараах gitignored файлуудаас (байвал) уншигдана, үгүй бол гараар дарах зай гарна:
+//   docs/contracts/assets/binder-tamga.png · binder-gariin-useg.png · binder-logo.jpg
+// (--stamp=, --signature=, --logo= гэж өөр зам өгч болно)
+//
+// ХУВЬ ХҮНЭЭР нэхэмжлэх бол (регистр нь PII тул кодонд БИЧИХГҮЙ):
+//   ... 2696 --provider-file=docs/contracts/individual-<нэр>.json --amount=423000
+// JSON нь доорх BINDER-тэй ижил талбартай, `"individual": true` — тамгагүй,
+// зөвхөн гарын үсэгтэй гарна. docs/contracts/ нь gitignored.
 //
 // Тамга, захирлын гарын үсэг нь Supabase-ийн ХААЛТТАЙ bucket-аас (contract-seal)
 // уншигдана — гэрээтэй ижил эх сурвалж. Уншигдаагүй бол цэгтэй мөр гарна.
@@ -46,6 +57,7 @@ const KIND = arg('kind') || 'setup';
 const AMOUNT_OVERRIDE = arg('amount') ? Number(arg('amount')) : null;
 const DUE_OVERRIDE = arg('due');
 const NO_SEAL = process.argv.includes('--no-seal');
+const PROVIDER_KEY = arg('provider') || 'tugs-orchin';
 
 if (!Number.isFinite(sokhId) || sokhId <= 0) {
   console.error('Ашиглах нь: node --import ./scripts/lib/alias-register.mjs scripts/make-platform-invoice.mjs <sokh_id> [--kind=setup|monthly] [--amount=N] [--due=YYYY-MM-DD]');
@@ -61,7 +73,33 @@ for (const line of fs.readFileSync(path.join(ROOT, '.env.local'), 'utf8').split(
   }
 }
 const { createClient } = await import('@supabase/supabase-js');
-const { PROVIDER } = await import('../app/lib/contract/service-agreement.ts');
+const { PROVIDER: TUGS_ORCHIN } = await import('../app/lib/contract/service-agreement.ts');
+
+// Хотол платформыг Биндэр Эй Ай Софт ХХК-иар дамжуулан гэрээ байгуулсан СӨХ-үүдэд.
+const BINDER = {
+  company: 'Биндэр Эй Ай Софт ХХК',
+  brand: 'Хотол',
+  code: 'БЭАС',
+  register: '7334441',
+  address: '',
+  phone: '9401-9927',
+  email: '',
+  bank: 'Худалдаа хөгжлийн',
+  bankAccount: '441053338',
+  iban: 'MN59 0004 000 441053338',
+  bankAccountHolder: 'Биндэр Эй Ай Софт ХХК',
+  representative: 'Ч.Мэндсайхан',
+  representativeTitle: 'Захирал',
+  assets: { stamp: 'binder-tamga.png', signature: 'binder-gariin-useg.png', logo: 'binder-logo.jpg' },
+};
+const PROVIDERS = { 'tugs-orchin': TUGS_ORCHIN, binder: BINDER };
+const PROVIDER_FILE = arg('provider-file');
+if (PROVIDER_FILE) PROVIDERS[path.basename(PROVIDER_FILE, '.json')] = JSON.parse(fs.readFileSync(path.resolve(ROOT, PROVIDER_FILE), 'utf8'));
+const PROVIDER = PROVIDERS[PROVIDER_FILE ? path.basename(PROVIDER_FILE, '.json') : PROVIDER_KEY];
+if (!PROVIDER) { console.error(`❌ --provider=${PROVIDER_KEY} танигдсангүй (${Object.keys(PROVIDERS).join(' | ')})`); process.exit(1); }
+const IS_DEFAULT_PROVIDER = PROVIDER === TUGS_ORCHIN;
+const IS_INDIVIDUAL = !!PROVIDER.individual;
+const OUT_KEY = PROVIDER_FILE ? path.basename(PROVIDER_FILE, '.json') : PROVIDER_KEY;
 const { loadSeal } = await import('../app/lib/contract/seal.ts');
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -71,7 +109,7 @@ const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABA
 // ---- өгөгдөл ----
 const { data: org } = await sb
   .from('sokh_organizations')
-  .select('id, name, tax_id, address, phone, contact_email, contract_number')
+  .select('id, name, tax_id, address, phone, contact_email, contract_number, unit_count')
   .eq('id', sokhId).single();
 if (!org) { console.error(`❌ СӨХ #${sokhId} олдсонгүй`); process.exit(1); }
 
@@ -91,7 +129,8 @@ if (!inv && AMOUNT_OVERRIDE == null) {
 const amount = AMOUNT_OVERRIDE ?? Number(inv.amount);
 const details = inv?.calculation_details || {};
 const dueDate = DUE_OVERRIDE || inv?.due_date || '';
-const issueDate = inv ? `${inv.period_year}-${String(inv.period_month).padStart(2, '0')}-01` : '';
+const today = new Date().toISOString().slice(0, 10);
+const issueDate = inv ? `${inv.period_year}-${String(inv.period_month).padStart(2, '0')}-01` : today;
 
 // ---- туслах ----
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -123,11 +162,36 @@ function tugrugWords(a) {
 
 // Гэрээтэй ижил тамга, гарын үсэг. Уншигдаагүй бол баримт нь тамгагүй гарна
 // (алдаа шидэхгүй) — тамгагүй гарсан нь огт гарахгүй байснаас дээр.
-const seal = NO_SEAL ? undefined : await loadSeal();
+// Өөр компанийн нэхэмжлэх дээр Төгс Орчины тамга хэзээ ч гарах ёсгүй — тиймээс
+// Storage-ийн тамгыг зөвхөн анхдагч нэхэмжлэгчид уншина.
+const ASSET_DIR = path.join(ROOT, 'docs', 'contracts', 'assets');
+const localImg = (p) => {
+  if (!p || !fs.existsSync(p)) return null;
+  const ext = path.extname(p).slice(1).toLowerCase().replace('jpg', 'jpeg');
+  return `data:image/${ext};base64,${fs.readFileSync(p).toString('base64')}`;
+};
+const assetPath = (name) => arg(name) || (PROVIDER.assets?.[name] ? path.join(ASSET_DIR, PROVIDER.assets[name]) : null);
+let seal;
+if (!NO_SEAL) {
+  if (IS_DEFAULT_PROVIDER) seal = await loadSeal();
+  else {
+    // Тамга, гарын үсэг тус тусдаа байж болно — тамгагүй бол гарын үсгийг
+    // зурж, тамгыг гараар дарах дугуйг үлдээнэ.
+    const stamp = localImg(assetPath('stamp'));
+    const signature = localImg(assetPath('signature'));
+    if (stamp || signature) seal = { stamp, signature };
+  }
+}
+const logo = localImg(assetPath('logo'));
 
 const isSetup = KIND === 'setup';
-const units = details.apartments ?? null;
-const perUnit = details.per_unit_fee ?? null;
+// DB-д нэхэмжлэх үүсээгүй бол СӨХ-ийн айлын тоогоор задална (дүн нь яг хуваагдвал)
+let units = details.apartments ?? null;
+let perUnit = details.per_unit_fee ?? null;
+if (!inv && org.unit_count && amount % org.unit_count === 0) {
+  units = org.unit_count;
+  perUnit = amount / units;
+}
 const itemName = isSetup
   ? 'Хотол платформын суурилуулалтын нэг удаагийн төлбөр'
   : `Хотол платформын сарын хураамж${inv ? ` (${inv.period_year} оны ${inv.period_month}-р сар)` : ''}`;
@@ -137,6 +201,14 @@ const CSS = `
   @page { size: A4; margin: 12mm 10mm; }
   * { box-sizing: border-box; }
   body { margin:0; font-family: "Times New Roman", "Noto Serif", Georgia, serif; color:#000; font-size:11.5px; }
+  .lhead { display:flex; align-items:center; gap:14px; padding-bottom:8px; margin-bottom:12px; border-bottom:2px solid #000; }
+  .lhead img { height:64px; width:auto; }
+  .lhead .mark { width:54px; height:54px; border:2px solid #000; border-radius:8px; display:flex; align-items:center;
+                 justify-content:center; font-weight:700; font-size:15px; letter-spacing:.04em; }
+  .lhead .co { flex:1; }
+  .lhead .co b { display:block; font-size:16px; letter-spacing:.02em; }
+  .lhead .co span { font-size:10.5px; color:#333; }
+  .lhead .form { font-size:9.5px; text-align:right; color:#333; line-height:1.4; }
   .doctitle { text-align:center; font-size:17px; font-weight:700; letter-spacing:.06em; margin:0 0 2px; }
   .subtitle { text-align:center; font-size:11px; margin:0 0 12px; color:#333; }
   .parties { display:flex; gap:26px; margin-bottom:10px; }
@@ -170,26 +242,39 @@ const CSS = `
   .ink .sig { position:absolute; left:78px; top:14px; width:138px; }
   .ink .stamp-img { position:absolute; left:0; top:0; width:112px; }
   .ink .rule { margin:0; }
+  /* Тамгыг гарын үсгийн ХАЖУУД бодит 40мм диаметртэй (санхүүгийн тамганы хэмжээ) */
+  .ink.side { padding-top:42mm; }
+  .ink.side .sig { left:2mm; top:21mm; width:36mm; }
+  .ink.side .stamp-img { left:36mm; top:2mm; width:40mm; height:40mm; }
+  .ink.sig-only { padding-top:70px; }
+  .ink.sig-only .sig { left:40px; top:0; }
   .sign .stamp { margin-top:16px; width:118px; height:118px; border:1px dashed #aaa; border-radius:50%;
                  display:flex; align-items:center; justify-content:center; font-size:9px; color:#aaa; letter-spacing:.12em; }
   .foot { margin-top:10px; padding-top:6px; border-top:1px solid #999; font-size:9px; color:#444; line-height:1.45; }
 `;
 
 const html = `<!doctype html><html lang="mn"><head><meta charset="utf-8">
-<title>${esc(PROVIDER.brand)} → ${esc(org.name)} нэхэмжлэх</title><style>${CSS}</style></head><body>
+<title>${esc(PROVIDER.company)} → ${esc(org.name)} нэхэмжлэх</title><style>${CSS}</style></head><body>
+  ${IS_DEFAULT_PROVIDER || IS_INDIVIDUAL ? '' : `<div class="lhead">
+    ${logo ? `<img src="${logo}" alt="">` : `<div class="mark">${esc(PROVIDER.code)}</div>`}
+    <div class="co"><b>${esc(PROVIDER.company.toUpperCase())}</b>
+      <span>Улсын бүртгэлийн дугаар: ${esc(PROVIDER.register)} · Утас: ${esc(PROVIDER.phone)}${PROVIDER.email ? ` · ${esc(PROVIDER.email)}` : ''}</span></div>
+    <div class="form">${esc(today)}</div>
+  </div>`}
   <p class="doctitle">НЭХЭМЖЛЭХ</p>
-  <p class="subtitle">№ ${esc(`${PROVIDER.brand.toUpperCase()}-${sokhId}-${isSetup ? 'S' : `${inv?.period_year}${String(inv?.period_month).padStart(2, '0')}`}`)} · ${esc(PROVIDER.company)}</p>
+  <p class="subtitle">№ ${esc(`${(PROVIDER.code || PROVIDER.brand).toUpperCase()}-${sokhId}-${isSetup ? 'S' : `${inv?.period_year}${String(inv?.period_month).padStart(2, '0')}`}`)} · ${esc(PROVIDER.company)}</p>
 
   <div class="parties">
     <div>
       <h3>Нэхэмжлэгч:</h3>
-      <p>ТТД: ${esc(PROVIDER.register)}</p>
-      <p>НЭР: <b>${esc(PROVIDER.company)}</b> («${esc(PROVIDER.brand)}» платформ)</p>
-      <p>Хаяг: ${esc(PROVIDER.address)}</p>
+      <p>${IS_INDIVIDUAL ? 'Регистрийн дугаар' : 'ТТД'}: ${esc(PROVIDER.register)}</p>
+      <p>НЭР: <b>${esc(PROVIDER.company)}</b>${IS_INDIVIDUAL ? ' (хувь хүн)' : ''} («${esc(PROVIDER.brand)}» платформ)</p>
+      ${PROVIDER.address ? `<p>Хаяг: ${esc(PROVIDER.address)}</p>` : ''}
       <p>Утас: ${esc(PROVIDER.phone)}</p>
-      <p>Э-Шуудан: ${esc(PROVIDER.email)}</p>
+      ${PROVIDER.email ? `<p>Э-Шуудан: ${esc(PROVIDER.email)}</p>` : ''}
       <p>Банкны нэр: ${esc(PROVIDER.bank)} банк</p>
       <p>Банкны дансны дугаар: <b>${esc(PROVIDER.bankAccount)}</b></p>
+      ${PROVIDER.iban ? `<p>IBAN: ${esc(PROVIDER.iban)}</p>` : ''}
       <p>Данс эзэмшигч: ${esc(PROVIDER.bankAccountHolder)}</p>
     </div>
     <div>
@@ -242,13 +327,16 @@ const html = `<!doctype html><html lang="mn"><head><meta charset="utf-8">
   <div class="sign">
     <div>
       <p>Нэхэмжлэх гаргасан:</p>
-      <p class="line">${esc(PROVIDER.company)}-ийн ${esc(PROVIDER.representativeTitle)} /${esc(PROVIDER.representative)}/</p>
-      ${seal ? `<div class="ink">
-        <img class="sig" src="${seal.signature}" alt="">
+      <p class="line">${IS_INDIVIDUAL ? `Нэхэмжлэгч /${esc(PROVIDER.representative)}/` : `${esc(PROVIDER.company)}-ийн ${esc(PROVIDER.representativeTitle)} /${esc(PROVIDER.representative || '....................')}/`}</p>
+      ${seal?.stamp ? `<div class="ink${IS_DEFAULT_PROVIDER ? '' : ' side'}">
+        ${seal.signature ? `<img class="sig" src="${seal.signature}" alt="">` : ''}
         <img class="stamp-img" src="${seal.stamp}" alt="">
         <p class="rule">..................................... /гарын үсэг/</p>
-      </div>` : `<p>..................................... /гарын үсэг/</p>
-      <p class="stamp">Т А М Г А</p>`}
+      </div>` : `${seal?.signature ? `<div class="ink sig-only">
+        <img class="sig" src="${seal.signature}" alt="">
+        <p class="rule">..................................... /гарын үсэг/</p>
+      </div>` : `<p>..................................... /гарын үсэг/</p>`}
+      ${IS_INDIVIDUAL ? '' : '<p class="stamp">Т А М Г А</p>'}`}
     </div>
     <div>
       <p>Хүлээн авсан:</p>
@@ -264,7 +352,7 @@ const html = `<!doctype html><html lang="mn"><head><meta charset="utf-8">
   </p>
 </body></html>`;
 
-const outDir = path.join(ROOT, 'docs', 'invoices', 'platform', `sokh-${sokhId}`);
+const outDir = path.join(ROOT, 'docs', 'invoices', 'platform', `sokh-${sokhId}`, ...(IS_DEFAULT_PROVIDER ? [] : [OUT_KEY]));
 fs.mkdirSync(outDir, { recursive: true });
 const base = `${KIND}${inv ? `-${inv.period_year}${String(inv.period_month).padStart(2, '0')}` : ''}`;
 fs.writeFileSync(path.join(outDir, `${base}.html`), html, 'utf8');
