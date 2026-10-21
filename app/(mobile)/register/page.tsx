@@ -62,6 +62,23 @@ function RegisterInner() {
   const qrBuilding = (searchParams.get('b') || '').trim().slice(0, 20);
   const buildingValue = qrBuilding || apartment;
 
+  // Олон байртай СӨХ-д байрыг ЗӨВХӨН жагсаалтаас сонгуулна (33А, 33Б…) —
+  // гараар «33» гээд орцоо тусад нь бичвэл даргын бүртгэлтэй таарахгүй.
+  // Сервер ч мөн шалгаж, жагсаалтад байхгүй байрыг хүлээж авахгүй.
+  // Байр бүр ганц орцтой тул энэ үед «Орц» талбар хэрэггүй.
+  const [buildings, setBuildings] = useState<string[]>([]);
+  const pickBuilding = buildings.length > 1;
+  useEffect(() => {
+    setBuildings([]); setApartment('');
+    if (!selectedSokh?.id) return;
+    let alive = true;
+    fetch(`/api/residents/buildings?sokh=${selectedSokh.id}`)
+      .then(r => r.json())
+      .then(d => { if (alive) setBuildings(Array.isArray(d?.buildings) ? d.buildings : []); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [selectedSokh?.id]);
+
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(false);
   const [error, setError] = useState('');
@@ -207,6 +224,7 @@ function RegisterInner() {
     if (password.trim().length < 6) { setError('Нууц үг хамгийн багадаа 6 тэмдэгт'); return; }
     if (password.trim() !== confirmPassword.trim()) { setError('Нууц үг таарахгүй байна'); return; }
     if (!consent) { setError('Үйлчилгээний нөхцөл, нууцлалын бодлоготой танилцаж зөвшөөрнө үү'); return; }
+    if (pickBuilding && !qrBuilding && !apartment) { setError('Байраа сонгоно уу'); return; }
 
     setLoading(true);
 
@@ -485,7 +503,14 @@ function RegisterInner() {
                   </p>
                 )}
                 <div className="grid grid-cols-2 gap-2">
-                  {!qrBuilding && (
+                  {!qrBuilding && pickBuilding && (
+                    <select value={apartment} onChange={e => setApartment(e.target.value)}
+                      className={`col-span-2 border rounded-lg px-3 py-2 text-sm bg-white ${apartment ? '' : 'text-gray-400'}`}>
+                      <option value="">Байраа сонгоно уу *</option>
+                      {buildings.map(b => <option key={b} value={b} className="text-gray-900">{b}</option>)}
+                    </select>
+                  )}
+                  {!qrBuilding && !pickBuilding && (
                     <>
                       <input placeholder="Байрны дугаар" value={apartment} onChange={e => setApartment(e.target.value)}
                         className="border rounded-lg px-3 py-2 text-sm" />

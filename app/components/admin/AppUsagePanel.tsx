@@ -47,10 +47,39 @@ export async function fetchAppUsage(): Promise<AppUsage | null> {
 export const fmtDate = (t: string | null) =>
   t ? new Date(t).toLocaleDateString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '';
 
-function Chips({ rows, tone }: { rows: AppUsageResident[]; tone: 'in' | 'out' }) {
+// Олон байртай СӨХ-д тоот нь байр бүрд 1-ээс эхэлдэг (Аман хуур: 33А-1, 33Б-1…).
+// Зөвхөн тоотыг харуулбал «1, 1, 1, 1» болж ялгагдахгүй тул байраар бүлэглэж,
+// чип бүр дээр «33А-1» гэж бичнэ. Ганц байртай бол өмнөх шигээ зөвхөн тоот.
+const byBuilding = (rows: AppUsageResident[]) => {
+  const groups = new Map<string, AppUsageResident[]>();
+  for (const r of rows) {
+    const b = (r.building || '').trim();
+    if (!groups.has(b)) groups.set(b, []);
+    groups.get(b)!.push(r);
+  }
+  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+};
+
+function Chips({ rows, tone, multi }: { rows: AppUsageResident[]; tone: 'in' | 'out'; multi: boolean }) {
   if (!rows.length) return <p className="text-xs text-gray-400 py-2">Байхгүй</p>;
+  if (!multi) return <ChipRow rows={rows} tone={tone} multi={false} />;
   return (
-    <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto pr-1">
+    <div className="max-h-72 overflow-y-auto pr-1 space-y-2.5">
+      {byBuilding(rows).map(([b, list]) => (
+        <div key={b || '—'}>
+          <p className="text-[11px] font-semibold text-gray-500 mb-1">
+            {b || 'Байр тодорхойгүй'} <span className="font-normal text-gray-400">· {list.length}</span>
+          </p>
+          <ChipRow rows={list} tone={tone} multi />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ChipRow({ rows, tone, multi }: { rows: AppUsageResident[]; tone: 'in' | 'out'; multi: boolean }) {
+  return (
+    <div className={`flex flex-wrap gap-1.5 ${multi ? '' : 'max-h-56 overflow-y-auto pr-1'}`}>
       {rows.map(r => (
         <span
           key={r.id}
@@ -63,7 +92,7 @@ function Chips({ rows, tone }: { rows: AppUsageResident[]; tone: 'in' | 'out' })
               : 'bg-gray-50 border-gray-200 text-gray-500'
           }`}
         >
-          {r.apartment || '—'}
+          {multi && r.building ? `${r.building}-${r.apartment || '—'}` : r.apartment || '—'}
         </span>
       ))}
     </div>
@@ -75,6 +104,7 @@ export default function AppUsagePanel({ usage }: { usage: AppUsage }) {
   const pct = summary.total ? Math.round((summary.signed_in / summary.total) * 100) : 0;
   const signedIn = residents.filter(r => r.last_sign_in_at);
   const notYet = residents.filter(r => !r.last_sign_in_at);
+  const multi = new Set(residents.map(r => (r.building || '').trim())).size > 1;
 
   return (
     <div className="bg-white border rounded-xl p-5">
@@ -102,13 +132,13 @@ export default function AppUsagePanel({ usage }: { usage: AppUsage }) {
           <p className="text-xs font-semibold text-green-700 mb-2">
             ✅ Нэвтэрсэн — {signedIn.length}
           </p>
-          <Chips rows={signedIn} tone="in" />
+          <Chips rows={signedIn} tone="in" multi={multi} />
         </div>
         <div>
           <p className="text-xs font-semibold text-gray-500 mb-2">
             ⬜ Хараахан нэвтрээгүй — {notYet.length}
           </p>
-          <Chips rows={notYet} tone="out" />
+          <Chips rows={notYet} tone="out" multi={multi} />
         </div>
       </div>
 

@@ -68,8 +68,11 @@ export async function GET(request: Request) {
         last_sign_in_at: last,
       };
     })
+    // Байр → тоот: олон байртай СӨХ-д тоот нь байр бүрд 1-ээс эхэлдэг
     .sort((a, b) =>
-      (a.apartment || '').localeCompare(b.apartment || '', undefined, { numeric: true }) || a.id - b.id
+      (a.building || '').localeCompare(b.building || '', undefined, { numeric: true })
+      || (a.apartment || '').localeCompare(b.apartment || '', undefined, { numeric: true })
+      || a.id - b.id
     );
 
   const age = (t: string | null) => (t ? nowMs - new Date(t).getTime() : Infinity);

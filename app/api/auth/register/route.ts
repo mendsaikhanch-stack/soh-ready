@@ -4,6 +4,7 @@ import { registerLimiter } from '@/app/lib/rate-limit';
 import { linkManualSignupToUser, type LinkReport } from '@/app/lib/directory/link-manual-signup';
 import { enqueueRepair } from '@/app/lib/jobs/dispatch';
 import { normalizeSohName } from '@/app/lib/directory/normalize';
+import { loadSokhBuildings } from '@/app/lib/sokh-buildings';
 
 const CLAIM_COOKIE = 'manual-hoa-claim';
 
@@ -74,6 +75,18 @@ export async function POST(req: NextRequest) {
       if (!org) {
         return NextResponse.json({ error: 'Байгууллага олдсонгүй' }, { status: 400 });
       }
+      // Олон байртай СӨХ-д байр нь жагсаалтын аль нэгтэй таарах ЁСТОЙ —
+      // «33» гэж бичээд орохыг зөвшөөрвөл даргын мөртэй холбогдохгүй, давхар
+      // мөр үүсдэг (Аман хуур, 2026-10-21). Аккаунт үүсгэхээс ӨМНӨ шалгана.
+      const buildings = await loadSokhBuildings(sokh_id);
+      if (buildings.length > 1) {
+        const want = normBuilding(building);
+        if (!want || !buildings.some((b) => normBuilding(b) === want)) {
+          return NextResponse.json({
+            error: `Байраа зөв сонгоно уу (${buildings.join(', ')}). Аппаа шинэчлээд дахин оролдоно уу.`,
+          }, { status: 400 });
+        }
+      }
     } else if (sokh_name) {
       // Хэрэглэгч өөрөө СӨХ-ийн нэрээ оруулсан тохиолдолд шинэ байгууллага үүсгэх
       if (typeof sokh_name !== 'string' || sokh_name.trim().length < 2 || sokh_name.trim().length > 100) {
@@ -92,13 +105,20 @@ export async function POST(req: NextRequest) {
       }
       // Давхардал шалгах: ижил хороонд нормчилсон нэр нь таарах СӨХ байвал
       // шинээр үүсгэхгүй, байгааг нь дахин ашиглана (дубль tenant үүсгэхгүй).
-      const targetNorm = normalizeSohName(sokh_name);
+      // Зайг тооцохгүй — «Аманхуур Дижитал» нь «Аман хуур дижитал СӨХ» мөн
+      // (2026-10-21-нд ингэж давхар СӨХ үүсэж, айлууд буруу СӨХ-д бүртгэгдсэн).
+      const compact = (v: string) => normalizeSohName(v).replace(/\s+/g, '');
+      const targetNorm = compact(sokh_name);
+      // Аппын нэрийг СӨХ-ийн нэр гэж бичих тохиолдол гарсан («хотол сөх»)
+      if (!targetNorm || ['хотол', 'khotol', 'тоот', 'toot'].includes(targetNorm)) {
+        return NextResponse.json({ error: 'СӨХ-ийнхөө нэрийг бичнэ үү (аппын нэр биш)' }, { status: 400 });
+      }
       const { data: sameKhorooOrgs } = await supabaseAdmin
         .from('sokh_organizations')
         .select('id, name')
         .eq('khoroo_id', khoroo_id);
       const dup = (sameKhorooOrgs || []).find(
-        (o) => normalizeSohName(o.name as string) === targetNorm,
+        (o) => compact(o.name as string) === targetNorm,
       );
       if (dup) {
         sokh_id = dup.id as number;
