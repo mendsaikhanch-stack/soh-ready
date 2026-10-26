@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -39,6 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  // getSession + INITIAL_SESSION/SIGNED_IN нь нэг хэрэглэгчийг давхар татуулдаг
+  const profileUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Одоогийн session авах
@@ -53,12 +55,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Auth state өөрчлөлтийг сонсох
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        fetchProfile(s.user);
+        // TOKEN_REFRESHED нь профайлыг өөрчлөхгүй — дахин татах шаардлагагүй
+        if (event === 'USER_UPDATED') profileUserIdRef.current = null;
+        if (event !== 'TOKEN_REFRESHED') fetchProfile(s.user);
       } else {
+        profileUserIdRef.current = null;
         setProfile(null);
         setLoading(false);
       }
@@ -68,16 +73,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchProfile = async (u: User) => {
-    // user metadata-с утас/имэйл-р resident хайх
+    if (profileUserIdRef.current === u.id) return;
+    profileUserIdRef.current = u.id;
+
+    // user metadata-н утсаар, утасгүй бол auth_user_id-аар resident хайх.
+    // Шүүлтгүй query нь RLS-ийн хүрээнд ӨӨР оршин суугчийн мөрийг буцаадаг байсан.
     const phone = u.user_metadata?.phone;
 
-    let query = supabase.from('residents').select('*');
+    const query = phone
+      ? supabase.from('residents').select('*').eq('phone', phone)
+      : supabase.from('residents').select('*').eq('auth_user_id', u.id);
 
-    if (phone) {
-      query = query.eq('phone', phone);
-    }
-
-    const { data } = await query.limit(1).single();
+    const { data, error } = await query.limit(1).maybeSingle();
+    if (error) profileUserIdRef.current = null; // дараагийн auth event дээр дахин оролдоно
 
     if (data) {
       setProfile({
@@ -99,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    profileUserIdRef.current = null;
     setUser(null);
     setSession(null);
     setProfile(null);

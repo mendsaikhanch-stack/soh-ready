@@ -54,15 +54,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Amount mismatch' }, { status: 400 });
     }
 
-    // 4. invoice-ыг paid болгох
-    await supabaseAdmin.from('qpay_invoices')
+    // 4. invoice-ыг paid болгох — атомаар "claim" хийнэ. QPay callback-ыг давтаж
+    // (эсвэл зэрэг) дуудвал зөвхөн нэг нь мөрийг paid болгож, доорх payment-ыг бичнэ.
+    const { data: claimed, error: claimErr } = await supabaseAdmin.from('qpay_invoices')
       .update({
         status: 'paid',
         paid_amount: paidAmount,
         paid_at: new Date().toISOString(),
         callback_received_at: new Date().toISOString(),
       })
-      .eq('sender_invoice_no', orderId);
+      .eq('sender_invoice_no', orderId)
+      .neq('status', 'paid')
+      .select('id');
+
+    if (claimErr) {
+      console.error('[qpay/callback] claim failed', claimErr.message);
+      return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    }
+    if (!claimed || claimed.length === 0) {
+      return NextResponse.json({ success: true, duplicate: true });
+    }
 
     // Баталгаажсан төлбөрийг хадгалах
     await supabaseAdmin.from('payments').insert([{

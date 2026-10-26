@@ -58,16 +58,35 @@ export async function GET() {
     .from('hoa_activation_summaries')
     .select('id, directory_id, provisional_hoa_id, interest_count');
 
+  // Нэг query-гээр тоолно (өмнө нь summary бүрд тусдаа count — 200 хүртэл N+1 query)
+  // PostgREST нэг хүсэлтэд 1000 мөр буцаадаг тул хуудаслана
+  const requestKeys: { directory_id: number | null; provisional_hoa_id: number | null }[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: page } = await supabaseAdmin
+      .from('hoa_activation_requests')
+      .select('directory_id, provisional_hoa_id')
+      .order('id')
+      .range(from, from + 999);
+    requestKeys.push(...(page || []));
+    if (!page || page.length < 1000) break;
+  }
+  const realCounts = new Map<string, number>();
+  for (const r of requestKeys) {
+    if (r.directory_id) {
+      const k = `d:${r.directory_id}`;
+      realCounts.set(k, (realCounts.get(k) ?? 0) + 1);
+    }
+    if (r.provisional_hoa_id) {
+      const k = `p:${r.provisional_hoa_id}`;
+      realCounts.set(k, (realCounts.get(k) ?? 0) + 1);
+    }
+  }
+
   let mismatches = 0;
   for (const s of (summaries || []).slice(0, 200)) {
-    const filterCol = s.directory_id ? 'directory_id' : 'provisional_hoa_id';
-    const filterId = (s.directory_id ?? s.provisional_hoa_id) as number;
-    if (!filterId) continue;
-    const { count: realCount } = await supabaseAdmin
-      .from('hoa_activation_requests')
-      .select('id', { count: 'exact', head: true })
-      .eq(filterCol, filterId);
-    if ((realCount ?? 0) !== Number(s.interest_count)) mismatches++;
+    const key = s.directory_id ? `d:${s.directory_id}` : s.provisional_hoa_id ? `p:${s.provisional_hoa_id}` : null;
+    if (!key) continue;
+    if ((realCounts.get(key) ?? 0) !== Number(s.interest_count)) mismatches++;
   }
 
   // Unclaimed memberships

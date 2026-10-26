@@ -42,8 +42,16 @@ export async function subscribeToPush(sokhId: number): Promise<boolean> {
       });
     }
 
-    // Server-д subscription хадгалах
-    await fetch('/api/push/subscribe', {
+    // Server-д subscription хадгалах — endpoint/СӨХ өөрчлөгдөөгүй бол 7 хоногт нэг л удаа
+    // (самбарт орох бүрд upsert хийж DB-д бичилт үүсгэдэг байсан)
+    const marker = `${sokhId}|${subscription.endpoint}`;
+    const SYNC_KEY = 'push-sub-synced';
+    const SYNC_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+    let synced: { marker: string; at: number } | null = null;
+    try { synced = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); } catch { /* storage хаалттай */ }
+    if (synced?.marker === marker && Date.now() - synced.at < SYNC_TTL_MS) return true;
+
+    const res = await fetch('/api/push/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -51,6 +59,9 @@ export async function subscribeToPush(sokhId: number): Promise<boolean> {
         sokh_id: sokhId,
       }),
     });
+    if (res.ok) {
+      try { localStorage.setItem(SYNC_KEY, JSON.stringify({ marker, at: Date.now() })); } catch { /* ignore */ }
+    }
 
     return true;
   } catch (err) {

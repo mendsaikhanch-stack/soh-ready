@@ -24,14 +24,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Хэт олон хүсэлт. ${rl.retryAfterSec}с хүлээнэ үү` }, { status: 429 });
   }
 
-  if (!(await checkAnyAuth('admin', 'superadmin')).valid) {
+  const auth = await checkAnyAuth('admin', 'superadmin');
+  if (!auth.valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   ensureVapid();
 
   try {
-    const { title, body, url, sokh_id } = await request.json();
+    const { title, body, url, sokh_id: requestedSokhId } = await request.json();
+
+    // СӨХ-ийн админ зөвхөн өөрийн СӨХ рүү илгээнэ (body-н sokh_id-д итгэхгүй;
+    // хоосон бол өмнө нь платформын БҮХ subscriber руу явдаг байсан)
+    let sokh_id = requestedSokhId;
+    if (auth.role === 'admin') {
+      const ownSokhId = Number(auth.sokhId);
+      if (!ownSokhId) return NextResponse.json({ error: 'Session-д sokh_id байхгүй' }, { status: 403 });
+      if (requestedSokhId && Number(requestedSokhId) !== ownSokhId) {
+        return NextResponse.json({ error: 'Cross-tenant push denied' }, { status: 403 });
+      }
+      sokh_id = ownSokhId;
+    }
 
     if (!title) {
       return NextResponse.json({ error: 'title required' }, { status: 400 });

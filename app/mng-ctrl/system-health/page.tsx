@@ -48,8 +48,18 @@ export default function SystemHealthPage() {
 
   useEffect(() => {
     load();
-    const i = setInterval(load, 30_000);
-    return () => clearInterval(i);
+    // Нуугдсан tab дээр poll хийхгүй; буцаж ирэхэд шууд шинэчилнэ
+    const i = setInterval(() => {
+      if (document.visibilityState === 'visible') load();
+    }, 60_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(i);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   const retry = async (id: number) => {

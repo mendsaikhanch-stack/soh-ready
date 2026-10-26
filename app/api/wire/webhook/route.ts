@@ -56,11 +56,22 @@ export async function POST(request: Request) {
 
   const nowIso = new Date().toISOString();
 
-  // 1) wire_payments-ийг succeeded болгох
-  await supabaseAdmin
+  // 1) wire_payments-ийг succeeded болгох — атомаар claim хийнэ. Webhook давтагдах
+  // эсвэл зэрэг ирэхэд зөвхөн нэг нь доорх нэхэмжлэх/payment-ыг бичнэ.
+  const { data: claimed, error: claimErr } = await supabaseAdmin
     .from('wire_payments')
     .update({ status: 'succeeded', paid_at: nowIso, last_event_id: event.id })
-    .eq('id', wp.id);
+    .eq('id', wp.id)
+    .neq('status', 'succeeded')
+    .select('id');
+
+  if (claimErr) {
+    console.error('[wire/webhook] claim failed', claimErr.message);
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  }
+  if (!claimed || claimed.length === 0) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
 
   // 2) Холбогдсон нэхэмжлэхийг "төлсөн" болгох
   if (wp.invoice_id) {

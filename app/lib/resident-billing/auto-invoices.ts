@@ -23,6 +23,21 @@
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { residentDueDate } from '@/app/lib/resident-billing/due-date';
 
+// PostgREST нэг хүсэлтэд max_rows (1000) мөр л буцаадаг. Хуудаслахгүй бол
+// 300–500 айлтай СӨХ-ийн нэхэмжлэх 2–3 сард 1000-аас давж, өр буруу бодогдоно.
+const PAGE = 1000;
+async function fetchAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<{ data: T[]; error: { message: string } | null }> {
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1);
+    if (error) return { data: all, error };
+    all.push(...(data || []));
+    if (!data || data.length < PAGE) return { data: all, error: null };
+  }
+}
+
 const MONTH_NAMES = [
   '1-р сар', '2-р сар', '3-р сар', '4-р сар', '5-р сар', '6-р сар',
   '7-р сар', '8-р сар', '9-р сар', '10-р сар', '11-р сар', '12-р сар',
@@ -89,11 +104,13 @@ export async function runResidentInvoices(now: Date = new Date()): Promise<Resid
     const summary = { sokh_id: sokhId, name: o.name, created: 0, createdAmount: 0, statusChanged: 0, debtChanged: 0 };
     result.orgs.push(summary);
 
-    const { data: resData, error: resErr } = await supabaseAdmin
+    const { data: resData, error: resErr } = await fetchAllPages<ResRow>((from, to) => supabaseAdmin
       .from('residents')
       .select('id, debt, monthly_fee')
       .eq('sokh_id', sokhId)
-      .eq('pending_claim', false);
+      .eq('pending_claim', false)
+      .order('id')
+      .range(from, to));
     if (resErr) { result.errors.push(`${o.name}: айл уншиж чадсангүй — ${resErr.message}`); continue; }
     const residents = (resData || []) as ResRow[];
 
@@ -124,11 +141,13 @@ export async function runResidentInvoices(now: Date = new Date()): Promise<Resid
     }
 
     // 2) Тооцоо — «Эхний үлдэгдэл»-ээс хойших нэхэмжлэх + төлбөр
-    const { data: invData, error: invErr } = await supabaseAdmin
+    const { data: invData, error: invErr } = await fetchAllPages<InvRow>((from, to) => supabaseAdmin
       .from('invoices')
       .select('id, resident_id, year, month, amount, status, paid_amount, paid_at, due_date, created_at')
       .eq('sokh_id', sokhId)
-      .gte('year', opening.year);
+      .gte('year', opening.year)
+      .order('id')
+      .range(from, to));
     if (invErr) { result.errors.push(`${o.name}: нэхэмжлэх уншиж чадсангүй — ${invErr.message}`); continue; }
 
     const invByRes = new Map<number, InvRow[]>();
@@ -152,11 +171,14 @@ export async function runResidentInvoices(now: Date = new Date()): Promise<Resid
     const paidByRes = new Map<number, number>();
     const resIds = [...invByRes.keys()];
     for (let i = 0; i < resIds.length; i += 100) {
-      const { data: payData, error: payErr } = await supabaseAdmin
+      const chunk = resIds.slice(i, i + 100);
+      const { data: payData, error: payErr } = await fetchAllPages<PayRow>((from, to) => supabaseAdmin
         .from('payments')
         .select('resident_id, amount, paid_at')
-        .in('resident_id', resIds.slice(i, i + 100))
-        .gte('paid_at', earliest);
+        .in('resident_id', chunk)
+        .gte('paid_at', earliest)
+        .order('id')
+        .range(from, to));
       if (payErr) { result.errors.push(`${o.name}: төлбөр уншиж чадсангүй — ${payErr.message}`); continue; }
       for (const p of (payData || []) as PayRow[]) {
         if (new Date(p.paid_at) < new Date(startOf.get(p.resident_id) || 0)) continue;

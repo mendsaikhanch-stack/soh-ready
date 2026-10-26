@@ -4,8 +4,9 @@
 import { createHmac } from 'crypto';
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
+import { getSigningSecret } from '@/app/lib/secret';
 
-const SECRET = process.env.SESSION_SECRET || 'dev-secret-change-in-production';
+const secret = () => getSigningSecret(process.env.SESSION_SECRET, 'dev-secret-change-in-production');
 
 // ── RP (Relying Party) тохиргоог хүсэлтийн host-оос гаргах ──
 // khotol.com / www.khotol.com → rpID 'khotol.com' (passkey хоёуланд ажиллана)
@@ -35,7 +36,7 @@ export function expectedOrigins(req: NextRequest): string[] {
 export const CHALLENGE_COOKIE = 'pk-challenge';
 
 function sign(payload: string): string {
-  return createHmac('sha256', SECRET).update(payload).digest('hex').slice(0, 32);
+  return createHmac('sha256', secret()).update(payload).digest('hex').slice(0, 32);
 }
 
 export function packChallenge(challenge: string): string {

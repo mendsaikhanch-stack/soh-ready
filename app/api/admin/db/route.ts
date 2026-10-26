@@ -143,6 +143,11 @@ async function enforceTenantScope(
       if (residentIds.length === 0) {
         return { ok: false, error: 'resident_id шаардлагатай', status: 400 };
       }
+      // Update нь мөрийг өөр (СӨХ-ийн) оршин суугч руу шилжүүлж болохгүй
+      const updResident = action === 'update'
+        ? (params.data as Record<string, unknown> | undefined)?.resident_id
+        : undefined;
+      if (updResident !== undefined) residentIds.push(Number(updResident));
     } else {
       // insert/upsert
       const dataIn = params.data as Record<string, unknown> | Record<string, unknown>[] | undefined;
@@ -151,6 +156,10 @@ async function enforceTenantScope(
       for (const d of dataArr) {
         if (!d || d.resident_id === undefined) {
           return { ok: false, error: 'resident_id шаардлагатай', status: 400 };
+        }
+        // upsert нь id (PK)-ээр давхцвал ӨӨР СӨХ-ийн мөрийг дарж бичнэ — id-тай upsert хориглоно
+        if (action === 'upsert' && d.id !== undefined) {
+          return { ok: false, error: 'id-тай upsert хориглосон — update ашиглана уу', status: 403 };
         }
         residentIds.push(Number(d.resident_id));
       }
@@ -196,6 +205,9 @@ async function enforceTenantScope(
         if (!d || d.inspection_id === undefined) {
           return { ok: false, error: 'inspection_id шаардлагатай', status: 400 };
         }
+        if (action === 'upsert' && d.id !== undefined) {
+          return { ok: false, error: 'id-тай upsert хориглосон — update ашиглана уу', status: 403 };
+        }
         inspectionIds.push(Number(d.inspection_id));
       }
     }
@@ -238,6 +250,21 @@ async function enforceTenantScope(
         return { ok: false, error: 'Cross-tenant insert denied', status: 403 };
       }
       validated.push({ ...d, sokh_id: sokhId });
+    }
+    // upsert нь PK (id)-ээр давхцвал байгаа мөрийг дарж, sokh_id-г манайх болгоно.
+    // Тиймээс id-тай мөр бүр аль хэдийн энэ СӨХ-ийнх (эсвэл огт байхгүй) байх ёстой.
+    if (action === 'upsert') {
+      const ids = [...new Set(validated.map(d => d.id).filter(id => id !== undefined && id !== null))];
+      if (ids.length > 0) {
+        const { data: existing, error: existErr } = await supabaseAdmin
+          .from(table)
+          .select('id, sokh_id')
+          .in('id', ids as (string | number)[]);
+        if (existErr) return { ok: false, error: 'Мөрийн эзэмшлийг шалгаж чадсангүй', status: 400 };
+        if ((existing || []).some(r => Number(r.sokh_id) !== sokhId)) {
+          return { ok: false, error: 'Cross-tenant upsert denied', status: 403 };
+        }
+      }
     }
     params.data = Array.isArray(dataIn) ? validated : validated[0];
   }

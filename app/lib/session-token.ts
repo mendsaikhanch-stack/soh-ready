@@ -1,11 +1,12 @@
-import { createHmac, randomUUID } from 'crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { cookies } from 'next/headers';
+import { getSigningSecret } from '@/app/lib/secret';
 
-const SECRET = process.env.SESSION_SECRET || 'dev-secret-change-in-production';
+const secret = () => getSigningSecret(process.env.SESSION_SECRET, 'dev-secret-change-in-production');
 
 // HMAC-SHA256 гарын үсэг
 function sign(payload: string): string {
-  return createHmac('sha256', SECRET).update(payload).digest('hex').slice(0, 32);
+  return createHmac('sha256', secret()).update(payload).digest('hex').slice(0, 32);
 }
 
 // Token үүсгэх: payload.signature
@@ -47,7 +48,9 @@ export function validateSessionToken(token: string, maxAgeMs: number, expectedRo
 
   // Signature шалгах
   const expectedSig = sign(payload);
-  if (sig !== expectedSig) return { valid: false };
+  if (sig.length !== expectedSig.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
+    return { valid: false };
+  }
 
   // Формат: timestamp:sokhId:userId:role:nonce (5 хэсэг заавал)
   const parts = payload.split(':');

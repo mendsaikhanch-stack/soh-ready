@@ -36,5 +36,10 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({ byDistrict, byKhoroo, total: all.length });
+  // Нийтийн нэгтгэл тоо (СӨХ-ийн хувийн мэдээлэлгүй) — /find-hoa нээх бүрд
+  // sokh_organizations-ийг бүхэлд нь уншихгүйн тулд CDN дээр 10 минут кэшилнэ
+  return NextResponse.json(
+    { byDistrict, byKhoroo, total: all.length },
+    { headers: { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=3600' } },
+  );
 }

@@ -1,13 +1,14 @@
 import { createHmac } from 'crypto';
+import { getSigningSecret } from '@/app/lib/secret';
 
 // OTP амжилттай баталгаажсаны дараа санал өгөх эрхийг богино хугацаагаар
 // баталгаажуулах HMAC-signed ticket. session-token.ts-тэй ижил SECRET.
 
-const SECRET = process.env.SESSION_SECRET || 'dev-secret-change-in-production';
+const secret = () => getSigningSecret(process.env.SESSION_SECRET, 'dev-secret-change-in-production');
 const TICKET_MAX_AGE_MS = 15 * 60 * 1000; // 15 минут
 
 function sign(payload: string): string {
-  return createHmac('sha256', SECRET).update(payload).digest('hex').slice(0, 32);
+  return createHmac('sha256', secret()).update(payload).digest('hex').slice(0, 32);
 }
 
 // Санал өгөх ticket үүсгэх: proposalId:phone:ts.signature

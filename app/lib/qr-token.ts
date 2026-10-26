@@ -1,10 +1,11 @@
 import { createHmac } from 'crypto';
+import { getSigningSecret } from '@/app/lib/secret';
 
-const SECRET = process.env.QR_SECRET || process.env.SESSION_SECRET || 'dev-qr-secret-change-in-production';
+const secret = () => getSigningSecret(process.env.QR_SECRET || process.env.SESSION_SECRET, 'dev-qr-secret-change-in-production', 'QR_SECRET/SESSION_SECRET');
 
 // HMAC-SHA256
 function sign(payload: string): string {
-  return createHmac('sha256', SECRET).update(payload).digest('hex').slice(0, 32);
+  return createHmac('sha256', secret()).update(payload).digest('hex').slice(0, 32);
 }
 
 export type QrKind = 'gate' | 'gate-guest' | 'elevator';

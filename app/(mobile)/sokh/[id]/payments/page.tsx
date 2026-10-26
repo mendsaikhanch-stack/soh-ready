@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
@@ -81,6 +81,14 @@ export default function PaymentsPage() {
   const [qpayInvoice, setQpayInvoice] = useState<QPayInvoice | null>(null);
   const [qpayLoading, setQpayLoading] = useState(false);
   const [checking, setChecking] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Unmount-д QPay polling зогсоох (өмнө нь хуудаснаас гарсны дараа 5 мин үргэлжилдэг байсан)
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
   const [paymentStep, setPaymentStep] = useState<'select' | 'qpay'>('select');
   const [receiptPayment, setReceiptPayment] = useState<any>(null);
   const [myInvoices, setMyInvoices] = useState<MyInvoice[]>([]);
@@ -352,6 +360,7 @@ export default function PaymentsPage() {
 
   const startPolling = (invoiceId: string, bill: BillItem) => {
     setChecking(true);
+    if (pollingRef.current) clearInterval(pollingRef.current);
     const interval = setInterval(async () => {
       try {
         const res = await fetch('/api/qpay/check', {
@@ -387,6 +396,7 @@ export default function PaymentsPage() {
         // QPay polling алдаа — дараагийн interval дахин шалгана
       }
     }, 3000);
+    pollingRef.current = interval;
 
     // 5 минутын дараа polling зогсоох
     setTimeout(() => {
