@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isBankSmsEnabled } from '@/app/lib/bank-sms/enabled';
 import {
   bankSmsAuthFailLimiter, bankSmsDeviceLimiter, bankSmsIpLimiter,
 } from '@/app/lib/rate-limit';
@@ -47,6 +48,8 @@ async function authenticate(request: Request): Promise<{ device: DeviceRow } | {
     return { response: json({ error: r.error === 'revoked' ? 'device_revoked' : 'unauthorized' }, r.error === 'revoked' ? 403 : 401) };
   }
   const { device } = r;
+  // Функц унтраалттай СӨХ-ийн төхөөрөмж — цуцлагдсантай адил (апп илгээхээ зогсооно)
+  if (!isBankSmsEnabled(device.sokh_id)) return { response: json({ error: 'device_revoked' }, 403) };
 
   const drl = bankSmsDeviceLimiter.check(String(device.id));
   if (!drl.allowed) return { response: json({ error: 'rate_limited', retryAfterSec: drl.retryAfterSec }, 429) };

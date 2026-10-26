@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import HotolLogo from '@/app/components/HotolLogo';
 import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
+import { isBankSmsEnabled } from '@/app/lib/bank-sms/enabled';
 import { supabase } from '@/app/lib/supabase';
 import Image from 'next/image';
 import { DEMO_BLOCKED_PREFIXES } from '@/app/lib/demo-admin';
@@ -68,6 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [orgName, setOrgName] = useState('');
   // Танилцуулгын демо эрх — зөвхөн харах. Цэс, мэдэгдлийг үүгээр тохируулна.
   const [isDemo, setIsDemo] = useState(false);
+  const [sokhId, setSokhId] = useState(0);
 
   // Админ PWA manifest солих
   useEffect(() => {
@@ -104,6 +106,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       const data = await res.json();
       setAuthed(data.authenticated);
       setIsDemo(data.demo === true);
+      setSokhId(Number(data.sokhId) || 0);
     } catch {
       setAuthed(false);
     }
@@ -127,6 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       if (res.ok && data.success) {
         setAuthed(true);
         setIsDemo(data.demo === true);
+        setSokhId(Number(data.sokhId) || 0);
         setUsername('');
         setPassword('');
       } else {
@@ -152,9 +156,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   // Демо эрхэд нээгдэхгүй цэсийг харуулахгүй — дарахад л буцаагдана
-  const visibleNavItems = isDemo
-    ? navItems.filter((item) => !DEMO_BLOCKED_PREFIXES.some((prefix) => item.href.startsWith(prefix)))
-    : navItems;
+  // Банкны SMS — зөвхөн асаалттай СӨХ-д (app/lib/bank-sms/enabled.ts)
+  const visibleNavItems = navItems
+    .filter((item) => item.href !== '/admin/bank-sms' || isBankSmsEnabled(sokhId))
+    .filter((item) => !isDemo || !DEMO_BLOCKED_PREFIXES.some((prefix) => item.href.startsWith(prefix)));
 
   if (checking) {
     return (

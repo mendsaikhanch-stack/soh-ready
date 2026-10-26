@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { checkAnyAuth, type AuthRole } from '@/app/lib/session-token';
 import { adminBankSmsLimiter } from '@/app/lib/rate-limit';
+import { isBankSmsEnabled } from '@/app/lib/bank-sms/enabled';
 import {
   generateDeviceToken, hashDeviceToken, matchTransaction, normalizeReference, processStoredEvent,
 } from '@/app/lib/bank-sms/core';
@@ -47,6 +48,9 @@ async function context(request: NextRequest, bodySokhId?: unknown): Promise<Ctx>
     sokhId = Number(auth.sokhId);
   }
   if (!Number.isSafeInteger(sokhId) || sokhId <= 0) throw new HttpError(403, 'СӨХ тодорхойгүй');
+  if (auth.role !== 'superadmin' && !isBankSmsEnabled(sokhId)) {
+    throw new HttpError(403, 'Банкны SMS функц энэ СӨХ-д идэвхжээгүй байна');
+  }
 
   return {
     sokhId,
