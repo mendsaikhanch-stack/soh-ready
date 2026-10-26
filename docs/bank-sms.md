@@ -11,7 +11,7 @@ anon 401, `payments_provider_check`-д `bank_sms` орсон. Seed-ийн 5 дү
 
 ```
 ХасБанк (илгээгч 131888) ──SMS──▶ Samsung утас (СӨХ-ийн SIM)
-   │  android-sms-forwarder: илгээгч шүүх → SQLite дараалал → WorkManager retry
+   │  apps/android-sms-bridge: илгээгч шүүх → SQLite дараалал → WorkManager retry
    ▼  HTTPS, Authorization: Bearer khsms_…
 POST /api/bank-sms ── токен (SHA-256) шалгах, rate limit, 16KB хязгаар, validation
    ▼
@@ -43,7 +43,7 @@ payments (provider 'bank_sms') + invoices.paid_amount + residents.debt
 | `app/api/cron/bank-sms-retention/route.ts` | Эх SMS-ийн текстийг 90 хоногийн дараа арилгана (`vercel.json`) |
 | `app/admin/bank-sms/page.tsx` | Админ дэлгэц (цэс: «Банкны SMS гүйлгээ») |
 | `tests/bank-sms.test.ts` | 34 тест (`npm test`) |
-| `android-sms-forwarder/` | Kotlin дамжуулагч апп (тусдаа төсөл) |
+| `apps/android-sms-bridge/` | Khotol SMS Bridge — Kotlin апп (тусдаа Gradle төсөл, README-тэй) |
 
 ## 1. Migration ажиллуулах
 
@@ -73,11 +73,13 @@ Production DB-д **зөвшөөрөл авсны дараа**, Supabase ▸ SQL 
 
 ## 3. Android апп build хийж Samsung утсанд суулгах
 
-Энэ машинд JDK/Android SDK алга тул **build хийж шалгаагүй**.
+2026-10-26: JDK 17 (Temurin) + Android SDK 36 `C:UsersUserAndroid`-д суулгаж
+`testDebugUnitTest` (17/17), `assembleDebug`, `lintDebug` амжилттай. **Бодит утсан
+дээр хараахан туршаагүй.** Дэлгэрэнгүй: `apps/android-sms-bridge/README.md`.
 
-1. Android Studio (JDK 17+ хамт ирнэ) суулгаад `android-sms-forwarder/`-ийг нээнэ.
+1. Android Studio (JDK 17+ хамт ирнэ) суулгаад `apps/android-sms-bridge/`-ийг нээнэ.
    Gradle 8.14.3 / AGP 8.13.0 — `android/` (Capacitor)-тай ижил.
-2. Unit тест: `./gradlew test` (`SmsFilterTest`).
+2. Unit тест: `./gradlew testDebugUnitTest` (`SmsFilterTest`, `DeliveryProcessorTest`).
 3. APK: `./gradlew assembleRelease` — гарын үсэг зурахын тулд **тусдаа** keystore
    үүсгэнэ (`khotol-release.jks`-ийг бүү ашигла — тэр нь Play-ийн аппынх).
    Хурдан туршихад `./gradlew assembleDebug` хангалттай.
@@ -98,12 +100,14 @@ Form + хянан шалгалт) л олгогддог. Одоогийн «Хо
 
 ## 4. Утсыг сервертэй холбох
 
+Даргад илгээх линк: **https://www.khotol.com/sms-app** (APK 1.0.0 + алхам алхмаар заавар).
+
 1. Хотол ▸ Админ ▸ **Банкны SMS гүйлгээ** ▸ «Дамжуулагч утас» ▸ нэр, илгээгч
    (`131888`), дансны маск (SMS дээрх `5006***029`) → «Төхөөрөмж бүртгэж токен авах».
 2. Токен **нэг л удаа** харагдана → утасны апп ▸ «Токен» талбарт оруулна.
    Серверийн хаяг: `https://www.khotol.com`. Илгээгч: `131888`. «Хадгалах».
 3. «SMS хүлээн авах зөвшөөрөл өгөх». Зөвшөөрөл саарал/идэвхгүй байвал
-   (Android 13+ «Restricted settings») Тохиргоо ▸ Апп ▸ Хотол SMS дамжуулагч ▸
+   (Android 13+ «Restricted settings») Тохиргоо ▸ Апп ▸ Khotol SMS Bridge ▸
    ⋮ ▸ «Allow restricted settings».
 4. «Батарейн хязгаарлалтаас чөлөөлөх» → «Хязгаарлахгүй».
    Samsung: Тохиргоо ▸ Батарей ▸ Background usage limits ▸ **Never sleeping apps**-д

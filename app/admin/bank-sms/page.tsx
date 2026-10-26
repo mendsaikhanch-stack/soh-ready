@@ -451,7 +451,7 @@ function DeviceList({ devices, busy, run, now }: { devices: Device[]; busy: stri
         <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
           <p className="font-semibold text-amber-900 mb-1">🔑 Төхөөрөмжийн токен — ЗӨВХӨН ОДОО харагдана</p>
           <p className="text-xs text-amber-800 mb-2">
-            Утсан дээрх «Хотол SMS дамжуулагч» аппын «Токен» талбарт хуулж оруулна. Хуудсыг хаасны дараа дахин харах боломжгүй
+            Утсан дээрх «Khotol SMS Bridge» аппын «Токен» талбарт хуулж оруулна. Хуудсыг хаасны дараа дахин харах боломжгүй
             (алдвал «Токен шинэчлэх» дарна). Хэнд ч бүү илгээ.
           </p>
           <div className="flex gap-2">
@@ -477,6 +477,10 @@ function DeviceList({ devices, busy, run, now }: { devices: Device[]; busy: stri
         </button>
         <p className="text-xs text-gray-400 mt-2">
           Автомат бүртгэл анхдагчаар унтраалттай. Бодит SMS ирж зөв танигдаж байгааг шалгасны дараа асаана.
+        </p>
+        <p className="text-xs text-gray-500 mt-1">
+          Утсанд апп суулгах заавар:{' '}
+          <a href="/sms-app" target="_blank" rel="noopener" className="text-blue-600 underline">khotol.com/sms-app</a>
         </p>
       </div>
     </div>
