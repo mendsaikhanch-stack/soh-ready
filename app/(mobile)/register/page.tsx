@@ -9,7 +9,7 @@ import { safeSession } from '@/app/lib/safe-storage';
 interface City { id: number; name: string; }
 interface District { id: number; city_id: number; name: string; }
 interface Khoroo { id: number; district_id: number; name: string; }
-interface SokhOrg { id: number; khoroo_id: number; name: string; address: string; phone: string; }
+interface SokhOrg { id: number; khoroo_id: number; name: string; address: string; phone: string; claim_status?: string | null; }
 
 export default function RegisterPage() {
   return (
@@ -197,9 +197,15 @@ function RegisterInner() {
     setStep(5);
   };
 
+  // Хороонд даргатай СӨХ байвал шинэ нэр оруулахыг хаана — сервер ч мөн адил
+  // татгалзана (409 sokh_exists_in_khoroo). АйСиТаун-д «Ic town», «АЙ таун»
+  // гэх мэт давхар СӨХ үүсч айлууд тарсан (2026-10-26).
+  const khorooHasActiveSokh = sokhList.some(s => s.claim_status === 'active');
+
   const confirmCustomSokh = () => {
     const trimmed = customSokhName.trim();
     if (trimmed.length < 2) { setError('СӨХ-ийн нэрээ оруулна уу'); return; }
+    if (khorooHasActiveSokh) { setEnteringCustomSokh(false); setError('Энэ хороонд бүртгэлтэй СӨХ байна — жагсаалтаас сонгоно уу'); return; }
     setSelectedSokh(null);
     setError('');
     setStep(5);
@@ -252,7 +258,18 @@ function RegisterInner() {
       });
 
       const result = await res.json();
-      if (!res.ok) { setError(result.error); setLoading(false); return; }
+      if (!res.ok) {
+        if (result.code === 'sokh_exists_in_khoroo' && selectedKhoroo) {
+          // Жагсаалтыг дахин ачаалж СӨХ сонгох алхам руу буцаана
+          setLoading(false);
+          await selectKhoroo(selectedKhoroo);
+          setCustomSokhName('');
+          setEnteringCustomSokh(false);
+          setError(result.error);
+          return;
+        }
+        setError(result.error); setLoading(false); return;
+      }
 
       // Автоматаар нэвтрэх (утаснаас үүссэн имэйлээр)
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -430,7 +447,11 @@ function RegisterInner() {
                   </div>
                 )}
 
-                {!enteringCustomSokh ? (
+                {khorooHasActiveSokh ? (
+                  <p className="pt-3 border-t text-xs text-gray-500 text-center">
+                    Таны СӨХ жагсаалтад байхгүй бол СӨХ-ийнхөө даргаас бүртгэлийн QR код авна уу.
+                  </p>
+                ) : !enteringCustomSokh ? (
                   <div className={sokhList.length === 0 ? 'text-center py-8' : 'pt-2 border-t'}>
                     {sokhList.length === 0 && (
                       <p className="text-gray-400 mb-3 text-sm">Энэ хороонд бүртгэлтэй СӨХ байхгүй байна</p>

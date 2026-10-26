@@ -115,11 +115,22 @@ export async function POST(req: NextRequest) {
       }
       const { data: sameKhorooOrgs } = await supabaseAdmin
         .from('sokh_organizations')
-        .select('id, name')
+        .select('id, name, claim_status')
         .eq('khoroo_id', khoroo_id);
       const dup = (sameKhorooOrgs || []).find(
         (o) => compact(o.name as string) === targetNorm,
       );
+      // Хороонд даргатай (идэвхтэй) СӨХ байвал шинийг ҮҮСГЭХГҮЙ — сонгуулна.
+      // Нэрийн харьцуулалт латин «Ic town», үсгийн алдаатай «АЙ таун»-ыг
+      // танихгүй тул АйСиТаун-д 3 давхар СӨХ үүсч, айлууд тарсан (2026-10-26).
+      const active = (sameKhorooOrgs || []).filter((o) => o.claim_status === 'active');
+      if (!dup && active.length > 0) {
+        return NextResponse.json({
+          error: 'Энэ хороонд бүртгэлтэй СӨХ байна — жагсаалтаас сонгоно уу. Таны СӨХ жагсаалтад байхгүй бол даргаасаа QR код авна уу.',
+          code: 'sokh_exists_in_khoroo',
+          suggestions: active.map((o) => ({ id: o.id, name: o.name })),
+        }, { status: 409 });
+      }
       if (dup) {
         sokh_id = dup.id as number;
       } else {
