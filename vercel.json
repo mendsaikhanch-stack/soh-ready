@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/resident-invoices",
       "schedule": "10 16 * * *"
+    },
+    {
+      "path": "/api/cron/bank-sms-retention",
+      "schedule": "40 18 * * *"
     }
   ]
 }

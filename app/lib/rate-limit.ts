@@ -87,3 +87,8 @@ export const voteCreateLimiter = rateLimit({ name: 'vote-create', windowMs: 60 *
 export const voteOtpSendLimiter = rateLimit({ name: 'vote-otp-send', windowMs: 10 * 60 * 1000, maxRequests: 5 });
 export const voteOtpVerifyLimiter = rateLimit({ name: 'vote-otp-verify', windowMs: 5 * 60 * 1000, maxRequests: 10 });
 export const voteCastLimiter = rateLimit({ name: 'vote-cast', windowMs: 60 * 1000, maxRequests: 20 });
+// Банкны SMS дамжуулагч (/api/bank-sms) — IP-ээр (токен таахаас), төхөөрөмжөөр
+export const bankSmsIpLimiter = rateLimit({ name: 'bank-sms-ip', windowMs: 60 * 1000, maxRequests: 120 });
+export const bankSmsAuthFailLimiter = rateLimit({ name: 'bank-sms-authfail', windowMs: 10 * 60 * 1000, maxRequests: 20 });
+export const bankSmsDeviceLimiter = rateLimit({ name: 'bank-sms-device', windowMs: 60 * 1000, maxRequests: 60 });
+export const adminBankSmsLimiter = rateLimit({ name: 'admin-bank-sms', windowMs: 60 * 1000, maxRequests: 120 });

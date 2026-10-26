@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Хотол SMS дамжуулагч</string>
+    <string name="purpose">Энэ апп нь зөвхөн СӨХ-ийн дансны банкны гүйлгээний SMS-ийг Хотол систем рүү дамжуулна. Тохируулсан банкны дугаараас бусад SMS (хувийн мессеж, OTP, нэвтрэх код) утаснаас гарахгүй.</string>
+    <string name="token_saved_hint">Токен хадгалсан (солих бол шинээр оруулна)</string>
+</resources>
