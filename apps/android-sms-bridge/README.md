@@ -70,7 +70,10 @@ Release (даргад түгээх): `./gradlew assembleRelease`. Гарын ү�
 2. Компьютер: `adb install -r app/build/outputs/apk/debug/app-debug.apk`
    (`adb` — `<sdk>/platform-tools`). Эсвэл APK-г утсанд хуулж нээгээд «Тодорхойгүй
    эх сурвалжаас суулгах»-ыг **зөвхөн тэр удаа** зөвшөөрнө.
-3. Google Play Protect анхааруулга гарч болно — хувийн апп тул «Install anyway».
+3. Хөтчөөс суулгахад Google Play Protect «App blocked to protect your device» гэж **хаана**
+   (зөвхөн «Got it», RECEIVE_SMS-тэй sideload апп). Суулгах хооронд Play Store ▸ Play Protect ▸ ⚙ ▸
+   «Scan apps with Play Protect»-ийг, Samsung дээр Тохиргоо ▸ Аюулгүй байдал ▸ **Auto Blocker**-ийг түр
+   унтрааж, суулгасны дараа буцааж асаана. `adb install` хаагдахгүй. Шалгагдсан: 2026-10-26.
    Энэ апп Play-ийн хяналт, зөвшөөрөл аваагүй, авахыг ч зорихгүй.
 
 Яагаад Play Store биш: Google Play-ийн SMS permission-ийн бодлогоор `RECEIVE_SMS`

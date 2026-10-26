@@ -17,13 +17,34 @@ export const metadata = {
 
 const STEPS: { t: string; d: React.ReactNode }[] = [
   {
+    t: 'Хамгаалалтыг түр унтраана',
+    d: (
+      <>
+        Хотолын апп Play Store-д байхгүй тул Google, Samsung-ийн хамгаалалт суулгахыг хаадаг («App blocked to
+        protect your device»). Суулгах хооронд л түр унтраана:
+        <br />• <b>Play Store</b> → баруун дээд профайл зураг → <b>Play Protect</b> → ⚙ →{' '}
+        <b>«Scan apps with Play Protect»</b>-ийг унтраана.
+        <br />• Samsung дээр мөн: <b>Тохиргоо → Аюулгүй байдал ба нууцлал → Auto Blocker</b> асаалттай бол
+        унтраана (ийм цэс байхгүй бол алгасна).
+      </>
+    ),
+  },
+  {
     t: 'Аппыг татаж суулгана',
     d: (
       <>
         Банкны SMS ирдэг утсаараа энэ хуудсыг нээж, доорх <b>«Апп татах»</b> товчийг дарна. Татаж дуусаад
         файлыг нээнэ. «Энэ эх сурвалжаас суулгахыг зөвшөөрөх үү?» гэвэл <b>Тохиргоо → Зөвшөөрөх</b>, дараа нь
-        <b> Суулгах</b>. Google Play Protect анхааруулбал <b>«Ямартай ч суулгах»</b> (Install anyway) дарна —
-        Хотолын хувийн апп тул Play Store-д байхгүй.
+        <b> Суулгах</b>.
+      </>
+    ),
+  },
+  {
+    t: 'Хамгаалалтаа буцааж асаана',
+    d: (
+      <>
+        Суулгаж дуусмагц <b>Play Protect</b>-ийн «Scan apps with Play Protect»-ийг болон <b>Auto Blocker</b>-ийг
+        (унтраасан бол) <b>заавал буцааж асаана</b>. Асаалттай үед Khotol SMS Bridge хэвийн ажиллана.
       </>
     ),
   },
@@ -123,7 +144,7 @@ export default function SmsAppPage() {
               </li>
               <li>Утас байнга асаалттай, интернэттэй (Wi-Fi эсвэл дата) байх ёстой.</li>
               <li>Даргын эрхээр khotol.com/admin руу нэвтрэх боломжтой байх.</li>
-              <li>15 орчим минут зарцуулна.</li>
+              <li>20 орчим минут зарцуулна.</li>
             </ul>
           </div>
   
@@ -173,6 +194,10 @@ export default function SmsAppPage() {
           <details className="bg-white border border-gray-200 rounded-2xl p-4 text-sm text-gray-700">
             <summary className="font-bold text-gray-800 cursor-pointer">Асуудал гарвал</summary>
             <ul className="list-disc pl-5 space-y-2 mt-3 leading-relaxed">
+              <li>
+                <b>«App blocked to protect your device»</b> гэж гараад зөвхөн «Got it» товч байвал — 1-р алхмын
+                хамгаалалт асаалттай байна. Унтрааж, татсан файлыг дахин нээнэ.
+              </li>
               <li>
                 <b>«ТОХИРГОО ДУТУУ»</b> — нууцлалын чагт, токен, SMS зөвшөөрлийн аль нэг нь дутуу.
               </li>
