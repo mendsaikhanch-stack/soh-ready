@@ -112,8 +112,10 @@ function unitPart(v: unknown, field: string, required = true): string | null {
 function senders(v: unknown): string[] {
   if (!Array.isArray(v)) throw new HttpError(400, 'Илгээгчийн жагсаалт буруу');
   const list = v.map((s) => (typeof s === 'string' ? s.trim() : '')).filter(Boolean);
-  if (list.length > 5 || list.some((s) => !/^[+0-9A-Za-z ]{2,32}$/.test(s))) {
-    throw new HttpError(400, 'Илгээгчийн дугаар буруу (жишээ: 131888)');
+  // SMS-ийн дугаар (131888) эсвэл имэйл мэдэгдлийн илгээгчийн хаяг
+  const ok = (s: string) => /^[+0-9A-Za-z ]{2,32}$/.test(s) || /^[A-Za-z0-9._%+-]{1,40}@[A-Za-z0-9.-]{1,40}\.[A-Za-z]{2,10}$/.test(s);
+  if (list.length > 5 || list.some((s) => !ok(s))) {
+    throw new HttpError(400, 'Илгээгч буруу (жишээ: 131888 эсвэл имэйл хаяг)');
   }
   return list;
 }

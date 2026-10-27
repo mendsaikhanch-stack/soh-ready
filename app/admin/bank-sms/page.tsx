@@ -468,7 +468,7 @@ function DeviceList({ devices, busy, run, now }: { devices: Device[]; busy: stri
         <h3 className="font-semibold text-sm text-gray-500 mb-3">ШИНЭ ДАМЖУУЛАГЧ УТАС</h3>
         <div className="grid md:grid-cols-3 gap-3 mb-3">
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Нэр (жишээ: Samsung — ХасБанк)" className="px-3 py-2 border rounded-lg text-sm" />
-          <input value={senders} onChange={e => setSenders(e.target.value)} placeholder="Банкны SMS илгээгч (жишээ: 131888)" className="px-3 py-2 border rounded-lg text-sm" />
+          <input value={senders} onChange={e => setSenders(e.target.value)} placeholder="Илгээгч (SMS: 131888, имэйл: банкны хаяг)" className="px-3 py-2 border rounded-lg text-sm" />
           <input value={mask} onChange={e => setMask(e.target.value)} placeholder="SMS дээрх дансны маск (жишээ: 5006***029)" className="px-3 py-2 border rounded-lg text-sm" />
         </div>
         <button onClick={create} disabled={!name.trim() || busy === 'dev-new'}

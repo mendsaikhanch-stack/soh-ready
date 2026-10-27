@@ -247,6 +247,21 @@ Form + хянан шалгалт) л олгогддог. Одоогийн «Хо
 - Result: **23 payments confirmed**, 1,265,000₮ in total. Each one closed its invoice (`paid`). There were 0 duplicate payments.
   - 15 were matched by the numbering scheme.
   - 8 were matched by address + payer name, with the user's approval: 405, 1202, 907, 613, 601, 1602, 1606 and 1101.
-- Left in `needs_review` for the darga: 1. It is a 56,000₮ card (POS) settlement, «UZESGELEN1», not a resident payment.
+- The 56,000₮ card (POS) settlement «UZESGELEN1» belongs to 498-2-1510, as the user confirmed. Its invoice was closed with a 1,000₮ overpayment. There is no field to store the surplus, so it is not tracked. All 24 are now confirmed, 1,321,000₮ in total.
+- 2026-10-27: 2 more transactions from the bank statement (QPay 498/2-1503 and «2 байр 2 орц 611») were added the same way. Total: **26 confirmed, 1,431,000₮**. The rerun recognised the earlier 24 as duplicates and did not change them.
 - After this import, the scheme now also gives a **suggestion** for «498/5-1-1202» (a weak code with an entrance) and for «… 1ORTs 4/ 405» (a floor number before the unit). Both still go to manual review.
 - The script is `scripts/ictown-bank-sms-import.local.js` (gitignored, because the data contains PII). It is safe to run again.
+
+## Имэйл мэдэгдэл (2026-10-27)
+
+SMS аппыг (Play Protect хаалт) орлож ХасБанкны **имэйл** мэдэгдлийг ашиглана.
+Илгээгч `XacInfo@xacbank.mn`, гарчиг «ОРЛОГЫН ГҮЙЛГЭЭ» / «ЗАРЛАГЫН ГҮЙЛГЭЭ».
+
+- `parseBankSms` имэйлийн «Гүйлгээний дүн:» талбарыг таньвал `parseBankEmail` руу шилжинэ
+  (дүн, валют MNT, үлдэгдэл, утга, огноо). Бүтэн дансны дугаарыг `maskAccount`-аар
+  `5006***029` болгож хадгална. Зарлагын имэйл → `debit_unverified`. `PARSER_VERSION = xacbank-v2`.
+- Дамжуулагч: Gmail дээрх Apps Script — [`apps/gmail-bank-relay`](../apps/gmail-bank-relay/README.md).
+  Одоогийн `/api/bank-sms`, төхөөрөмжийн токенийг ашиглана; `allowed_senders`-д имэйл хаяг
+  оруулж болдог болсон.
+- Имэйлд цаг байхгүй (зөвхөн огноо) — `receivedAt` нь Gmail-ийн хүлээн авсан цаг.
+- Gmail дээр бодитоор хараахан туршаагүй.

@@ -10,7 +10,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { UNIT_SCHEMES, resolveUnitReference, type UnitCandidate } from './unit-address.ts';
 
-export const PARSER_VERSION = 'xacbank-v1';
+export const PARSER_VERSION = 'xacbank-v2';
 
 // ============================================================
 // 1. SMS задлах
@@ -49,7 +49,7 @@ const CREDIT_RE = new RegExp(
 );
 const BALANCE_RE = new RegExp(String.raw`(?:Uldegdel|Үлдэгдэл)\s*:?\s*(-?)` + MONEY + String.raw`\s*MNT`, 'iu');
 const DATE_RE = /(?:Ognoo|Огноо)\s*:?\s*(\d{4})[-./](\d{2})[-./](\d{2})/iu;
-const DEBIT_RE = /(ZARLAGA|зарлага|гарлаа|garlaa|хасагдлаа|xasagdlaa)/iu;
+const DEBIT_RE = /(ZARLAGA|зарлага|зарлагын|гарлаа|garlaa|хасагдлаа|xasagdlaa)/iu;
 const QPAY_RE = /^(qpay)\s*[:#]?\s*(\d{8,24})(?:\s+|$)(.*)$/iu;
 
 function clean(body: string): string {
@@ -72,11 +72,74 @@ function validDate(y: string, mo: string, d: string): string | null {
   return iso;
 }
 
+// Имэйл мэдэгдэл (ХасБанк, 2026-10-27-ны жишээ). Талбар бүр «Нэр: утга» мөрөөр ирнэ:
+//   ОРЛОГЫН ГҮЙЛГЭЭ … таны дансанд орлогын гүйлгээ хийгдлээ.
+//   Дансны дугаар: 5006xxx029 · Гүйлгээний дүн: 40,000.00 · Гүйлгээний валют: MNT
+//   Дансны үлдэгдэл: -107,077.16MNT · Гүйлгээний утга: … · Гүйлгээ хийсэн огноо: 2026-10-27
+// Зарлагын имэйл нь «зарлагын гүйлгээ хийгдлээ» гэж ирдэг → DEBIT_RE.
+const EMAIL_MARK_RE = /Гүйлгээний\s+дүн\s*:/iu;
+const EMAIL_CREDIT_RE = /орлогын\s+гүйлгээ\s+хийгдлээ/iu;
+const EMAIL_ACCOUNT_RE = /Дансны\s+дугаар\s*:\s*(\d{6,20})(?!\d)/iu;
+const EMAIL_AMOUNT_RE = new RegExp(String.raw`Гүйлгээний\s+дүн\s*:\s*` + MONEY, 'iu');
+const EMAIL_CURRENCY_RE = /Гүйлгээний\s+валют\s*:\s*([A-Z]{3})/iu;
+const EMAIL_BALANCE_RE = new RegExp(String.raw`Дансны\s+үлдэгдэл\s*:\s*(-?)` + MONEY + String.raw`\s*MNT`, 'iu');
+const EMAIL_DESC_RE = /Гүйлгээний\s+утга\s*:\s*(.*?)\s*Гүйлгээ\s+хийсэн\s+огноо\s*:/iu;
+const EMAIL_DATE_RE = /Гүйлгээ\s+хийсэн\s+огноо\s*:\s*(\d{4})[-./](\d{2})[-./](\d{2})/iu;
+
+/**
+ * Имэйлд дансны дугаар бүтнээрээ ирдэг — SMS-ийн маскаар (5006***029) хадгална:
+ * бүтэн дугаар DB-д орохгүй, төхөөрөмжийн account_mask-тай шууд тулгагдана.
+ */
+export function maskAccount(account: string): string {
+  return account.length >= 8 ? `${account.slice(0, 4)}***${account.slice(-3)}` : account;
+}
+
+function withChannel(description: string) {
+  const q = QPAY_RE.exec(description);
+  return q
+    ? { channel: 'qpay' as const, transactionReference: q[2], payerReference: q[3].trim() }
+    : { channel: null, transactionReference: null, payerReference: description };
+}
+
+function parseBankEmail(body: string): ParseResult {
+  if (!EMAIL_CREDIT_RE.test(body)) return { ok: false, reason: 'unrecognized_format' };
+  const acct = EMAIL_ACCOUNT_RE.exec(body);
+  const amt = EMAIL_AMOUNT_RE.exec(body);
+  const cur = EMAIL_CURRENCY_RE.exec(body);
+  if (!acct || !amt || !cur || cur[1].toUpperCase() !== 'MNT') return { ok: false, reason: 'unrecognized_format' };
+
+  const amountMinor = parseMoneyMinor(amt[1]);
+  if (!amountMinor || amountMinor <= 0) return { ok: false, reason: 'bad_amount' };
+
+  const bal = EMAIL_BALANCE_RE.exec(body);
+  const balanceAbs = bal ? parseMoneyMinor(bal[2]) : null;
+  const balanceAfterMinor = balanceAbs == null ? null : bal![1] === '-' ? -balanceAbs : balanceAbs;
+
+  const dm = EMAIL_DATE_RE.exec(body);
+  const transactionDate = dm && validDate(dm[1], dm[2], dm[3]);
+  if (!transactionDate) return { ok: false, reason: 'bad_date' };
+
+  const description = (EMAIL_DESC_RE.exec(body)?.[1] ?? '').trim().slice(0, 300);
+  return {
+    ok: true,
+    tx: {
+      accountReference: maskAccount(acct[1]),
+      amountMinor,
+      balanceAfterMinor,
+      currency: 'MNT',
+      transactionDate,
+      description,
+      ...withChannel(description),
+    },
+  };
+}
+
 export function parseBankSms(rawBody: string): ParseResult {
   const body = clean(rawBody);
 
   // Зарлага гэж харагдвал орлого болгож хэзээ ч бүртгэхгүй
   if (DEBIT_RE.test(body)) return { ok: false, reason: 'debit_unverified' };
+  if (EMAIL_MARK_RE.test(body)) return parseBankEmail(body);
 
   const credit = CREDIT_RE.exec(body);
   if (!credit) return { ok: false, reason: 'unrecognized_format' };
@@ -100,16 +163,6 @@ export function parseBankSms(rawBody: string): ParseResult {
     .trim()
     .slice(0, 300);
 
-  let channel: 'qpay' | null = null;
-  let transactionReference: string | null = null;
-  let payerReference = description;
-  const q = QPAY_RE.exec(description);
-  if (q) {
-    channel = 'qpay';
-    transactionReference = q[2];
-    payerReference = q[3].trim();
-  }
-
   return {
     ok: true,
     tx: {
@@ -119,9 +172,7 @@ export function parseBankSms(rawBody: string): ParseResult {
       currency: 'MNT',
       transactionDate,
       description,
-      channel,
-      transactionReference,
-      payerReference,
+      ...withChannel(description),
     },
   };
 }
@@ -332,7 +383,7 @@ export function validatePayload(input: unknown, now: Date = new Date()): { ok: t
   if (typeof o.messageId !== 'string' || !/^[A-Za-z0-9_.:-]{8,128}$/.test(o.messageId)) {
     return { ok: false, error: 'invalid_message_id' };
   }
-  if (typeof o.sender !== 'string' || o.sender.trim().length === 0 || o.sender.length > 32) {
+  if (typeof o.sender !== 'string' || o.sender.trim().length === 0 || o.sender.length > 96) {
     return { ok: false, error: 'invalid_sender' };
   }
   if (typeof o.body !== 'string' || o.body.trim().length === 0 || o.body.length > MAX_BODY_CHARS) {
@@ -629,7 +680,7 @@ export async function processIncomingSms(
   if (!senderAllowed(payload.sender, device.allowedSenders)) {
     return { accepted: true, status: 'ignored', reason: 'sender_not_allowed' };
   }
-  if (looksLikeSecretCode(payload.body) && !CREDIT_RE.test(clean(payload.body))) {
+  if (looksLikeSecretCode(payload.body) && !parseBankSms(payload.body).ok) {
     return { accepted: true, status: 'ignored', reason: 'secret_code' };
   }
 
@@ -637,7 +688,7 @@ export async function processIncomingSms(
     sokh_id: device.sokhId,
     device_id: device.id,
     source_message_id: payload.messageId,
-    sender: payload.sender.trim().slice(0, 32),
+    sender: payload.sender.trim().slice(0, 96),
     received_at: payload.receivedAt,
     body_sha256: sha256Hex(clean(payload.body)),
     raw_body: payload.body,
