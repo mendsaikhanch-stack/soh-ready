@@ -152,6 +152,19 @@ function uniq(cs: UnitCandidate[]): UnitCandidate[] {
 export function resolveUnitReference(scheme: UnitScheme, text: string | null | undefined): UnitResolution {
   if (!text) return { status: 'none' };
   const nums = addressNumbers(text);
+  const res = resolveNumbers(scheme, nums);
+  if (res.status !== 'none' || nums.length < 3) return res;
+
+  // «498/2 байр 1 орц 4/ 405» — тоотын өмнөх тоо нь давхар (405 → 4) байж магадгүй.
+  // Зөвхөн өөрөөр уншигдаагүй үед хасаж үзнэ, үр дүн нь ҮРГЭЛЖ санал (шалгалт руу).
+  const apt = nums[nums.length - 1];
+  const floor = nums[nums.length - 2];
+  if (!/^\d{3,4}$/.test(apt) || !/^\d{1,2}$/.test(floor) || Number(floor) !== Math.floor(Number(apt) / 100)) return res;
+  const alt = resolveNumbers(scheme, [...nums.slice(0, -2), apt]);
+  return alt.status === 'resolved' ? { status: 'unconfirmed', candidates: [alt.unit] } : alt;
+}
+
+function resolveNumbers(scheme: UnitScheme, nums: string[]): UnitResolution {
   if (nums.length === 0 || nums.length > 4) return { status: 'none' };
 
   const apartment = nums[nums.length - 1];
@@ -173,6 +186,8 @@ export function resolveUnitReference(scheme: UnitScheme, text: string | null | u
   const code = prefix.join('-');
   const head = prefix.slice(0, -1).join('-');
   const entranceGiven = prefix[prefix.length - 1];
+  // «498-1-…» нь 498-1 байр (орц биш) — сул кодын орцтой хэлбэрийг зөвхөн бусад үед
+  const codeIsStrong = scheme.buildings.some((b) => b.strongCodes.includes(code));
 
   for (const b of scheme.buildings) {
     const e = unitIn(b, apartment);
@@ -190,6 +205,12 @@ export function resolveUnitReference(scheme: UnitScheme, text: string | null | u
     if (b.weakCodes?.includes(code)) {
       buildingKnown = true;
       if (e) weak.push(candidate(b, e, apartment));
+    }
+    // [498, 5, орц, тоот] — сул код ч орц нь тоотын дугаартай таарвал санал болгоно
+    if (!codeIsStrong && head && b.weakCodes?.includes(head) && b.entrances.some((x) => x.entrance === entranceGiven)) {
+      buildingKnown = true;
+      if (e && e.entrance === entranceGiven) weak.push(candidate(b, e, apartment));
+      else if (e) conflicts.push(candidate(b, e, apartment));
     }
   }
 

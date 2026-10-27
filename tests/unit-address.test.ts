@@ -121,6 +121,19 @@ describe('эргэлзээтэй / буруу утга → таамаглахг�
     assert.deepEqual(cands(r('498/5-101')), ['5-1-101']);
     assert.equal(r('498/5-101').status, 'unconfirmed');
     assert.deepEqual(cands(r('498-3-505')), ['3-1-505']);
+    // Орцтой бичсэн ч сул код хэвээр — санал, орц зөрвөл conflict
+    assert.equal(r('498/5-1-1202').status, 'unconfirmed');
+    assert.deepEqual(cands(r('498/5-1-1202')), ['5-1-1202']);
+    assert.equal(r('498/5-2-1202').status, 'conflict');
+  });
+  test('тоотын өмнөх давхрын дугаар — зөвхөн санал', () => {
+    const x = r('498/2BAIR 1ORTs 4/ 405');
+    assert.equal(x.status, 'unconfirmed');
+    assert.deepEqual(cands(x), ['2-1-405']);
+    // Давхар биш тоо бол хасахгүй
+    assert.equal(r('498/2BAIR 1ORTs 7/ 405').status, 'none');
+    // Энгийн хэлбэр өөрчлөгдөхгүй: 2-2-213-д «2» орц хэвээр
+    assert.equal(keyOf(r('2-2-213')), '2-2-213');
   });
   test('сар, утас, дүн хаягт орохгүй', () => {
     assert.deepEqual(addressNumbers('10 сарын төлбөр 205-505'), ['205', '505']);

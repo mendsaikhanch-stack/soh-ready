@@ -234,3 +234,19 @@ Form + хянан шалгалт) л олгогддог. Одоогийн «Хо
    хамгийн найдвартай.
 3. **Гараар** — интернэт банкны хуулгыг Excel-ээр импортлох (одоогийн
    «Төлбөр бүртгэх» урсгал).
+
+## Production log: 2026-10-27, ICTown, first manual import
+
+- The XacBank 131888 SMS for 10/25–26 (24 credits, taken from the darga's screenshots) went through the `processIncomingSms` pipeline. The device is `bank_sms_devices#1`, «Гараар оруулсан — SMS зураг 10/25–26». It is revoked and has no token. It was used with `auto_apply=false`.
+- The real SMS arrive in **Latin script**: «Tany 5006\*\*\*029 toot dansand … ORLOGO orloo». See `tests/bank-sms-latin.test.ts`.
+- Checks run before confirming:
+  - the descriptions in the SMS and in the bank statement matched;
+  - the balance sequence was continuous, so no transaction is missing;
+  - QPay refs are unique;
+  - each resident had no earlier payment and exactly one pending invoice of 55,000.
+- Result: **23 payments confirmed**, 1,265,000₮ in total. Each one closed its invoice (`paid`). There were 0 duplicate payments.
+  - 15 were matched by the numbering scheme.
+  - 8 were matched by address + payer name, with the user's approval: 405, 1202, 907, 613, 601, 1602, 1606 and 1101.
+- Left in `needs_review` for the darga: 1. It is a 56,000₮ card (POS) settlement, «UZESGELEN1», not a resident payment.
+- After this import, the scheme now also gives a **suggestion** for «498/5-1-1202» (a weak code with an entrance) and for «… 1ORTs 4/ 405» (a floor number before the unit). Both still go to manual review.
+- The script is `scripts/ictown-bank-sms-import.local.js` (gitignored, because the data contains PII). It is safe to run again.
