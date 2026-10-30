@@ -55,11 +55,16 @@ interface MyInvoice {
   year: number;
   month: number;
   amount: number;
+  paid_amount: number | null;
   due_date: string;
   status: string;
   paid_at: string | null;
   description: string;
 }
+
+/** Нэхэмжлэхийн төлөгдөөгүй үлдэгдэл (partial үед хэсэгчлэн төлсөнийг хасна). */
+const invoiceRemaining = (inv: MyInvoice) =>
+  inv.status === 'paid' ? 0 : Math.max(0, Number(inv.amount) - Number(inv.paid_amount || 0));
 
 const BILL_COLORS: Record<string, string> = {
   'service': 'bg-blue-50 border-blue-200',
@@ -192,8 +197,9 @@ export default function PaymentsPage() {
         if (thisMonthInv) {
           const sokhBillIdx = baseBills.findIndex(b => /СӨХ|хураамж/i.test(b.name));
           const isPaid = thisMonthInv.status === 'paid';
+          const due = isPaid ? Number(thisMonthInv.amount) : invoiceRemaining(thisMonthInv);
           if (sokhBillIdx >= 0) {
-            baseBills[sokhBillIdx].amount = Number(thisMonthInv.amount);
+            baseBills[sokhBillIdx].amount = due;
             baseBills[sokhBillIdx].paid = isPaid;
             baseBills[sokhBillIdx].id = thisMonthInv.id + 50000;
           } else {
@@ -201,11 +207,28 @@ export default function PaymentsPage() {
               id: thisMonthInv.id + 50000,
               name: 'СӨХ сарын хураамж',
               icon: '🏢',
-              amount: Number(thisMonthInv.amount),
+              amount: due,
               paid: isPaid,
               color: 'bg-blue-50 border-blue-200',
             });
           }
+        }
+
+        // Өмнөх сарын төлөгдөөгүй нэхэмжлэх (эхний үлдэгдэл, хоцорсон сар).
+        // Өмнө нь зөвхөн энэ сарынх харагддаг байсан тул айлууд өрөө аппаар
+        // төлж чаддаггүй байв. Хуучнаас нь эхэлж жагсаана.
+        const pastUnpaid = (invs || [])
+          .filter(i => i !== thisMonthInv && invoiceRemaining(i) > 0)
+          .sort((a, b) => a.year - b.year || a.month - b.month);
+        for (const inv of pastUnpaid) {
+          baseBills.push({
+            id: inv.id + 50000,
+            name: `${inv.month}-р сар — ${/үлдэгдэл/i.test(inv.description || '') ? 'өмнөх үлдэгдэл' : 'хоцорсон төлбөр'}`,
+            icon: '📌',
+            amount: invoiceRemaining(inv),
+            paid: false,
+            color: 'bg-red-50 border-red-200',
+          });
         }
       }
 
@@ -477,7 +500,7 @@ export default function PaymentsPage() {
       <div className="px-4 -mt-3">
         <div className="bg-white rounded-xl shadow-sm p-4">
           <div className="flex justify-between items-center mb-1">
-            <p className="text-xs text-gray-500">Энэ сарын нийт</p>
+            <p className="text-xs text-gray-500">Нийт төлбөр</p>
             <p className="text-xs text-gray-500">Төлөгдөөгүй</p>
           </div>
           <div className="flex justify-between items-center">
