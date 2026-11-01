@@ -168,6 +168,7 @@ export default function SokhDashboard() {
       recentAnnsRes,
       reqDataRes,
       elecBillRes,
+      myInvRes,
     ] = await Promise.all([
       supabase.from('sokh_organizations').select('*').eq('id', params.id).single(),
       supabase.from('residents').select('*', { count: 'exact', head: true }).eq('sokh_id', params.id),
@@ -180,6 +181,10 @@ export default function SokhDashboard() {
         ? supabase.from('utility_bills').select('id, amount, month, year')
             .eq('resident_id', profile.id).eq('utility_type', 'electricity').eq('status', 'unpaid')
             .order('year', { ascending: false }).order('month', { ascending: false }).limit(1).single()
+        : Promise.resolve({ data: null }),
+      profile
+        ? supabase.from('invoices').select('year, month, amount, paid_amount, status')
+            .eq('resident_id', profile.id).in('status', ['pending', 'overdue', 'partial'])
         : Promise.resolve({ data: null }),
     ]);
 
@@ -207,7 +212,16 @@ export default function SokhDashboard() {
     setMyRequests(reqDataRes.data || []);
 
     if (profile) {
-      setMyDebt(Number(profile.debt) || 0);
+      // residents.debt нь зөвхөн cron-оор (auto_invoice_from-той СӨХ) шинэчлэгддэг.
+      // Өмнөх сарын төлөгдөөгүй нэхэмжлэх нь сар солигдмогц «0» болж харагдахгүйн
+      // тулд тэдгээрийн үлдэгдлийг тооцно (хугацаа хэтэрсэн нь debt-д аль хэдийн
+      // орсон байж болох тул нэмэхгүй, ихийг нь авна).
+      const now = new Date();
+      const curKey = now.getFullYear() * 12 + now.getMonth() + 1;
+      const pastUnpaid = ((myInvRes.data || []) as { year: number; month: number; amount: number; paid_amount: number | null }[])
+        .filter(i => i.year * 12 + i.month < curKey)
+        .reduce((s, i) => s + Math.max(0, Number(i.amount) - Number(i.paid_amount || 0)), 0);
+      setMyDebt(Math.max(Number(profile.debt) || 0, pastUnpaid));
       setElectricityBill(elecBillRes.data || null);
     }
 
