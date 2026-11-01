@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import ReportButton from '@/app/components/ReportButton';
 import { safeLocal } from '@/app/lib/safe-storage';
+import { useVisiblePolling } from '@/app/lib/use-visible-polling';
 
 interface Message {
   id: number;
@@ -23,27 +24,34 @@ export default function ChatPage() {
   const [nameSet, setNameSet] = useState(false);
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<Message[]>([]);
+  messagesRef.current = messages;
 
   useEffect(() => {
     const saved = safeLocal.getItem(`chat-name-${params.id}`);
     if (saved) { setName(saved); setNameSet(true); }
     fetchMessages();
-
-    // Real-time subscription
-    const channel = supabase
-      .channel(`chat-${params.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'chat_messages',
-        filter: `sokh_id=eq.${params.id}`,
-      }, (payload) => {
-        setMessages(prev => [...prev, payload.new as Message]);
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, [params.id]);
+
+  // Realtime-ийн оронд: харагдаж байх үед 5с тутам зөвхөн шинэ мессежийг татна.
+  const fetchNew = async () => {
+    const lastId = messagesRef.current.reduce((m, x) => Math.max(m, Number(x.id)), 0);
+    if (!lastId) return fetchMessages();
+    const { data } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('sokh_id', params.id)
+      .gt('id', lastId)
+      .order('id', { ascending: true })
+      .limit(100);
+    if (data && data.length) {
+      setMessages(prev => {
+        const seen = new Set(prev.map(m => m.id));
+        return [...prev, ...data.filter(m => !seen.has(m.id))];
+      });
+    }
+  };
+  useVisiblePolling(fetchNew, 5000, !loading);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -85,6 +93,7 @@ export default function ChatPage() {
 
     setText('');
     setSending(false);
+    fetchNew(); // өөрийн мессежийг шууд харуулна (өмнө нь Realtime хийдэг байсан)
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

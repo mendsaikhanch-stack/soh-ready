@@ -33,58 +33,65 @@ export default function NotificationToast() {
     const sokhId = params?.id;
     if (!sokhId) return;
 
-    // Supabase realtime: шинэ мэдэгдэл сонсох
-    const channel = supabase
-      .channel('notifications-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'scheduled_notifications',
-          filter: `sokh_id=eq.${sokhId}`,
-        },
-        (payload) => {
-          const data = payload.new as any;
-          if (data.status === 'sent') {
-            const iconMap: Record<string, string> = {
-              debt: '💰',
-              announcement: '📢',
-              custom: '✉️',
-            };
-            addToast({
-              id: `sn-${data.id}`,
-              title: data.title,
-              message: data.message,
-              icon: iconMap[data.type] || '🔔',
-              url: `/sokh/${sokhId}/notifications`,
-            });
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'announcements',
-          filter: `sokh_id=eq.${sokhId}`,
-        },
-        (payload) => {
-          const data = payload.new as any;
-          addToast({
-            id: `ann-${data.id}`,
-            title: data.title,
-            message: data.content?.slice(0, 80) || '',
-            icon: '📢',
-            url: `/sokh/${sokhId}/announcements`,
+    // Өмнө нь энд Supabase Realtime `postgres_changes` байсан. Энэ компонент
+    // оршин суугчийн бүх хуудсанд (layout) байнга mount хийгддэг тул нэг ч хүн
+    // аппаа нээлттэй (утсан дээр арын фонд ч) орхивол Realtime сервер WAL-ийг
+    // тасралтгүй poll хийж (`realtime.list_changes`), Disk I/O-ийн гол хэрэглэгч
+    // болж байв (pg_stat_statements: 1.5 сая дуудлага, нийт хугацааны 63.7%).
+    // Одоо зөвхөн дэлгэц харагдаж байх үед 60с тутам + буцаж ирэхэд индекстэй
+    // хоёр жижиг query хийнэ. Яаралтай мэдэгдэл нь web push-оор очдог хэвээр.
+    const ICONS: Record<string, string> = { debt: '💰', announcement: '📢', custom: '✉️' };
+    let lastAnn: number | null = null;
+    let lastSn: number | null = null;
+    let busy = false;
+    let cancelled = false;
+
+    const poll = async () => {
+      if (busy || cancelled || document.visibilityState !== 'visible') return;
+      busy = true;
+      try {
+        const annQ = supabase.from('announcements').select('id, title, content')
+          .eq('sokh_id', sokhId).order('id', { ascending: false }).limit(3);
+        const snQ = supabase.from('scheduled_notifications').select('id, title, message, type')
+          .eq('sokh_id', sokhId).eq('status', 'sent').order('id', { ascending: false }).limit(3);
+        const [ann, sn] = await Promise.all([
+          lastAnn == null ? annQ : annQ.gt('id', lastAnn),
+          lastSn == null ? snQ : snQ.gt('id', lastSn),
+        ]);
+        if (cancelled) return;
+        // Эхний удаа зөвхөн суурь id-г тогтооно — хуучин мэдэгдлийг toast хийхгүй.
+        const firstAnn = lastAnn == null, firstSn = lastSn == null;
+        if (!ann.error) {
+          const rows = ann.data || [];
+          lastAnn = Math.max(lastAnn ?? 0, ...rows.map(r => Number(r.id)));
+          if (!firstAnn) for (const r of [...rows].reverse()) addToast({
+            id: `ann-${r.id}`, title: r.title, message: r.content?.slice(0, 80) || '',
+            icon: '📢', url: `/sokh/${sokhId}/announcements`,
           });
         }
-      )
-      .subscribe();
+        if (!sn.error) {
+          const rows = sn.data || [];
+          lastSn = Math.max(lastSn ?? 0, ...rows.map(r => Number(r.id)));
+          if (!firstSn) for (const r of [...rows].reverse()) addToast({
+            id: `sn-${r.id}`, title: r.title, message: r.message,
+            icon: ICONS[r.type] || '🔔', url: `/sokh/${sokhId}/notifications`,
+          });
+        }
+      } catch {
+        // сүлжээгүй — дараагийн удаа дахин оролдоно
+      } finally {
+        busy = false;
+      }
+    };
 
+    poll();
+    const timer = setInterval(poll, 60_000);
+    const onVisible = () => { if (document.visibilityState === 'visible') poll(); };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [params?.id, addToast]);
 

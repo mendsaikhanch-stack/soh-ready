@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { useVisiblePolling } from '@/app/lib/use-visible-polling';
 
 interface Alert {
   id: number;
@@ -39,22 +40,10 @@ export default function EmergencyPage() {
 
   useEffect(() => {
     fetchAlerts();
-
-    // Real-time for new alerts
-    const channel = supabase
-      .channel(`emergency-${params.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'emergency_alerts',
-        filter: `sokh_id=eq.${params.id}`,
-      }, () => {
-        fetchAlerts();
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, [params.id]);
+
+  // Realtime-ийн оронд: харагдаж байх үед 10с тутам (≤50 мөр, sokh_id индекстэй).
+  useVisiblePolling(() => fetchAlerts(), 10_000);
 
   const fetchAlerts = async () => {
     const { data } = await supabase

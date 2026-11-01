@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { safeLocal } from '@/app/lib/safe-storage';
+import { useVisiblePolling } from '@/app/lib/use-visible-polling';
 
 interface Poll {
   id: number;
@@ -42,30 +43,10 @@ export default function VotingPage() {
     // Миний саналууд localStorage-с
     const saved = safeLocal.getItem(`votes_${params.id}`);
     if (saved) setMyVotes(JSON.parse(saved));
-
-    // Real-time subscription
-    const channel = supabase
-      .channel(`polls_${params.id}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'polls',
-        filter: `sokh_id=eq.${params.id}`,
-      }, (payload) => {
-        setPolls(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } as Poll : p));
-      })
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'polls',
-        filter: `sokh_id=eq.${params.id}`,
-      }, (payload) => {
-        setPolls(prev => [payload.new as Poll, ...prev]);
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, [params.id]);
+
+  // Realtime-ийн оронд: харагдаж байх үед 15с тутам санал/шинэ асуулгыг шинэчилнэ.
+  useVisiblePolling(() => fetchPolls(), 15_000);
 
   const vote = async (pollId: number, choice: 'yes' | 'no') => {
     if (myVotes[pollId] || voting) return;
