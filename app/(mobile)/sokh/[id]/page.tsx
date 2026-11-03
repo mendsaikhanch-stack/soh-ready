@@ -133,6 +133,8 @@ export default function SokhDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('sokh');
+  // ТУЗ / Хяналтын зөвлөлийн гишүүнд л харагдах «🏛 Зөвлөл»
+  const [council, setCouncil] = useState<{ member: boolean; council?: string; badge: number }>({ member: false, badge: 0 });
   const [electricityBill, setElectricityBill] = useState<{ id: number; amount: number; month: number; year: number } | null>(null);
 
   // Pull-to-refresh
@@ -240,6 +242,29 @@ export default function SokhDashboard() {
       });
     }
   }, [params.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch(`/api/council?sokhId=${params.id}&view=summary`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const data = await res.json();
+        if (!cancelled && res.ok) {
+          setCouncil({
+            member: !!data.member,
+            council: data.council,
+            badge: (Number(data.unread_reports) || 0) + (Number(data.pending_votes) || 0),
+          });
+        }
+      } catch { /* гишүүн биш гэж үзнэ */ }
+    })();
+    return () => { cancelled = true; };
+  }, [user, params.id]);
 
   const theme = getTheme(sokh?.theme || 'classic');
 
@@ -628,6 +653,25 @@ export default function SokhDashboard() {
               </span>
             )}
             <span className="text-gray-300">›</span>
+          </button>
+        )}
+
+        {activeMainTab === 'sokh' && council.member && (
+          <button
+            onClick={() => router.push(`/sokh/${params.id}/council`)}
+            className="w-full flex items-center gap-3 p-4 rounded-xl border bg-slate-800 border-slate-800 text-white text-left active:scale-[0.98] transition"
+          >
+            <span className="text-2xl">🏛</span>
+            <div className="flex-1">
+              <p className="font-medium text-sm">Зөвлөл</p>
+              <p className="text-xs text-white/70">
+                {council.council === 'audit' ? 'Хяналтын зөвлөл' : 'ТУЗ'} · тайлан, санал, санхүү, чат
+              </p>
+            </div>
+            {council.badge > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{council.badge}</span>
+            )}
+            <span className="text-white/40">›</span>
           </button>
         )}
 

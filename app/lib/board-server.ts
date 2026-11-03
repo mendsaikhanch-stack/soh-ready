@@ -121,3 +121,67 @@ export async function finalizeIfNeeded(proposal: ProposalRow): Promise<string> {
 
   return newStatus;
 }
+
+export const VALID_VOTES = new Set(['approve', 'disapprove', 'abstain']);
+
+export type CastResult =
+  | { ok: true; status: string }
+  | { ok: false; error: string; httpStatus: number };
+
+/**
+ * Санал бүртгэх — линкээр (ticket) болон апп доторх зөвлөлийн гишүүнээс
+ * ижил дүрмээр. Санал асуулга идэвхтэй + утас урьсан гишүүдэд байх ёстой.
+ */
+export async function castVote(
+  proposalId: number,
+  phone: string,
+  voteValue: string,
+  comment: string | null,
+  opts?: { sokhId?: number },
+): Promise<CastResult> {
+  if (!VALID_VOTES.has(voteValue)) return { ok: false, error: 'Санал буруу байна', httpStatus: 400 };
+
+  const { data: p } = await supabaseAdmin
+    .from('proposals')
+    .select('id, status, expires_at, sokh_id, pass_threshold_percentage, auto_approve_on_timeout')
+    .eq('id', proposalId)
+    .single();
+  if (!p) return { ok: false, error: 'Санал асуулга олдсонгүй', httpStatus: 404 };
+  if (opts?.sokhId && Number(p.sokh_id) !== opts.sokhId) {
+    return { ok: false, error: 'Санал асуулга олдсонгүй', httpStatus: 404 };
+  }
+  if (p.status !== 'active' || new Date(p.expires_at).getTime() <= Date.now()) {
+    return { ok: false, error: 'Санал асуулга хаагдсан байна', httpStatus: 400 };
+  }
+
+  const { data: voter } = await supabaseAdmin
+    .from('proposal_voters')
+    .select('id')
+    .eq('proposal_id', proposalId)
+    .eq('phone_number', phone)
+    .maybeSingle();
+  if (!voter) return { ok: false, error: 'Энэ саналд таныг санал өгөгчөөр оруулаагүй байна', httpStatus: 403 };
+
+  const { error: insErr } = await supabaseAdmin.from('proposal_votes').insert({
+    proposal_id: proposalId,
+    sokh_id: p.sokh_id,
+    phone_number: phone,
+    vote_value: voteValue,
+    comment,
+  });
+  if (insErr) {
+    if (insErr.code === '23505') return { ok: false, error: 'Та аль хэдийн санал өгсөн байна', httpStatus: 409 };
+    console.error('[castVote] insert', insErr.message);
+    return { ok: false, error: 'Санал бүртгэхэд алдаа гарлаа', httpStatus: 500 };
+  }
+
+  const status = await finalizeIfNeeded({
+    id: p.id,
+    status: p.status,
+    expires_at: p.expires_at,
+    pass_threshold_percentage: p.pass_threshold_percentage,
+    auto_approve_on_timeout: p.auto_approve_on_timeout,
+    sokh_id: p.sokh_id,
+  });
+  return { ok: true, status };
+}

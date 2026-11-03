@@ -39,7 +39,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { data: voters } = await supabaseAdmin
     .from('proposal_voters')
-    .select('phone_number, full_name')
+    .select('*') // council багана миграцаас хамаарч байж/байхгүй байж болно
     .eq('proposal_id', proposalId)
     .order('full_name');
 
@@ -55,6 +55,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const v = voteMap.get(voter.phone_number);
     return {
       full_name: voter.full_name,
+      council: (voter.council as string | null) || null,
       phone: maskPhone(voter.phone_number),
       voted: !!v,
       vote_value: v?.vote_value || null,

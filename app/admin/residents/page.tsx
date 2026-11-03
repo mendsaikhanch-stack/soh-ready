@@ -154,6 +154,38 @@ export default function AdminResidents() {
     });
   }, []);
 
+  // ТУЗ / Хяналтын зөвлөлийн тэмдэглэгээ: resident_id → { council, phone }
+  const [councilById, setCouncilById] = useState<Record<number, { council: 'board' | 'audit'; phone: string }>>({});
+  const [councilBusy, setCouncilBusy] = useState<number | null>(null);
+
+  const fetchCouncil = async () => {
+    const { data, error } = await adminFrom('board_members').select('resident_id, council, phone_number');
+    if (error) return; // миграц хийгдээгүй
+    const map: Record<number, { council: 'board' | 'audit'; phone: string }> = {};
+    for (const m of (data as { resident_id: number | null; council: 'board' | 'audit'; phone_number: string }[]) || []) {
+      if (m.resident_id) map[m.resident_id] = { council: m.council, phone: m.phone_number };
+    }
+    setCouncilById(map);
+  };
+
+  const setCouncil = async (r: Resident, council: string) => {
+    setCouncilBusy(r.id);
+    try {
+      const res = await fetch('/api/admin/council', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'set', resident_id: r.id, council: council || null }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) alert(data.error || 'Хадгалж чадсангүй');
+      await fetchCouncil();
+    } finally {
+      setCouncilBusy(null);
+    }
+  };
+
+  useEffect(() => { fetchCouncil(); }, []);
+
   const fetchResidents = async () => {
     const sokhId = await getAdminSokhId();
     // adminFrom proxy (service_role + tenant-scope) ашиглана — admin нь Supabase auth биш тул
@@ -608,6 +640,7 @@ export default function AdminResidents() {
                   <th className="px-3 py-3">Эзэмшлийн төрөл</th>
                   <th className="px-3 py-3">Утас</th>
                   <th className="px-3 py-3">Апп</th>
+                  <th className="px-3 py-3" title="ТУЗ / Хяналтын зөвлөлийн гишүүнд апп дээр «🏛 Зөвлөл» хэсэг нээгдэнэ">Зөвлөл</th>
                   <th className="px-3 py-3">Машины бүртгэл</th>
                   <th className="px-3 py-3 text-right">Өмнөх үлдэгдэл</th>
                   <th className="px-3 py-3 text-right">Сарын төлбөр</th>
@@ -662,6 +695,30 @@ export default function AdminResidents() {
                                 : 'Утасны дугаар бүртгэгдээгүй тул нэвтэрч чадахгүй'}>
                           {(r.phone || '').trim() ? '⬜ Ороогүй' : '⚠️ Утасгүй'}
                         </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      <select
+                        value={councilById[r.id]?.council || ''}
+                        disabled={councilBusy === r.id}
+                        onChange={e => setCouncil(r, e.target.value)}
+                        className={`text-[11px] border rounded px-1 py-0.5 ${
+                          councilById[r.id]?.council === 'board' ? 'bg-blue-50 border-blue-200 text-blue-700'
+                          : councilById[r.id]?.council === 'audit' ? 'bg-purple-50 border-purple-200 text-purple-700'
+                          : 'border-gray-200 text-gray-400'}`}
+                      >
+                        <option value="">—</option>
+                        <option value="board">ТУЗ</option>
+                        <option value="audit">Хяналт</option>
+                      </select>
+                      {councilById[r.id] && (r.phone || '').trim() !== councilById[r.id].phone && (
+                        <button
+                          onClick={() => setCouncil(r, councilById[r.id].council)}
+                          className="block text-[10px] text-red-500 hover:underline"
+                          title={`Тэмдэглэх үеийн утас: ${councilById[r.id].phone}. Энэ хүн мөн бол дарж шинэ утсыг баталгаажуулна уу — тэр болтол «Зөвлөл» хэсэг хаалттай.`}
+                        >
+                          ⚠️ утас зөрсөн · батлах
+                        </button>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-gray-500">

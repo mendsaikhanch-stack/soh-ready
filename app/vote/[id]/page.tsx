@@ -46,6 +46,7 @@ export default function VotePage() {
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [voterName, setVoterName] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -64,9 +65,27 @@ export default function VotePage() {
   }, [proposalId]);
 
   useEffect(() => {
-    const run = async () => { await load(); };
+    const run = async () => {
+      await load();
+      // Хувийн урилгын линк (?t=<invite_token>) — OTP-гүйгээр шууд санал өгөх
+      const token = new URLSearchParams(window.location.search).get('t');
+      if (!token) return;
+      try {
+        const res = await fetch('/api/vote/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ proposalId, token }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error || 'Линк хүчингүй'); return; }
+        setVoterName(data.name || data.phone || '');
+        setStep(data.already_voted ? 'done' : 'vote');
+      } catch {
+        setError('Сервертэй холбогдож чадсангүй');
+      }
+    };
     run();
-  }, [load]);
+  }, [load, proposalId]);
 
   const closed = proposal ? proposal.status !== 'active' : false;
 
@@ -200,7 +219,7 @@ export default function VotePage() {
               >
                 {busy ? 'Илгээж байна...' : 'Баталгаажуулах код авах'}
               </button>
-              <p className="text-xs text-gray-400 text-center">Зөвхөн урьсан ТУЗ-ийн гишүүд санал өгөх боломжтой.</p>
+              <p className="text-xs text-gray-400 text-center">Зөвхөн урьсан ТУЗ / Хяналтын зөвлөлийн гишүүд санал өгөх боломжтой. Даргаас ирсэн хувийн линкээр орвол код шаардахгүй.</p>
             </div>
           ) : step === 'otp' ? (
             <div className="space-y-3">
@@ -225,6 +244,7 @@ export default function VotePage() {
             </div>
           ) : step === 'vote' ? (
             <div className="space-y-3">
+              {voterName && <p className="text-xs text-gray-400">Гишүүн: <b className="text-gray-600">{voterName}</b></p>}
               <p className="text-sm font-medium text-gray-700">Таны шийдвэр</p>
               <div className="grid grid-cols-1 gap-2">
                 <ChoiceBtn active={choice === 'approve'} color="green" onClick={() => setChoice('approve')} label="✅ Зөвшөөрөх" />

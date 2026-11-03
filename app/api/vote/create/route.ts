@@ -9,6 +9,7 @@ import { normalizePhone } from '@/app/lib/vote-ticket';
 interface VoterInput {
   phone?: string;
   name?: string;
+  council?: 'board' | 'audit';
 }
 
 const MAX_VOTERS = 50;
@@ -62,13 +63,14 @@ export async function POST(req: NextRequest) {
 
     // Гишүүдийг цэвэрлэж давхардлыг арилгах
     const seen = new Set<string>();
-    const cleanVoters: { phone_number: string; full_name: string | null }[] = [];
+    const cleanVoters: { phone_number: string; full_name: string | null; council: 'board' | 'audit' | null }[] = [];
     for (const v of voters) {
       const phone = normalizePhone(v.phone || '');
       if (phone.length !== 8) continue;
       if (seen.has(phone)) continue;
       seen.add(phone);
-      cleanVoters.push({ phone_number: phone, full_name: v.name?.trim() || null });
+      const council = v.council === 'audit' || v.council === 'board' ? v.council : null;
+      cleanVoters.push({ phone_number: phone, full_name: v.name?.trim() || null, council });
     }
     if (cleanVoters.length === 0) {
       return NextResponse.json({ error: 'Зөв утасны дугаар (8 орон) оруулна уу' }, { status: 400 });
@@ -138,10 +140,23 @@ export async function POST(req: NextRequest) {
       sokh_id: sokhId,
       phone_number: v.phone_number,
       full_name: v.full_name,
+      council: v.council,
       invite_token: randomUUID(),
     }));
 
-    const { error: vErr } = await supabaseAdmin.from('proposal_voters').insert(voterRows);
+    let { error: vErr } = await supabaseAdmin.from('proposal_voters').insert(voterRows);
+    // council багана миграц хийгдээгүй бол (42703) түүнгүйгээр дахин оролдоно
+    if (vErr && (vErr.code === '42703' || vErr.code === 'PGRST204')) {
+      ({ error: vErr } = await supabaseAdmin
+        .from('proposal_voters')
+        .insert(voterRows.map((r) => ({
+          proposal_id: r.proposal_id,
+          sokh_id: r.sokh_id,
+          phone_number: r.phone_number,
+          full_name: r.full_name,
+          invite_token: r.invite_token,
+        }))));
+    }
     if (vErr) {
       console.error('[vote/create] voters', vErr.message);
       // proposal-ыг цэвэрлэх (best-effort)

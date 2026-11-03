@@ -27,6 +27,7 @@ interface Tally {
 }
 interface Row {
   full_name: string | null;
+  council?: string | null;
   phone: string;
   voted: boolean;
   vote_value: string | null;
@@ -147,7 +148,7 @@ export default function ResultPage() {
             .map(
               (r, i) => `<tr>
             <td>${i + 1}</td>
-            <td>${escapeHtml(r.full_name || '-')}</td>
+            <td>${escapeHtml(r.full_name || '-')}${r.council === 'audit' ? ' <small>(Хяналтын зөвлөл)</small>' : ''}</td>
             <td>${r.phone}</td>
             <td>${r.voted ? (VOTE_LABEL[r.vote_value || ''] || r.vote_value) + (r.is_auto ? ' (авто)' : '') : '— (өгөөгүй)'}</td>
             <td>${escapeHtml(r.comment || '')}</td>
@@ -251,7 +252,10 @@ export default function ResultPage() {
                 {rows.map((r, i) => (
                   <tr key={i} className="border-b border-gray-50">
                     <td className="py-2 pr-2">
-                      <div className="text-gray-800">{r.full_name || '-'}</div>
+                      <div className="text-gray-800">
+                        {r.full_name || '-'}
+                        {r.council === 'audit' && <span className="ml-1.5 text-[10px] font-medium text-purple-600">Хяналтын зөвлөл</span>}
+                      </div>
                       <div className="text-xs text-gray-400">{r.phone}</div>
                     </td>
                     <td className="py-2 pr-2">

@@ -23,7 +23,7 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'platform_plans', 'sokh_subscriptions', 'platform_invoices',
     'platform_bank_accounts', 'platform_transactions', 'sokh_tiers',
     'ebarimt_configs', 'sokh_bank_accounts', 'payment_notices',
-    'proposals', 'proposal_voters', 'proposal_votes',
+    'proposals', 'proposal_voters', 'proposal_votes', 'board_members',
     'debt_agreements', 'maintenance_works', 'payables', 'payroll_entries',
     'staff_salaries',
     // mng-ctrl/*-revenue — ОСНАА, цахилгааны нэхэмжлэх
@@ -42,7 +42,7 @@ const ROLE_TABLES: Record<Role, Set<string>> = {
     'resident_points', 'finance_entries', 'budget_categories',
     // Санхүү — бүгд sokh_id-тэй тул enforceTenantScope-ийн ерөнхий зам хамгаална
     'invoices', 'budget_items', 'budget_plans', 'reserve_fund',
-    'proposals', 'proposal_voters', 'proposal_votes',
+    'proposals', 'proposal_voters', 'proposal_votes', 'board_members',
     // Хураамж хүлээн авах данс + "Би шилжүүлсэн" мэдэгдэл (tenant scope)
     'sokh_bank_accounts', 'payment_notices',
     // Өр барагдуулах гэрээ — sokh_id-тэй тул ерөнхий tenant scope хамгаална
