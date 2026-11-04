@@ -331,3 +331,11 @@ SMS аппыг (Play Protect хаалт) орлож ХасБанкны **имэ�
   оруулж болдог болсон.
 - Имэйлд цаг байхгүй (зөвхөн огноо) — `receivedAt` нь Gmail-ийн хүлээн авсан цаг.
 - Gmail дээр бодитоор хараахан туршаагүй.
+
+### 2026-11-04: Gmail relay суулгав
+
+khotolapp дээрх Apps Script бүрэн суулгагдсан: Script Property-д токен оруулж, OAuth зөвшөөрөл өгч, 5 минут тутмын `relayBankEmails` trigger үүсгэсэн. Имэйлгүй үед heartbeat илгээнэ. Device#2 сервертэй холбогдож байгааг (`last_seen_at`) шалгасан.
+
+Эхний OAuth зөвшөөрөлд «Connect to an external service» чеклэгдээгүй тул `UrlFetchApp` эрхгүй алдаа гарсан. myaccount ▸ Linked apps дотор энэ скрипт «Untitled project» нэрээр харагддаг. Тэр холболтыг устгаад дахин «Select all»-оор зөвшөөрснөөр зассан.
+
+Хүлээгдэж буй: даргын Gmail-ээс khotolapp руу дамжуулах тохиргоо, шүүлтүүр, бодит туршилтын гүйлгээ.
