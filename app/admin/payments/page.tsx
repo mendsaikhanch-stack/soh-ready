@@ -62,6 +62,10 @@ interface BankRow {
 export default function AdminPayments() {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  // Айл бүрийн нээлттэй нэхэмжлэхийн үлдэгдэл. residents.debt талбар нь нэхэмжлэх
+  // үүсгэхэд нэмэгддэггүй тул (ICTown-д 432 нээлттэй нэхэмжлэхтэй атлаа бүгд 0) өрийг
+  // нэхэмжлэхээс тооцно.
+  const [openDue, setOpenDue] = useState<Record<number, number>>({});
   const [notices, setNotices] = useState<PaymentNotice[]>([]);
   const [resolving, setResolving] = useState<number | null>(null);
   const [bankRow, setBankRow] = useState<BankRow | null>(null);
@@ -87,9 +91,20 @@ export default function AdminPayments() {
     // payments нь sokh_id шууд байхгүй — proxy resident_id-ээр scope хийдэг тул айлуудын id-аар уншина.
     const residentIds = residentList.map(r => r.id);
     const { data: pay } = residentIds.length
-      ? await adminFrom('payments').select('*').in('resident_id', residentIds).order('paid_at', { ascending: false }).limit(50)
+      ? await adminFrom('payments').select('*').in('resident_id', residentIds).order('paid_at', { ascending: false })
       : { data: [] };
+    // Өмнө нь .limit(50) байсан тул «Нийт цуглуулсан», «Энэ сарын орлого», Excel татах нь
+    // зөвхөн сүүлийн 50 төлбөрийг (ихэвчлэн өнөөдрийнхийг) тоолж, хянах самбартай зөрдөг байв.
     setPayments((pay as unknown as Payment[]) || []);
+
+    const { data: openInv } = await adminFrom('invoices')
+      .select('resident_id,amount,paid_amount').eq('sokh_id', sokhId).in('status', ['pending', 'overdue', 'partial']);
+    const due: Record<number, number> = {};
+    for (const i of (openInv as unknown as { resident_id: number; amount: number; paid_amount: number | null }[]) || []) {
+      const left = Number(i.amount) - Number(i.paid_amount || 0);
+      if (left > 0) due[i.resident_id] = (due[i.resident_id] || 0) + left;
+    }
+    setOpenDue(due);
 
     // Баталгаажуулахыг хүлээж буй "Би шилжүүлсэн" мэдэгдлүүд
     // Сервер айлын нэхэмжлэхийн төлөв, давхар мэдэгдлийн тоог хамт буцаана
@@ -203,10 +218,10 @@ export default function AdminPayments() {
     XLSX.utils.book_append_sheet(wb, paySheet, 'Төлбөрийн түүх');
 
     // Өртэй айлууд sheet
-    const debtData = residents.filter(r => r.debt > 0).sort((a, b) => b.debt - a.debt).map(r => ({
+    const debtData = residents.filter(r => debtOf(r) > 0).sort((a, b) => debtOf(b) - debtOf(a)).map(r => ({
       'Нэр': r.name,
       'Тоот': r.apartment,
-      'Өр (₮)': r.debt,
+      'Өр (₮)': debtOf(r),
     }));
     const debtSheet = XLSX.utils.json_to_sheet(debtData);
     XLSX.utils.book_append_sheet(wb, debtSheet, 'Өртэй айлууд');
@@ -220,9 +235,11 @@ export default function AdminPayments() {
   const awaitingAgreements = agreements.filter(a => a.status === 'pending');
   const agreementTotal = openAgreements.reduce((s, a) => s + Number(a.total_debt), 0);
 
-  const totalDebt = residents.reduce((s, r) => s + r.debt, 0);
+  // Өр = max(residents.debt, нээлттэй нэхэмжлэхийн үлдэгдэл)
+  const debtOf = (r: Resident) => Math.max(Number(r.debt || 0), openDue[r.id] || 0);
+  const totalDebt = residents.reduce((s, r) => s + debtOf(r), 0);
   const totalCollected = payments.reduce((s, p) => s + Number(p.amount), 0);
-  const debtors = residents.filter(r => r.debt > 0).length;
+  const debtors = residents.filter(r => debtOf(r) > 0).length;
 
   // Сарын орлого тооцоо
   const now = new Date();
@@ -448,7 +465,7 @@ export default function AdminPayments() {
                 <select value={selectedResident} onChange={e => setSelectedResident(e.target.value)} className="border rounded-lg px-3 py-2 text-sm">
                   <option value="">Оршин суугч сонгох...</option>
                   {residents.map(r => (
-                    <option key={r.id} value={r.id}>{r.name} ({r.apartment}) {r.debt > 0 ? `- Өр: ${r.debt.toLocaleString()}₮` : ''}</option>
+                    <option key={r.id} value={r.id}>{r.name} ({r.apartment}) {debtOf(r) > 0 ? `- Өр: ${debtOf(r).toLocaleString()}₮` : ''}</option>
                   ))}
                 </select>
                 <input placeholder="Дүн (₮)" type="number" value={amount} onChange={e => setAmount(e.target.value)} className="border rounded-lg px-3 py-2 text-sm" />
@@ -475,11 +492,11 @@ export default function AdminPayments() {
                 </tr>
               </thead>
               <tbody>
-                {residents.filter(r => r.debt > 0).sort((a, b) => b.debt - a.debt).map(r => (
+                {residents.filter(r => debtOf(r) > 0).sort((a, b) => debtOf(b) - debtOf(a)).map(r => (
                   <tr key={r.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{r.name}</td>
                     <td className="px-4 py-3 text-sm text-gray-500">{r.apartment}</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-red-500">{r.debt.toLocaleString()}₮</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold text-red-500">{debtOf(r).toLocaleString()}₮</td>
                   </tr>
                 ))}
                 {debtors === 0 && (
