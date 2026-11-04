@@ -5,6 +5,7 @@ import { linkManualSignupToUser, type LinkReport } from '@/app/lib/directory/lin
 import { enqueueRepair } from '@/app/lib/jobs/dispatch';
 import { normalizeSohName } from '@/app/lib/directory/normalize';
 import { loadSokhBuildings } from '@/app/lib/sokh-buildings';
+import { findAuthUserIdByEmail } from '@/app/lib/auth-signins';
 
 const CLAIM_COOKIE = 'manual-hoa-claim';
 
@@ -158,12 +159,40 @@ export async function POST(req: NextRequest) {
       user_metadata: { name: name.trim(), phone: cleanPhone },
     });
 
+    let authUserId: string | null = authData?.user?.id ?? null;
+
     if (authError) {
-      if (authError.message.includes('already been registered')) {
+      if (!authError.message.includes('already been registered')) {
+        console.error('[register]', authError.message);
+        return NextResponse.json({ error: 'Бүртгэл амжилтгүй' }, { status: 400 });
+      }
+      // Дарга айлын мөрийг устгахад нэвтрэх бүртгэл (auth user) нь үлддэг тул
+      // тэр айл дахин бүртгүүлэх гэхээр «утас бүртгэлтэй» гэж гацдаг байв
+      // (ICTown 2-2-807, 2026-11-04). Аль ч residents мөрөнд холбогдоогүй
+      // «өнчин» бүртгэл бол шинэ бүртгүүлэгчид шилжүүлж, нууц үгийг нь солино.
+      const existingId = await findAuthUserIdByEmail(email);
+      if (existingId) {
+        const { data: owner } = await supabaseAdmin
+          .from('residents')
+          .select('id')
+          .eq('auth_user_id', existingId)
+          .limit(1);
+        if (!owner || owner.length === 0) {
+          const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(existingId, {
+            password,
+            user_metadata: { name: name.trim(), phone: cleanPhone },
+          });
+          if (!updErr) {
+            authUserId = existingId;
+            console.log(`[register] reclaimed orphan auth user for ${cleanPhone}`);
+          } else {
+            console.error('[register] reclaim', updErr.message);
+          }
+        }
+      }
+      if (!authUserId) {
         return NextResponse.json({ error: 'Энэ утасны дугаар бүртгэлтэй байна' }, { status: 400 });
       }
-      console.error('[register]', authError.message);
-      return NextResponse.json({ error: 'Бүртгэл амжилтгүй' }, { status: 400 });
     }
 
     // ── Даргын бүртгэлтэй тулгах ──
@@ -200,7 +229,7 @@ export async function POST(req: NextRequest) {
             name: name.trim(),
             // auth-context нь профайлыг УТСААР хайдаг тул заавал шинэчилнэ
             phone: cleanPhone,
-            auth_user_id: authData.user?.id ?? null,
+            auth_user_id: authUserId,
           })
           .eq('id', free[0].id)
           .is('auth_user_id', null)   // зэрэг хоёр хүн бүртгүүлэхээс хамгаална
@@ -237,7 +266,7 @@ export async function POST(req: NextRequest) {
           building: cleanBuilding || null,
           debt: 0,
           sokh_id,
-          auth_user_id: authData.user?.id ?? null,
+          auth_user_id: authUserId,
           pending_claim: pending,
         }])
         .select('id')

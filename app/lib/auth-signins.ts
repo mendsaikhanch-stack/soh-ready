@@ -16,6 +16,19 @@ import { supabaseAdmin } from '@/app/lib/supabase-admin';
 const SIGNINS_TTL_MS = 5 * 60 * 1000;
 let signInsCache: { at: number; map: ReadonlyMap<string, string> } | null = null;
 
+/** `<утас>@toot.app` хаягтай auth хэрэглэгчийн id-г хайна (кэшгүй). */
+export async function findAuthUserIdByEmail(email: string): Promise<string | null> {
+  const want = email.toLowerCase();
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error || !data) return null;
+    const hit = data.users.find((u) => (u.email || '').toLowerCase() === want);
+    if (hit) return hit.id;
+    if (data.users.length < 1000) return null;
+  }
+  return null;
+}
+
 export async function loadSignIns(tag = 'auth-signins'): Promise<ReadonlyMap<string, string>> {
   if (signInsCache && Date.now() - signInsCache.at < SIGNINS_TTL_MS) return signInsCache.map;
 
