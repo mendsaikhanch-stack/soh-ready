@@ -14,7 +14,7 @@ interface BudgetItem { id: number; category: string; amount: number; month: numb
 interface BudgetPlan { id: number; category: string; planned_amount: number; month: number; year: number; notes: string; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
 interface Invoice { id: number; resident_id: number; year: number; month: number; amount: number; status: string; paid_amount: number; due_date: string; paid_at: string | null; description: string; }
-interface Resident { id: number; name: string; apartment: string; debt: number; entrance: number | null; monthly_fee: number | null; pending_claim: boolean; }
+interface Resident { id: number; name: string; apartment: string; building?: string | null; debt: number; entrance: number | null; monthly_fee: number | null; pending_claim: boolean; }
 interface ReserveEntry { id: number; type: string; amount: number; description: string; occurred_at: string; }
 // Өглөг — СӨХ ХЭНД өртэй (авлагын эсрэг тал). supabase-payables-migration.sql
 interface Payable { id: number; vendor: string; category: string; amount: number; paid_amount: number; due_date: string | null; status: string; paid_at: string | null; description: string; }
@@ -58,6 +58,7 @@ export default function AdminFinanceHub() {
   const [yearBudgetItems, setYearBudgetItems] = useState<BudgetItem[]>([]);
   const [budgetPlans, setBudgetPlans] = useState<BudgetPlan[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invFilter, setInvFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [reserveEntries, setReserveEntries] = useState<ReserveEntry[]>([]);
   const [payables, setPayables] = useState<Payable[]>([]);
   // Миграц гараар ажиллуулдаг тул хүснэгт үүсээгүй байж болно — чимээгүй
@@ -114,7 +115,7 @@ export default function AdminFinanceHub() {
     // Бүх уншилт adminFrom proxy-гоор (service_role + tenant scope) явна.
     const [{ data: org }, { data: res }] = await Promise.all([
       adminFrom('sokh_organizations').select('monthly_fee, name, address, phone').eq('id', sokhId).single(),
-      adminFrom('residents').select('id,name,apartment,debt,entrance,monthly_fee,pending_claim').eq('sokh_id', sokhId).order('apartment', { ascending: true }),
+      adminFrom('residents').select('id,name,apartment,building,debt,entrance,monthly_fee,pending_claim').eq('sokh_id', sokhId).order('apartment', { ascending: true }),
     ]);
 
     // Дарга баталгаажуулаагүй (өөрөө бүртгүүлсэн) хүнд нэхэмжлэх үүсгэхгүй,
@@ -357,6 +358,40 @@ export default function AdminFinanceHub() {
   const collectionRate = expectedMonthly > 0 ? (monthIncome / expectedMonthly * 100) : 0;
   const reserveBalance = reserveEntries.reduce((s, e) => s + (e.type === 'deposit' ? e.amount : -e.amount), 0);
   const yearFeeIncome = allPayments.filter(p => new Date(p.paid_at).getFullYear() === year).reduce((s, p) => s + Number(p.amount), 0);
+  // Нэхэмжлэхийн тулгалт: төлсөн / төлөөгүй (хэсэгчлэн төлсөн нь төлөөгүйд)
+  const invPaid = (i: Invoice) => i.status === 'paid';
+  const invLeft = (i: Invoice) => Math.max(0, Number(i.amount) - Number(i.paid_amount || 0));
+  const unitOf = (r?: Resident) => (r ? [r.building, r.apartment].filter(Boolean).join('-') : '—');
+  const unitSort = (a: Invoice, b: Invoice) => {
+    const ra = residents.find(x => x.id === a.resident_id), rb = residents.find(x => x.id === b.resident_id);
+    return (ra?.building || '').localeCompare(rb?.building || '') || (Number(ra?.apartment) || 0) - (Number(rb?.apartment) || 0);
+  };
+  const shownInvoices = invoices
+    .filter(i => invFilter === 'all' || (invFilter === 'paid' ? invPaid(i) : !invPaid(i)))
+    .slice().sort(unitSort);
+
+  // Дарга банкны хуулгатай гараар тулгахад зориулсан файл: «Төлсөн», «Төлөөгүй» тусдаа хуудас
+  const exportInvoiceStatus = () => {
+    const row = (i: Invoice) => {
+      const r = residents.find(x => x.id === i.resident_id);
+      return {
+        'Байр': r?.building || '',
+        'Тоот': r?.apartment || '',
+        'Нэр': r?.name || 'Тодорхойгүй',
+        'Нэхэмжилсэн (₮)': Number(i.amount),
+        'Төлсөн (₮)': Number(i.paid_amount || 0),
+        'Үлдэгдэл (₮)': invLeft(i),
+        'Төлсөн огноо': i.paid_at ? new Date(i.paid_at).toLocaleDateString('mn-MN') : '',
+      };
+    };
+    const sorted = invoices.slice().sort(unitSort);
+    const paid = sorted.filter(invPaid), unpaid = sorted.filter(i => !invPaid(i));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paid.map(row)), `Төлсөн (${paid.length})`);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(unpaid.map(row)), `Төлөөгүй (${unpaid.length})`);
+    XLSX.writeFile(wb, `төлөлт-${year}-${String(month).padStart(2, '0')}.xlsx`);
+  };
+
   const pendingInvoices = invoices.filter(i => i.status === 'pending' || i.status === 'overdue').length;
 
   // Жилийн нийт орлого = гишүүдийн хураамж + бусад орлого
@@ -805,6 +840,21 @@ export default function AdminFinanceHub() {
                 <KpiCard label="Хугацаа хэтэрсэн" value={String(invoices.filter(i => i.status === 'overdue').length)} sub="" color="red" />
               </div>
 
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <div className="flex gap-1">
+                  {([['all', `Бүгд (${invoices.length})`], ['paid', `Төлсөн (${invoices.filter(invPaid).length})`], ['unpaid', `Төлөөгүй (${invoices.filter(i => !invPaid(i)).length})`]] as const).map(([k, label]) => (
+                    <button key={k} onClick={() => setInvFilter(k)}
+                      className={`text-xs px-3 py-1.5 rounded-lg border ${invFilter === k ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={exportInvoiceStatus} disabled={invoices.length === 0}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white disabled:opacity-50">
+                  📥 Төлсөн / төлөөгүй Excel
+                </button>
+              </div>
+
               <div className="bg-white border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b">
@@ -818,13 +868,13 @@ export default function AdminFinanceHub() {
                     </tr>
                   </thead>
                   <tbody>
-                    {invoices.map(inv => {
+                    {shownInvoices.map(inv => {
                       const r = residents.find(x => x.id === inv.resident_id);
                       const st = STATUS_LABEL[inv.status] || STATUS_LABEL.pending;
                       const overdue = inv.status === 'pending' && inv.due_date && new Date(inv.due_date) < new Date();
                       return (
                         <tr key={inv.id} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-3 font-mono text-xs">{r?.apartment || '—'}</td>
+                          <td className="px-4 py-3 font-mono text-xs">{unitOf(r)}</td>
                           <td className="px-4 py-3">{r?.name || 'Тодорхойгүй'}</td>
                           <td className="px-4 py-3 text-right font-medium">{inv.amount.toLocaleString()}₮</td>
                           <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${overdue ? STATUS_LABEL.overdue.color : st.color}`}>{overdue ? 'Хугацаа хэтэрсэн' : st.label}</span></td>
