@@ -39,13 +39,22 @@ function relayBankEmails() {
     });
     messages.sort(function (a, b) { return a.ts - b.ts; });
 
+    var sent = 0;
     for (var i = 0; i < messages.length; i++) {
       // Зөвхөн орлого — зарлагын (карт, POS) мэдээлэл Хотол руу дамжихгүй
       var r = /орлогын\s+гүйлгээ/i.test(messages[i].m.getPlainBody()) ? send(token, from, messages[i].m) : 'skip';
+      if (r === 'ok') sent++;
       if (r === 'retry' || r === 'stop') break; // дараагийн удаа энэ имэйлээс үргэлжилнэ
       cursor = Math.max(cursor, messages[i].ts);
     }
     props.setProperty('CURSOR', String(cursor));
+    // Амьд байгааг илтгэх дохио: имэйл ирээгүй үед ч админ дээрх «Сүүлд холбогдсон»
+    // шинэчлэгдэнэ. Удаан шинэчлэгдэхгүй бол скрипт зогссон гэсэн үг.
+    if (sent === 0) {
+      UrlFetchApp.fetch(SERVER + '/api/bank-sms', {
+        headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true, followRedirects: false,
+      });
+    }
   } finally {
     lock.releaseLock();
   }
