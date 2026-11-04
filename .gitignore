@@ -57,6 +57,7 @@ sokh-import-skipped.csv
 bzd-target-50.csv
 # Локал ажлын бүртгэл (тестерийн имэйл, гадаад системийн төлөв) — репо public!
 *.local.md
+*.local.json
 # PII (утас, нэр) агуулсан нэг удаагийн скрипт — репо public
 scripts/*.local.js
 
