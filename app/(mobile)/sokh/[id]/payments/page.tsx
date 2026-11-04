@@ -454,6 +454,19 @@ export default function PaymentsPage() {
     if (!payingBill || !profile) return;
     setNoticeError('');
     setNoticeSending(true);
+    // Нэг төлбөрт нэг л мэдэгдэл. Өмнө нь товчийг дахин дарахад даргын самбарт
+    // нэг айлын 5–6 мэдэгдэл давхардаж байсан (2026-11-04, ICTown).
+    const { data: existing } = await supabase
+      .from('payment_notices')
+      .select('id')
+      .eq('resident_id', profile.id)
+      .eq('status', 'pending')
+      .limit(1);
+    if (existing && existing.length > 0) {
+      setNoticeSending(false);
+      setNoticeSent(true);
+      return;
+    }
     const { error } = await supabase.from('payment_notices').insert([{
       sokh_id: Number(params.id),
       resident_id: profile.id,
@@ -831,6 +844,7 @@ export default function PaymentsPage() {
                         <p className="text-sm text-green-800 font-medium">✓ СӨХ-д мэдэгдлээ</p>
                         <p className="text-[11px] text-green-700 mt-0.5">
                           Дарга банкны хуулгатай тулгаж баталгаажуулмагц төлбөрийн түүхэнд орно.
+                          Дахин мэдэгдэх шаардлагагүй.
                         </p>
                       </div>
                     ) : (

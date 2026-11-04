@@ -16,6 +16,11 @@ interface PaymentNotice {
   description: string | null;
   status: string;
   created_at: string;
+  resident_name?: string | null;
+  unit?: string | null;
+  has_invoices?: boolean;
+  open_due?: number;
+  same_resident_pending?: number;
 }
 
 /** Өр барагдуулах гэрээ. agreed_payment_plan-ыг CreateDebtAgreementModal бичдэг. */
@@ -87,9 +92,11 @@ export default function AdminPayments() {
     setPayments((pay as unknown as Payment[]) || []);
 
     // Баталгаажуулахыг хүлээж буй "Би шилжүүлсэн" мэдэгдлүүд
-    const { data: nt } = await adminFrom('payment_notices')
-      .select('*').eq('sokh_id', sokhId).eq('status', 'pending').order('created_at', { ascending: true });
-    setNotices((nt as unknown as PaymentNotice[]) || []);
+    // Сервер айлын нэхэмжлэхийн төлөв, давхар мэдэгдлийн тоог хамт буцаана
+    const nt = await fetch('/api/admin/payment-notices')
+      .then(r => (r.ok ? r.json() : { notices: [] }))
+      .catch(() => ({ notices: [] }));
+    setNotices((nt.notices as PaymentNotice[]) || []);
 
     // Хураамж хүлээн авах данс (/admin/bank-account дээр тохируулдаг)
     // СӨХ олон данстай байж болно — энд үндсэн (эхний) дансыг харуулна
@@ -107,50 +114,30 @@ export default function AdminPayments() {
     setLoading(false);
   };
 
-  // Баталгаажуулах: төлбөрийг бүртгээд өрөөс хасна.
-  // Дараалал чухал — эхлээд мэдэгдлийг хааж давхар боловсруулахаас сэргийлнэ.
-  const confirmNotice = async (n: PaymentNotice) => {
-    const resident = residents.find(r => r.id === n.resident_id);
-    if (!confirm(
-      `${resident ? `${resident.name} (${resident.apartment})` : 'Оршин суугч'} — ${Number(n.amount).toLocaleString()}₮\n\n` +
-      `Банкны хуулгаас энэ гүйлгээг ОЛСОН эсэхээ шалгасан уу?\n` +
-      `Баталгаажуулбал төлбөр бүртгэгдэж, тэр дүнгээр өр нь хасагдана.`
-    )) return;
-
+  // Баталгаажуулах/татгалзах — /api/admin/payment-notices нэхэмжлэхтэй холбож НЭГ удаа бүртгэнэ.
+  // Нэхэмжлэх нь аль хэдийн (банкны хуулгаар) төлөгдсөн бол төлбөр бичихгүй, мэдэгдлийг давхар гэж хаана.
+  // Өмнө нь энд клиентээс payments-д шууд мөр нэмдэг байсан нь давхар төлбөр үүсгэж байсан (2026-11-04).
+  const resolveNotice = async (n: PaymentNotice, action: 'confirm' | 'reject') => {
+    const who = n.resident_name ? `${n.resident_name} (${n.unit || ''})` : getResidentName(n.resident_id);
+    const msg = action === 'confirm'
+      ? `${who} — ${Number(n.amount).toLocaleString()}₮\n\nБанкны хуулгаас энэ гүйлгээг ОЛСОН эсэхээ шалгасан уу?\nБаталгаажуулбал айлын нэхэмжлэх хаагдана.`
+      : 'Банкны хуулгад энэ гүйлгээ ОЛДООГҮЙ бол татгалзана. Үргэлжлүүлэх үү?';
+    if (!confirm(msg)) return;
     setResolving(n.id);
-    const { error: closeErr } = await adminFrom('payment_notices')
-      .update({ status: 'confirmed', resolved_at: new Date().toISOString() }).eq('id', n.id);
-    if (closeErr) {
+    try {
+      const r = await fetch('/api/admin/payment-notices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: n.id, action }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) alert(d.error || 'Алдаа гарлаа');
+      else if (d.status === 'duplicate') alert(d.message);
+      else if (d.closed_others > 0) alert(`Бүртгэлээ. Мөн энэ айлын давхар ${d.closed_others} мэдэгдлийг хаалаа.`);
+    } finally {
       setResolving(null);
-      alert(`Баталгаажуулж чадсангүй: ${closeErr}`);
-      return;
-    }
-
-    const { error: payErr } = await adminFrom('payments')
-      .insert([{ resident_id: n.resident_id, amount: n.amount, description: n.description || 'Банкаар шилжүүлсэн' }]);
-    if (payErr) {
-      // Мэдэгдэл хаагдсан ч төлбөр бүртгэгдээгүй — даргад ХЭЛНЭ, чимээгүй өнгөрөхгүй
-      setResolving(null);
-      alert(`⚠️ Мэдэгдэл хаагдсан ч төлбөр бүртгэгдсэнгүй: ${payErr}\n\n"Төлбөр бүртгэх" хэсгээс гараар нэмнэ үү.`);
       await fetchData();
-      return;
     }
-    if (resident) {
-      await adminFrom('residents')
-        .update({ debt: Math.max(0, resident.debt - Number(n.amount)) }).eq('id', n.resident_id);
-    }
-
-    setResolving(null);
-    await fetchData();
-  };
-
-  const rejectNotice = async (n: PaymentNotice) => {
-    if (!confirm('Банкны хуулгад энэ гүйлгээ ОЛДООГҮЙ бол татгалзана. Үргэлжлүүлэх үү?')) return;
-    setResolving(n.id);
-    await adminFrom('payment_notices')
-      .update({ status: 'rejected', resolved_at: new Date().toISOString() }).eq('id', n.id);
-    setResolving(null);
-    await fetchData();
   };
 
   // Гэрээг хаах. Зөвхөн төлвийг солино — өрийг ХӨНДӨХГҮЙ. Өр нь жинхэнэ төлбөр
@@ -286,13 +273,23 @@ export default function AdminPayments() {
           </h3>
           <p className="text-xs text-amber-800 mb-3">
             Банкны хуулгаа шалгаад тухайн гүйлгээг олсон бол баталгаажуулна уу.
-            Баталгаажуулбал төлбөр бүртгэгдэж, өр нь хасагдана.
+            Баталгаажуулбал айлын нэхэмжлэх хаагдана. Нэхэмжлэх нь аль хэдийн төлөгдсөн айлд давхар төлбөр бичигдэхгүй.
           </p>
           <div className="space-y-2">
             {notices.map(n => (
               <div key={n.id} className="bg-white rounded-lg p-3 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{getResidentName(n.resident_id)}</p>
+                  <p className="text-sm font-medium truncate">
+                    {n.resident_name ? `${n.resident_name} (${n.unit || ''})` : getResidentName(n.resident_id)}
+                    {(n.same_resident_pending || 1) > 1 && (
+                      <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 align-middle">
+                        давхар ×{n.same_resident_pending}
+                      </span>
+                    )}
+                  </p>
+                  {n.has_invoices && !n.open_due && (
+                    <p className="text-[11px] text-green-700">✓ Нэхэмжлэх аль хэдийн төлөгдсөн — давхар мэдэгдэл байх магадлалтай</p>
+                  )}
                   <p className="text-xs text-gray-500 truncate">
                     {n.description || 'Банкаар шилжүүлсэн'} · {new Date(n.created_at).toLocaleString('mn-MN')}
                   </p>
@@ -300,14 +297,14 @@ export default function AdminPayments() {
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="font-bold text-sm">{Number(n.amount).toLocaleString()}₮</span>
                   <button
-                    onClick={() => confirmNotice(n)}
+                    onClick={() => resolveNotice(n, 'confirm')}
                     disabled={resolving === n.id}
                     className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium disabled:opacity-50"
                   >
                     {resolving === n.id ? '...' : '✓ Баталгаажуулах'}
                   </button>
                   <button
-                    onClick={() => rejectNotice(n)}
+                    onClick={() => resolveNotice(n, 'reject')}
                     disabled={resolving === n.id}
                     className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs disabled:opacity-50"
                   >
