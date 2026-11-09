@@ -186,7 +186,8 @@ export default function AdminPayments() {
     const resId = Number(selectedResident);
     const amt = Number(amount);
 
-    await adminFrom('payments').insert([{ resident_id: resId, amount: amt, description }]);
+    // sokh_id-гүй бол СӨХ-ийн түвшний нийлбэр (тайлан) энэ төлбөрийг алддаг
+    await adminFrom('payments').insert([{ resident_id: resId, sokh_id: await getAdminSokhId(), amount: amt, description }]);
     const resident = residents.find(r => r.id === resId);
     if (resident) {
       await adminFrom('residents').update({ debt: Math.max(0, resident.debt - amt) }).eq('id', resId);

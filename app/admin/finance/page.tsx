@@ -316,7 +316,7 @@ export default function AdminFinanceHub() {
 
   const markInvoicePaid = async (inv: Invoice) => {
     await adminFrom('invoices').update({ status: 'paid', paid_amount: inv.amount, paid_at: new Date().toISOString() }).eq('id', inv.id);
-    await adminFrom('payments').insert([{ resident_id: inv.resident_id, amount: inv.amount, description: `Нэхэмжлэх: ${inv.description}` }]);
+    await adminFrom('payments').insert([{ resident_id: inv.resident_id, sokh_id: await getAdminSokhId(), invoice_id: inv.id, amount: inv.amount, description: `Нэхэмжлэх: ${inv.description}` }]);
     const r = residents.find(x => x.id === inv.resident_id);
     if (r) await adminFrom('residents').update({ debt: Math.max(0, (r.debt || 0) - inv.amount) }).eq('id', inv.resident_id);
     await fetchAll();

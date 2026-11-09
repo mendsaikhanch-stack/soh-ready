@@ -173,7 +173,8 @@ export default function SokhDashboard() {
       myInvRes,
     ] = await Promise.all([
       supabase.from('sokh_organizations').select('*').eq('id', params.id).single(),
-      supabase.from('residents').select('*', { count: 'exact', head: true }).eq('sokh_id', params.id),
+      // Баталгаажаагүй (өөрөө бүртгүүлсэн) мөр айлын тоонд орохгүй
+      supabase.from('residents').select('*', { count: 'exact', head: true }).eq('sokh_id', params.id).eq('pending_claim', false),
       supabase.from('residents').select('debt').eq('sokh_id', params.id).gt('debt', 0),
       supabase.from('announcements').select('*', { count: 'exact', head: true }).eq('sokh_id', params.id),
       supabase.from('announcements').select('*', { count: 'exact', head: true }).eq('sokh_id', params.id).gte('created_at', weekAgo),

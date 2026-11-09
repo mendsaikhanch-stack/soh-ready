@@ -41,13 +41,19 @@ export default function ReportsPage() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [orgName, setOrgName] = useState('');
   const [monthlyFee, setMonthlyFee] = useState(0);
-  const [residentCount, setResidentCount] = useState(0);
-  const [feeSum, setFeeSum] = useState(0); // айл бүрийн тарифын нийлбэр
+  // Нийлбэрийг сервер бодно (/api/sokh-report): айлын тоо зөвхөн баталгаажсан
+  // мөрөөр, орлого нь ТААМАГ биш — тухайн сард бодитоор орсон төлбөр.
+  // (Өмнө нь «бүх мөр × хураамж» гэж тооцдог байсан тул давхар бүртгэлтэй
+  // СӨХ-д айлын тоо, орлого, үлдэгдэл бодитоос их харагдаж байв.)
+  const [sum, setSum] = useState<{
+    households: number; billed: number; invoiceCount: number; paidCount: number;
+    collected: number; otherIncome: number; expense: number; cashEnd: number | null;
+  } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const [{ data: budgetData }, { data: org }, { data: resList }] = await Promise.all([
+      const [{ data: budgetData }, { data: org }, report] = await Promise.all([
         supabase
           .from('budget_items')
           .select('*')
@@ -57,16 +63,13 @@ export default function ReportsPage() {
           .eq('year', year)
           .order('amount', { ascending: false }),
         supabase.from('sokh_organizations').select('name, monthly_fee').eq('id', params.id).single(),
-        supabase.from('residents').select('monthly_fee').eq('sokh_id', params.id),
+        fetch(`/api/sokh-report?sokhId=${params.id}&year=${year}&month=${month}`)
+          .then(r => (r.ok ? r.json() : null)).catch(() => null),
       ]);
       setItems(budgetData || []);
       setOrgName(org?.name || '');
       setMonthlyFee(org?.monthly_fee || 0);
-      const list = resList || [];
-      setResidentCount(list.length);
-      // Айл бүр өөрийн тарифтай байж болно; байхгүй бол СӨХ-ийн ерөнхий дүнгээр
-      setFeeSum(list.reduce((s: number, r: { monthly_fee: number | null }) =>
-        s + (Number(r.monthly_fee ?? org?.monthly_fee) || 0), 0));
+      setSum(report && typeof report.households === 'number' ? report : null);
       setLoading(false);
     };
     fetchData();
@@ -74,8 +77,10 @@ export default function ReportsPage() {
 
   const totalExpense = items.filter(i => !i.category.includes('income')).reduce((s, i) => s + i.amount, 0);
   const totalIncome = items.filter(i => i.category.includes('income')).reduce((s, i) => s + i.amount, 0);
-  const estimatedIncome = feeSum;
-  const avgFee = residentCount ? Math.round(feeSum / residentCount) : monthlyFee;
+  const collected = sum?.collected ?? 0;
+  // type='income' мөр (жишээ нь тоот тодорхойгүй орлого) энэ хуудасны запросоор ирэхгүй тул серверийн дүнг авна
+  const otherIncome = sum ? sum.otherIncome : totalIncome;
+  const net = collected + otherIncome - totalExpense;
   const getCat = (c: string) => categoryMap[c] || categoryMap.other;
   const fmt = (n: number) => n.toLocaleString('mn-MN') + '₮';
 
@@ -103,9 +108,11 @@ export default function ReportsPage() {
         {/* Ерөнхий мэдээлэл */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-white rounded-xl p-4 shadow-sm">
-            <p className="text-xs text-gray-500">Нийт орлого (тооцоолол)</p>
-            <p className="text-xl font-bold text-green-600">{fmt(estimatedIncome + totalIncome)}</p>
-            <p className="text-[10px] text-gray-400 mt-1">{residentCount} айл, дунджаар {fmt(avgFee)}</p>
+            <p className="text-xs text-gray-500">Орсон орлого</p>
+            <p className="text-xl font-bold text-green-600">{fmt(collected + otherIncome)}</p>
+            <p className="text-[10px] text-gray-400 mt-1">
+              {sum ? <>{sum.households} айл · нэхэмжилсэн {fmt(sum.billed)}</> : `сарын хураамж ${fmt(monthlyFee)}`}
+            </p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <p className="text-xs text-gray-500">Нийт зардал</p>
@@ -182,8 +189,8 @@ export default function ReportsPage() {
             {/* Дүгнэлт */}
             <div className="bg-gray-800 text-white rounded-xl p-4 shadow-sm">
               <div className="flex justify-between items-center mb-2">
-                <p className="text-sm text-gray-300">Орлого (тооцоолол)</p>
-                <p className="text-sm font-bold text-green-400">{fmt(estimatedIncome + totalIncome)}</p>
+                <p className="text-sm text-gray-300">Энэ сард орсон орлого</p>
+                <p className="text-sm font-bold text-green-400">{fmt(collected + otherIncome)}</p>
               </div>
               <div className="flex justify-between items-center mb-2">
                 <p className="text-sm text-gray-300">Зардал</p>
@@ -191,16 +198,23 @@ export default function ReportsPage() {
               </div>
               <div className="border-t border-gray-700 pt-2 mt-2">
                 <div className="flex justify-between items-center">
-                  <p className="text-sm font-medium">Үлдэгдэл</p>
-                  <p className={`text-lg font-bold ${(estimatedIncome + totalIncome - totalExpense) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {fmt(estimatedIncome + totalIncome - totalExpense)}
+                  <p className="text-sm font-medium">Сарын зөрүү</p>
+                  <p className={`text-lg font-bold ${net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {net >= 0 ? '+' : ''}{fmt(net)}
                   </p>
                 </div>
+                {sum?.cashEnd != null && (
+                  <div className="flex justify-between items-center mt-2">
+                    <p className="text-sm text-gray-300">Дансны үлдэгдэл (сарын эцэст)</p>
+                    <p className="text-sm font-bold">{fmt(Math.round(sum.cashEnd))}</p>
+                  </div>
+                )}
               </div>
             </div>
 
             <p className="text-center text-[10px] text-gray-400 mt-4">
-              Тайлбар: Орлого нь {residentCount} айлын сарын хураамжийн нийлбэрээр ({fmt(feeSum)}) тооцоолсон. Бодит цуглуулалтаас ялгаатай байж болно.
+              Орлого нь тухайн сард СӨХ-ийн дансанд бодитоор орсон төлбөр.
+              {sum && sum.invoiceCount > 0 && <> {sum.invoiceCount} нэхэмжлэхээс {sum.paidCount} нь бүрэн төлөгдсөн.</>}
             </p>
           </>
         )}
