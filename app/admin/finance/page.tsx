@@ -31,6 +31,7 @@ const categoryOptions = [
   { value: 'reserve', label: 'Нөөц сан', icon: '🏦', color: '#6366F1' },
   { value: 'insurance', label: 'Даатгал', icon: '🛡', color: '#EC4899' },
   { value: 'salary', label: 'Цалин', icon: '👷', color: '#0EA5E9' },
+  { value: 'garbage', label: 'Хог ачуулалт', icon: '🗑', color: '#78716C' },
   { value: 'other', label: 'Бусад', icon: '📋', color: '#9CA3AF' },
 ];
 
