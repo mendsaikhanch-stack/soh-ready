@@ -6,6 +6,7 @@ import { getAdminSokhId } from '@/app/lib/admin-config';
 import Field from '@/app/components/Field';
 import CreateDebtAgreementModal from '@/app/components/admin/CreateDebtAgreementModal';
 import { fetchAppUsage, fmtDate, type AppUsageResident } from '@/app/components/admin/AppUsagePanel';
+import { UNIT_SCHEMES, officialUnitLabel } from '@/app/lib/bank-sms/unit-address';
 
 interface Resident {
   id: number;
@@ -61,7 +62,12 @@ export default function AdminResidents() {
   const [agreementFor, setAgreementFor] = useState<number | null>(null);    // өрийн гэрээ байгуулах айл
   const [appById, setAppById] = useState<Record<number, AppUsageResident>>({}); // айл → апп-д нэвтэрсэн эсэх
   const [onlyNoApp, setOnlyNoApp] = useState(false);                        // зөвхөн апп-д ороогүй айлыг харуулах
-  const [buildingFilter, setBuildingFilter] = useState('');                 // '' = бүх байр
+  const [sokhId, setSokhId] = useState(0);
+  // Хаягаар хайх: Байр → Орц → Тоот. Тоот ганц айлд таарвал тэр айлыг ганцаарчлан нээнэ.
+  const [pathB, setPathB] = useState('');                                   // '' = бүх байр
+  const [pathE, setPathE] = useState('');                                   // '' = бүх орц
+  const [pathApt, setPathApt] = useState('');
+  const [focusId, setFocusId] = useState<number | null>(null);              // ганцаарчлан харж буй айл
   const [matchIdx, setMatchIdx] = useState(0);                              // олдсон айлуудын хэд дэх дээр зогсож байгаа
   const [showAgreement, setShowAgreement] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -188,6 +194,7 @@ export default function AdminResidents() {
 
   const fetchResidents = async () => {
     const sokhId = await getAdminSokhId();
+    setSokhId(sokhId);
     // adminFrom proxy (service_role + tenant-scope) ашиглана — admin нь Supabase auth биш тул
     // anon client RLS-д бүх мөр блоклогддог. Бичих үйлдэлтэй ижил замаар уншина.
     const [{ data }, { data: org }, { data: cars }] = await Promise.all([
@@ -227,19 +234,75 @@ export default function AdminResidents() {
     setLoading(false);
   };
 
-  // Жагсаалтаас мөр ХАСАХ нь зөвхөн эдгээр сонголт. Хайлт нь мөр нуудаггүй —
+  // ---- Хаягаар хайх (Байр → Орц → Тоот) ------------------------------------
+  // Схемтэй СӨХ (ICTown): residents.building = «блок-орц» («2-2»), харин дарга
+  // албан нэрээр (498-2) нь мэддэг тул сонголтод албан нэрийг харуулна.
+  // Схемгүй СӨХ: байр = building, орц = entrance багана.
+  const scheme = UNIT_SCHEMES[sokhId] || null;
+  const bldOf = (r: Resident) => (r.building || '').trim();
+  const inBuilding = (r: Resident, b: string) =>
+    scheme ? bldOf(r).split('-')[0] === b && bldOf(r).includes('-') : bldOf(r) === b;
+  const inEntrance = (r: Resident, b: string, e: string) =>
+    scheme ? bldOf(r) === `${b}-${e}` : bldOf(r) === b && (r.entrance || '').trim() === e;
+  const cmpNum = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
+
+  const pathBuildings: { key: string; label: string; count: number; entrances: { key: string; count: number }[] }[] = scheme
+    ? scheme.buildings.map(b => ({
+        key: b.internal,
+        label: b.official,
+        count: residents.filter(r => inBuilding(r, b.internal)).length,
+        entrances: b.entrances.map(e => ({
+          key: e.entrance, count: residents.filter(r => inEntrance(r, b.internal, e.entrance)).length,
+        })),
+      }))
+    : [...new Set(residents.map(bldOf).filter(Boolean))].sort(cmpNum).map(b => {
+        const inB = residents.filter(r => bldOf(r) === b);
+        return {
+          key: b, label: b, count: inB.length,
+          entrances: [...new Set(inB.map(r => (r.entrance || '').trim()).filter(Boolean))].sort(cmpNum)
+            .map(e => ({ key: e, count: inB.filter(r => (r.entrance || '').trim() === e).length })),
+        };
+      });
+  const showPath = !!scheme || pathBuildings.length >= 2;
+  const pathEntrances = pathBuildings.find(b => b.key === pathB)?.entrances || [];
+
+  const inPath = (r: Resident, b: string, e: string) =>
+    (!b || inBuilding(r, b)) && (!b || !e || inEntrance(r, b, e));
+  const aptEq = (r: Resident, apt: string) => norm(r.apartment) === norm(apt);
+  const pathMatchesFor = (b: string, e: string, apt: string) =>
+    apt.trim() ? residents.filter(r => inPath(r, b, e) && aptEq(r, apt)) : [];
+  const pathMatches = pathMatchesFor(pathB, pathE, pathApt);
+
+  // Хаяг өөрчлөгдөх бүрд: тоот ганц айлд таарвал тэр айлыг нээж, засах формыг бэлдэнэ
+  const applyPath = (b: string, e: string, apt: string) => {
+    setPathB(b); setPathE(e); setPathApt(apt); setMatchIdx(0);
+    const m = pathMatchesFor(b, e, apt);
+    if (m.length === 1) focusResident(m[0]);
+    else setFocusId(null);
+  };
+  const clearPath = () => { setPathB(''); setPathE(''); setPathApt(''); setFocusId(null); };
+
+  const focused = focusId != null ? residents.find(r => r.id === focusId) || null : null;
+  const focusResident = (r: Resident) => {
+    openEdit(r);
+    setShowForm(false);   // форм нь ганцаарчилсан картын дотор харагдана
+    setFocusId(r.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const closeFocus = () => { setFocusId(null); setEditId(null); setPathApt(''); };
+
+  // Жагсаалтаас мөр ХАСАХ нь зөвхөн эдгээр сонголт. Текст хайлт мөр нуудаггүй —
   // олдсон айлыг тодруулж, түүн дээр нь аваачдаг (дарга хөршүүдийг нь хамт хардаг).
   const visible = residents.filter(r => {
     if (onlyNoApp && signedIn(r)) return false;
-    if (buildingFilter && (r.building || '').trim() !== buildingFilter) return false;
+    if (!inPath(r, pathB, pathE)) return false;
+    if (pathApt.trim() && !aptEq(r, pathApt)) return false;
     return true;
     // Баталгаажуулах хүлээж буй мөрийг дээр гаргана — дарга анзаарахгүй өнгөрөх ёсгүй
   }).sort((a, b) => Number(b.pending_claim) - Number(a.pending_claim));
 
-  // Байрны шүүлтүүр — зөвхөн олон байртай СӨХ-д харагдана
   const buildings = [...new Set(residents.map(r => (r.building || '').trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  const countIn = (b: string) => residents.filter(r => (r.building || '').trim() === b).length;
 
   const matches = findMatches(visible, search);
   const matchIds = new Set(matches.map(m => m.id));
@@ -311,6 +374,8 @@ export default function AdminResidents() {
     }
 
     setShowForm(false);
+    // Ганцаарчилсан карт дээр засвал тоот өөрчлөгдсөн ч тэр айл нээлттэй үлдэнэ
+    if (editId && focusId === editId) setPathApt(payload.apartment);
     await fetchResidents();
 
     if (phoneChanged) {
@@ -338,6 +403,7 @@ export default function AdminResidents() {
   const deleteResident = async (id: number) => {
     if (!confirm('Устгах уу?')) return;
     await adminFrom('residents').delete().eq('id', id);
+    if (focusId === id) closeFocus();
     await fetchResidents();
   };
 
@@ -458,6 +524,62 @@ export default function AdminResidents() {
   const appCount = residents.filter(signedIn).length;
   const appPct = residents.length ? Math.round((appCount / residents.length) * 100) : 0;
 
+  // Нүд бүрийн дээр нэр нь бичээстэй байна — бөглөсний дараа ч ямар
+  // талбар болох нь харагдана (placeholder бол бөглөхөд алга болдог)
+  const formFields = (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <Field label="Нэр" required>
+        <input placeholder="Овог нэр" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+      </Field>
+      <Field label="Тоот" required>
+        <input placeholder="жнь: 101" value={form.apartment} onChange={e => setForm({...form, apartment: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+      </Field>
+      <Field label="Утас">
+        <input placeholder="99001122" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+      </Field>
+      <Field label="Байр">
+        <input placeholder="жнь: 1-р байр" value={form.building} onChange={e => setForm({...form, building: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+      </Field>
+      <Field label="Хэлбэр">
+        <select value={form.unit_kind} onChange={e => setForm({...form, unit_kind: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="household">🏠 Айл өрх</option>
+          <option value="business">🏢 Аж ахуйн нэгж</option>
+        </select>
+      </Field>
+      <Field label="Талбай (мкв)">
+        <input placeholder="жнь: 42.5" type="number" step="0.1" value={form.area_sqm} onChange={e => setForm({...form, area_sqm: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+      </Field>
+      <Field label="Өмнөх үлдэгдэл (₮)" hint="Энэ айлын өмнөх саруудаас үлдсэн өр">
+        <input placeholder="0" type="number" value={form.debt} onChange={e => setForm({...form, debt: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+      </Field>
+      <Field
+        label="Сарын төлбөр (₮)"
+        hint={orgFee
+          ? `Хоосон орхивол СӨХ-ийн ерөнхий тариф (${orgFee.toLocaleString()}₮) үйлчилнэ`
+          : 'Зөвхөн энэ тоотод тусгай тариф тогтоох бол бөглөнө'}
+      >
+        <input
+          placeholder={orgFee ? `Хоосон = ${orgFee.toLocaleString()}₮` : 'Тусгай тариф'}
+          type="number"
+          value={form.monthly_fee}
+          onChange={e => setForm({...form, monthly_fee: e.target.value})}
+          className="w-full border rounded-lg px-3 py-2 text-sm"
+        />
+      </Field>
+      <Field label="Банкны код" hint="И-биллингийн хэрэглэгчийн код. Хоосон бол тоотыг ашиглана.">
+        <input placeholder={form.apartment || 'тоот'} value={form.bank_customer_code} onChange={e => setForm({...form, bank_customer_code: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
+      </Field>
+      <Field label="Эзэмшил">
+        <select value={form.resident_type} onChange={e => setForm({...form, resident_type: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-600">
+          <option value="">Сонгоогүй</option>
+          <option value="owner">Эзэмшигч</option>
+          <option value="tenant">Түрээслэгч</option>
+          <option value="family">Гэр бүлийн гишүүн</option>
+        </select>
+      </Field>
+    </div>
+  );
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -514,6 +636,9 @@ export default function AdminResidents() {
           {search.trim() && (matches.length ? (
             <div className="flex items-center gap-1 whitespace-nowrap">
               <span className="text-xs text-gray-500">{safeIdx + 1} / {matches.length}</span>
+              <button type="button" onClick={() => { const r = matches[safeIdx]; if (r) focusResident(r); }}
+                      title="Энэ айлыг ганцаарчлан нээж засах"
+                      className="px-1.5 text-xs text-blue-600 hover:underline">нээх</button>
               <button type="button" onClick={() => stepMatch(-1)} title="Өмнөх (Shift+Enter)"
                       className="px-1.5 text-gray-500 hover:text-gray-800">‹</button>
               <button type="button" onClick={() => stepMatch(1)} title="Дараах (Enter)"
@@ -532,88 +657,116 @@ export default function AdminResidents() {
         </label>
       </div>
 
-      {/* Байрны шүүлтүүр — зөвхөн олон байртай СӨХ-д. Тоот байр бүрт давтагддаг
-          тул эхлээд байраа сонгоод дараа нь тоотоо хайх нь хамгийн хурдан. */}
-      {buildings.length >= 2 && (
-        <div className="flex flex-wrap items-center gap-1.5 mb-4">
-          <span className="text-xs text-gray-400 mr-1">Байр:</span>
-          <button
-            onClick={() => { setBuildingFilter(''); setMatchIdx(0); }}
-            className={`px-2.5 py-1 rounded-full text-xs border ${
-              buildingFilter === '' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+      {/* Хаягаар хайх: Байр → Орц → Тоот. Тоот олон байранд давтагддаг тул
+          байраа сонгоод тоотоо бичихэд тэр айл ганцаараа нээгдэнэ. */}
+      {showPath && (
+        <div className="flex flex-wrap items-center gap-2 mb-4 bg-gray-50 border rounded-lg px-3 py-2">
+          <span className="text-xs text-gray-500">📍 Хаягаар:</span>
+          <select
+            value={pathB}
+            onChange={e => {
+              const b = e.target.value;
+              const ents = pathBuildings.find(x => x.key === b)?.entrances || [];
+              applyPath(b, ents.length === 1 ? ents[0].key : '', pathApt);
+            }}
+            className="border rounded-lg px-2 py-1.5 text-sm bg-white"
           >
-            Бүгд ({residents.length})
-          </button>
-          {buildings.map(b => (
-            <button
-              key={b}
-              onClick={() => { setBuildingFilter(buildingFilter === b ? '' : b); setMatchIdx(0); }}
-              className={`px-2.5 py-1 rounded-full text-xs border ${
-                buildingFilter === b ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            <option value="">Бүх байр ({residents.length})</option>
+            {pathBuildings.map(b => (
+              <option key={b.key} value={b.key}>{b.label} байр ({b.count})</option>
+            ))}
+          </select>
+          {pathB && pathEntrances.length > 1 && (
+            <select
+              value={pathE}
+              onChange={e => applyPath(pathB, e.target.value, pathApt)}
+              className="border rounded-lg px-2 py-1.5 text-sm bg-white"
             >
-              {b} ({countIn(b)})
+              <option value="">Бүх орц</option>
+              {pathEntrances.map(e => (
+                <option key={e.key} value={e.key}>{e.key}-р орц ({e.count})</option>
+              ))}
+            </select>
+          )}
+          <input
+            placeholder="Тоот"
+            inputMode="numeric"
+            value={pathApt}
+            onChange={e => applyPath(pathB, pathE, e.target.value)}
+            className="border rounded-lg px-2 py-1.5 text-sm w-24 bg-white"
+          />
+          {pathApt.trim() && (
+            pathMatches.length === 0 ? <span className="text-xs text-red-500">олдсонгүй</span>
+            : pathMatches.length > 1 ? <span className="text-xs text-amber-600">{pathMatches.length} айл — байр/орцоо сонгоно уу</span>
+            : <span className="text-xs text-green-600">✓ олдлоо</span>
+          )}
+          {(pathB || pathE || pathApt) && (
+            <button type="button" onClick={clearPath} className="text-xs text-gray-400 hover:text-gray-700">✕ Цэвэрлэх</button>
+          )}
+        </div>
+      )}
+
+      {/* Ганцаарчилсан айл — зөвхөн энэ айлын мэдээлэл, шууд засна */}
+      {focused && (
+        <div className="bg-white border-2 border-blue-400 rounded-xl p-4 mb-4 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+            <div>
+              <div className="text-xs text-gray-400">
+                {officialUnitLabel(sokhId, focused.building, focused.apartment)
+                  || [focused.building && `${focused.building} байр`, focused.entrance && `${focused.entrance}-р орц`].filter(Boolean).join(' · ')}
+              </div>
+              <h3 className="text-lg font-bold">
+                {focused.apartment} тоот — {focused.name}
+                {focused.pending_claim && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-orange-200 text-orange-800 align-middle">өөрөө бүртгүүлсэн</span>}
+              </h3>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mt-1">
+                <span>📞 {focused.phone || '—'}</span>
+                <span>📱 {signedIn(focused)
+                  ? `Нэвтэрсэн (${fmtDate(appOf(focused)!.last_sign_in_at)})`
+                  : (focused.phone || '').trim() ? 'Апп-д ороогүй' : 'Утасгүй'}</span>
+                <span>🚗 {platesOf(platesByApt, focused).join(', ') || '—'}</span>
+                {councilById[focused.id] && <span>🏛 {councilById[focused.id].council === 'board' ? 'ТУЗ' : 'Хяналт'}</span>}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-400">Өмнөх үлдэгдэл + сарын төлбөр</div>
+              <div className={`text-sm font-semibold ${focused.debt > 0 ? 'text-red-500' : 'text-green-600'}`}>
+                {focused.debt.toLocaleString()}₮ + {feeOf(focused).toLocaleString()}₮
+              </div>
+              <div className="text-lg font-bold">{(focused.debt + feeOf(focused)).toLocaleString()}₮</div>
+            </div>
+          </div>
+
+          {formFields}
+
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <button onClick={saveResident} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm disabled:opacity-50">
+              {saving ? 'Хадгалж байна...' : 'Хадгалах'}
             </button>
-          ))}
+            <button onClick={() => focusResident(focused)} title="Засварыг буцааж хадгалсан утга руу нь оруулах"
+                    className="px-4 py-2 border rounded-lg text-sm">Буцаах</button>
+            {focused.pending_claim && (
+              <button onClick={() => approveResident(focused)} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm">✓ Баталгаажуулах</button>
+            )}
+            {focused.debt > 0 && (
+              <button onClick={() => { setAgreementFor(focused.id); setShowAgreement(true); }}
+                      className="px-3 py-2 bg-amber-100 text-amber-800 rounded-lg text-sm">🤝 Гэрээ</button>
+            )}
+            <button onClick={() => resetPassword(focused)} disabled={resetting === focused.id}
+                    className="px-3 py-2 text-amber-700 text-sm hover:underline disabled:text-gray-300">
+              {resetting === focused.id ? 'Сэргээж байна...' : 'Нууц үг сэргээх'}
+            </button>
+            <button onClick={() => deleteResident(focused.id)} className="px-3 py-2 text-red-500 text-sm hover:underline">Устгах</button>
+            <button onClick={closeFocus} className="ml-auto px-4 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200">← Бүх айл</button>
+          </div>
         </div>
       )}
 
       {/* Form */}
-      {showForm && (
+      {showForm && !focused && (
         <div className="bg-white border rounded-xl p-4 mb-4">
           <h3 className="font-semibold mb-3">{editId ? 'Засах' : 'Шинэ оршин суугч'}</h3>
-          {/* Нүд бүрийн дээр нэр нь бичээстэй байна — бөглөсний дараа ч ямар
-              талбар болох нь харагдана (placeholder бол бөглөхөд алга болдог) */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Field label="Нэр" required>
-              <input placeholder="Овог нэр" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
-            </Field>
-            <Field label="Тоот" required>
-              <input placeholder="жнь: 101" value={form.apartment} onChange={e => setForm({...form, apartment: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
-            </Field>
-            <Field label="Утас">
-              <input placeholder="99001122" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
-            </Field>
-            <Field label="Байр">
-              <input placeholder="жнь: 1-р байр" value={form.building} onChange={e => setForm({...form, building: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
-            </Field>
-            <Field label="Хэлбэр">
-              <select value={form.unit_kind} onChange={e => setForm({...form, unit_kind: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm">
-                <option value="household">🏠 Айл өрх</option>
-                <option value="business">🏢 Аж ахуйн нэгж</option>
-              </select>
-            </Field>
-            <Field label="Талбай (мкв)">
-              <input placeholder="жнь: 42.5" type="number" step="0.1" value={form.area_sqm} onChange={e => setForm({...form, area_sqm: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
-            </Field>
-            <Field label="Өмнөх үлдэгдэл (₮)" hint="Энэ айлын өмнөх саруудаас үлдсэн өр">
-              <input placeholder="0" type="number" value={form.debt} onChange={e => setForm({...form, debt: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
-            </Field>
-            <Field
-              label="Сарын төлбөр (₮)"
-              hint={orgFee
-                ? `Хоосон орхивол СӨХ-ийн ерөнхий тариф (${orgFee.toLocaleString()}₮) үйлчилнэ`
-                : 'Зөвхөн энэ тоотод тусгай тариф тогтоох бол бөглөнө'}
-            >
-              <input
-                placeholder={orgFee ? `Хоосон = ${orgFee.toLocaleString()}₮` : 'Тусгай тариф'}
-                type="number"
-                value={form.monthly_fee}
-                onChange={e => setForm({...form, monthly_fee: e.target.value})}
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-              />
-            </Field>
-            <Field label="Банкны код" hint="И-биллингийн хэрэглэгчийн код. Хоосон бол тоотыг ашиглана.">
-              <input placeholder={form.apartment || 'тоот'} value={form.bank_customer_code} onChange={e => setForm({...form, bank_customer_code: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" />
-            </Field>
-            <Field label="Эзэмшил">
-              <select value={form.resident_type} onChange={e => setForm({...form, resident_type: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm text-gray-600">
-                <option value="">Сонгоогүй</option>
-                <option value="owner">Эзэмшигч</option>
-                <option value="tenant">Түрээслэгч</option>
-                <option value="family">Гэр бүлийн гишүүн</option>
-              </select>
-            </Field>
-          </div>
+          {formFields}
           <div className="flex gap-2 mt-3">
             <button onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-lg text-sm">Цуцлах</button>
             <button onClick={saveResident} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm disabled:opacity-50">
@@ -624,7 +777,7 @@ export default function AdminResidents() {
       )}
 
       {/* Table */}
-      {loading ? (
+      {focused ? null : loading ? (
         <p className="text-gray-400 py-8 text-center">Ачаалж байна...</p>
       ) : (
         <div className="bg-white rounded-xl border overflow-hidden">
@@ -751,7 +904,7 @@ export default function AdminResidents() {
                           Гэрээ
                         </button>
                       )}
-                      <button onClick={() => openEdit(r)} className="text-blue-500 text-xs mr-2 hover:underline">Засах</button>
+                      <button onClick={() => focusResident(r)} className="text-blue-500 text-xs mr-2 hover:underline">Засах</button>
                       <button
                         onClick={() => resetPassword(r)}
                         disabled={resetting === r.id}

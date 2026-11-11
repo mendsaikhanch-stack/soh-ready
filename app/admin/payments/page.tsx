@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import * as XLSX from 'xlsx';
+import { UNIT_SCHEMES } from '@/app/lib/bank-sms/unit-address';
 
-interface Resident { id: number; name: string; apartment: string; debt: number; }
+interface Resident { id: number; name: string; apartment: string; debt: number; building: string | null; entrance: string | null; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
 
 /** Оршин суугчийн "Би шилжүүлсэн" мэдэгдэл — дарга банкны хуулгатай тулгаж баталгаажуулна */
@@ -79,13 +80,16 @@ export default function AdminPayments() {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('Сарын төлбөр');
   const [saving, setSaving] = useState(false);
+  const [sokhId, setSokhId] = useState(0);
+  const [openEntrance, setOpenEntrance] = useState<string | null>(null);   // задалсан орц
 
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     const sokhId = await getAdminSokhId();
+    setSokhId(sokhId);
     // adminFrom proxy ашиглана — admin нь Supabase auth биш тул anon client RLS-д блоклогддог.
-    const { data: res } = await adminFrom('residents').select('id,name,apartment,debt').eq('sokh_id', sokhId).order('apartment', { ascending: true });
+    const { data: res } = await adminFrom('residents').select('id,name,apartment,debt,building,entrance').eq('sokh_id', sokhId).order('apartment', { ascending: true });
     const residentList = (res as unknown as Resident[]) || [];
     setResidents(residentList);
     // payments нь sokh_id шууд байхгүй — proxy resident_id-ээр scope хийдэг тул айлуудын id-аар уншина.
@@ -183,14 +187,39 @@ export default function AdminPayments() {
   const recordPayment = async () => {
     if (!selectedResident || !amount) return;
     setSaving(true);
-    const resId = Number(selectedResident);
-    const amt = Number(amount);
+    // Сервер нээлттэй нэхэмжлэхийг хуучнаас нь эхлэн хаана. Өмнө нь энд нэхэмжлэхгүй
+    // төлбөр бичдэг байсан тул айл төлсөн атлаа өртэй харагдаж, давхардал үүсдэг байв.
+    const send = (force: boolean) => fetch('/api/admin/payments/record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resident_id: Number(selectedResident), amount: Number(amount), description, force }),
+    }).then(async r => ({ status: r.status, data: await r.json().catch(() => ({})) }));
 
-    // sokh_id-гүй бол СӨХ-ийн түвшний нийлбэр (тайлан) энэ төлбөрийг алддаг
-    await adminFrom('payments').insert([{ resident_id: resId, sokh_id: await getAdminSokhId(), amount: amt, description }]);
-    const resident = residents.find(r => r.id === resId);
-    if (resident) {
-      await adminFrom('residents').update({ debt: Math.max(0, resident.debt - amt) }).eq('id', resId);
+    try {
+      let res = await send(false);
+      if (res.status === 409 && res.data?.message) {
+        if (!confirm(`${res.data.message}\n\nТэгсэн ч бүртгэх үү?`)) { setSaving(false); return; }
+        res = await send(true);
+      }
+      if (res.status !== 200) {
+        alert(res.data?.error || 'Төлбөр бүртгэж чадсангүй');
+        setSaving(false);
+        await fetchData();
+        return;
+      }
+      const applied = (res.data.applied || []) as { month: string | null; amount: number }[];
+      const closed = applied.filter(x => x.month).map(x => `${x.month}: ${x.amount.toLocaleString()}₮`);
+      if (closed.length > 1 || res.data.advance > 0) {
+        alert(
+          'Бүртгэлээ.\n\n' +
+          (closed.length ? `Хаагдсан нэхэмжлэх:\n${closed.join('\n')}\n` : '') +
+          (res.data.advance > 0 ? `\nУрьдчилгаа (нэхэмжлэхгүй): ${Number(res.data.advance).toLocaleString()}₮` : '')
+        );
+      }
+    } catch {
+      alert('Сервертэй холбогдож чадсангүй');
+      setSaving(false);
+      return;
     }
 
     setShowForm(false);
@@ -227,6 +256,44 @@ export default function AdminPayments() {
     const debtSheet = XLSX.utils.json_to_sheet(debtData);
     XLSX.utils.book_append_sheet(wb, debtSheet, 'Өртэй айлууд');
 
+    if (entranceGroups.length >= 2) {
+      const entSheet = XLSX.utils.json_to_sheet(entranceGroups.map(g => ({
+        'Орц': g.label,
+        'Айл': g.units,
+        'Өргүй': g.paid,
+        'Өртэй': g.debtors,
+        'Төлөлт (%)': g.units ? Math.round((g.paid / g.units) * 100) : 0,
+        'Нийт өр (₮)': g.debt,
+        'Энэ сарын орлого (₮)': g.month,
+      })));
+      XLSX.utils.book_append_sheet(wb, entSheet, 'Орц орцоор');
+
+      // Орц бүр тусдаа хуудас — тухайн орцны айл бүрийн төлөв (дэлгэц дээр задлахтай ижил)
+      const used = new Set<string>(['Төлбөрийн түүх', 'Өртэй айлууд', 'Орц орцоор']);
+      for (const g of entranceGroups) {
+        // Excel: хуудасны нэр ≤31 тэмдэгт, : \ / ? * [ ] хориотой, давхцахгүй
+        const base = g.label.replace(' байр', '').replace(/[:\\/?*[\]]/g, '-').slice(0, 28);
+        let name = base;
+        for (let n = 2; used.has(name); n++) name = `${base} ${n}`;
+        used.add(name);
+        const rows = g.list.slice()
+          .sort((a, b) => a.apartment.localeCompare(b.apartment, undefined, { numeric: true }))
+          .map(r => ({
+            'Тоот': r.apartment,
+            'Нэр': r.name,
+            'Төлөв': debtOf(r) > 0 ? 'Өртэй' : 'Өргүй',
+            'Өр (₮)': debtOf(r),
+            'Энэ сарын орлого (₮)': monthPaidBy[r.id] || 0,
+          }));
+        rows.push({
+          'Тоот': 'Нийт', 'Нэр': `${g.units} айл · өргүй ${g.paid} · өртэй ${g.debtors}`,
+          'Төлөв': `${g.units ? Math.round((g.paid / g.units) * 100) : 0}%`,
+          'Өр (₮)': g.debt, 'Энэ сарын орлого (₮)': g.month,
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), name);
+      }
+    }
+
     const today = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `төлбөр-${today}.xlsx`);
   };
@@ -249,6 +316,50 @@ export default function AdminPayments() {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
   const thisMonthTotal = thisMonthPayments.reduce((s, p) => s + Number(p.amount), 0);
+
+  // ---- Орц орцоор ----------------------------------------------------------
+  // Схемтэй СӨХ (ICTown): residents.building = «блок-орц» («2-2») → «498-2 · 2-р орц».
+  // Схемгүй СӨХ: building + entrance баганаар бүлэглэнэ.
+  const scheme = UNIT_SCHEMES[sokhId] || null;
+  const entranceOf = (r: Resident): { key: string; label: string } => {
+    const b = (r.building || '').trim();
+    const e = (r.entrance || '').trim();
+    if (scheme) {
+      const [internal, ent] = b.split('-');
+      const sb = scheme.buildings.find(x => x.internal === internal);
+      if (sb && sb.entrances.some(x => x.entrance === ent)) {
+        return { key: b, label: `${sb.official} байр · ${ent}-р орц` };
+      }
+      return { key: `?${b}`, label: b ? `«${b}» (схемд үл таарах)` : 'Байр тодорхойгүй' };
+    }
+    if (!b && !e) return { key: '?', label: 'Байр тодорхойгүй' };
+    return { key: `${b}|${e}`, label: [b && `${b} байр`, e && `${e}-р орц`].filter(Boolean).join(' · ') };
+  };
+  const monthPaidBy: Record<number, number> = {};
+  for (const p of thisMonthPayments) monthPaidBy[p.resident_id] = (monthPaidBy[p.resident_id] || 0) + Number(p.amount);
+  const entranceGroups = (() => {
+    const m = new Map<string, { key: string; label: string; list: Resident[] }>();
+    for (const r of residents) {
+      const { key, label } = entranceOf(r);
+      if (!m.has(key)) m.set(key, { key, label, list: [] });
+      m.get(key)!.list.push(r);
+    }
+    return [...m.values()]
+      .map(g => {
+        const debtors = g.list.filter(r => debtOf(r) > 0);
+        return {
+          ...g,
+          units: g.list.length,
+          debtors: debtors.length,
+          paid: g.list.length - debtors.length,
+          debt: debtors.reduce((s, r) => s + debtOf(r), 0),
+          month: g.list.reduce((s, r) => s + (monthPaidBy[r.id] || 0), 0),
+        };
+      })
+      // Тодорхойгүй бүлгийг хамгийн ард
+      .sort((a, b) => Number(a.key.startsWith('?')) - Number(b.key.startsWith('?'))
+        || a.key.localeCompare(b.key, undefined, { numeric: true }));
+  })();
 
   return (
     <div className="p-6">
@@ -418,7 +529,83 @@ export default function AdminPayments() {
               </a>
             </div>
           )}
-
+          {/* Орц орцоор төлбөрийн байдал — мөр дээр дарж тухайн орцны айлуудыг харна */}
+          {entranceGroups.length >= 2 && (
+            <>
+              <h3 className="font-semibold text-sm text-gray-500 mb-3">ОРЦ ОРЦООР ТӨЛБӨРИЙН БАЙДАЛ</h3>
+              <div className="bg-white rounded-xl border overflow-hidden mb-6">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr className="text-left text-sm text-gray-500">
+                      <th className="px-4 py-3">Орц</th>
+                      <th className="px-4 py-3 text-right">Айл</th>
+                      <th className="px-4 py-3 text-right">Өргүй</th>
+                      <th className="px-4 py-3 text-right">Өртэй</th>
+                      <th className="px-4 py-3">Төлөлт</th>
+                      <th className="px-4 py-3 text-right">Нийт өр</th>
+                      <th className="px-4 py-3 text-right">Энэ сарын орлого</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entranceGroups.map(g => {
+                      const pct = g.units ? Math.round((g.paid / g.units) * 100) : 0;
+                      const isOpen = openEntrance === g.key;
+                      return [
+                        <tr key={g.key} onClick={() => setOpenEntrance(isOpen ? null : g.key)}
+                            className={`border-t cursor-pointer ${isOpen ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                          <td className="px-4 py-3 text-sm font-medium">{isOpen ? '▾' : '▸'} {g.label}</td>
+                          <td className="px-4 py-3 text-sm text-right">{g.units}</td>
+                          <td className="px-4 py-3 text-sm text-right text-green-600">{g.paid}</td>
+                          <td className="px-4 py-3 text-sm text-right text-red-500">{g.debtors}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div className={`h-full ${pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
+                                     style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs text-gray-500">{pct}%</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right font-semibold text-red-500">{g.debt.toLocaleString()}₮</td>
+                          <td className="px-4 py-3 text-sm text-right text-green-600">{g.month.toLocaleString()}₮</td>
+                        </tr>,
+                        isOpen && (
+                          <tr key={`${g.key}-list`} className="bg-blue-50/40">
+                            <td colSpan={7} className="px-4 py-3">
+                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-1.5">
+                                {g.list.slice()
+                                  .sort((a, b) => a.apartment.localeCompare(b.apartment, undefined, { numeric: true }))
+                                  .map(r => (
+                                    <div key={r.id} title={r.name}
+                                         className={`text-xs rounded px-2 py-1 border ${debtOf(r) > 0
+                                           ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
+                                      <b>{r.apartment}</b> · {debtOf(r) > 0 ? `${debtOf(r).toLocaleString()}₮` : 'өргүй'}
+                                    </div>
+                                  ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ),
+                      ];
+                    })}
+                  </tbody>
+                  <tfoot className="bg-gray-50 border-t">
+                    <tr className="text-sm font-semibold">
+                      <td className="px-4 py-3">Нийт</td>
+                      <td className="px-4 py-3 text-right">{residents.length}</td>
+                      <td className="px-4 py-3 text-right text-green-600">{residents.length - debtors}</td>
+                      <td className="px-4 py-3 text-right text-red-500">{debtors}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500">
+                        {residents.length ? Math.round(((residents.length - debtors) / residents.length) * 100) : 0}%
+                      </td>
+                      <td className="px-4 py-3 text-right text-red-500">{totalDebt.toLocaleString()}₮</td>
+                      <td className="px-4 py-3 text-right text-green-600">{thisMonthTotal.toLocaleString()}₮</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
 
           {/* Сүүлийн төлбөрүүд */}
           <h3 className="font-semibold text-sm text-gray-500 mb-3">СҮҮЛИЙН ОРЛОГУУД</h3>
