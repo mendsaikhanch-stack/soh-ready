@@ -27,6 +27,10 @@ const categoryMap: Record<string, { label: string; icon: string; color: string }
   reserve: { label: 'Нөөц сан', icon: '🏦', color: '#6366F1' },
   insurance: { label: 'Даатгал', icon: '🛡', color: '#EC4899' },
   garbage: { label: 'Хог ачуулалт', icon: '🗑️', color: '#22C55E' },
+  supplies: { label: 'Материал, хэрэгсэл', icon: '🧰', color: '#A16207' },
+  bank_fee: { label: 'Банкны шимтгэл', icon: '🏧', color: '#64748B' },
+  sms: { label: 'Мсж / мэдэгдэл', icon: '💬', color: '#0D9488' },
+  software: { label: 'Програм хангамж', icon: '💻', color: '#7C3AED' },
   parking_income: { label: 'Зогсоолын орлого', icon: '🚗', color: '#10B981' },
   other: { label: 'Бусад', icon: '📋', color: '#9CA3AF' },
 };

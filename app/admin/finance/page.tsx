@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { adminFrom } from '@/app/lib/admin-db';
+import { adminFrom, adminSelectAll } from '@/app/lib/admin-db';
+import { withPeriod } from '@/app/lib/finance/period';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import { residentDueDate } from '@/app/lib/resident-billing/due-date';
 import * as XLSX from 'xlsx';
@@ -12,7 +13,8 @@ type Tab = 'overview' | 'income' | 'expenses' | 'budget' | 'invoices' | 'reserve
 
 interface BudgetItem { id: number; category: string; amount: number; month: number; year: number; description: string; type?: string; name?: string; }
 interface BudgetPlan { id: number; category: string; planned_amount: number; month: number; year: number; notes: string; }
-interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
+// period_year/period_month = тайлант сар (СӨХ-ийн тасалбараар, app/lib/finance/period.ts)
+interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; period_year: number; period_month: number; }
 interface Invoice { id: number; resident_id: number; year: number; month: number; amount: number; status: string; paid_amount: number; due_date: string; paid_at: string | null; description: string; }
 interface Resident { id: number; name: string; apartment: string; building?: string | null; debt: number; entrance: number | null; monthly_fee: number | null; pending_claim: boolean; }
 interface ReserveEntry { id: number; type: string; amount: number; description: string; occurred_at: string; }
@@ -32,6 +34,10 @@ const categoryOptions = [
   { value: 'insurance', label: 'Даатгал', icon: '🛡', color: '#EC4899' },
   { value: 'salary', label: 'Цалин', icon: '👷', color: '#0EA5E9' },
   { value: 'garbage', label: 'Хог ачуулалт', icon: '🗑', color: '#78716C' },
+  { value: 'supplies', label: 'Материал, хэрэгсэл', icon: '🧰', color: '#A16207' },
+  { value: 'bank_fee', label: 'Банкны шимтгэл', icon: '🏧', color: '#64748B' },
+  { value: 'sms', label: 'Мсж / мэдэгдэл', icon: '💬', color: '#0D9488' },
+  { value: 'software', label: 'Програм хангамж', icon: '💻', color: '#7C3AED' },
   { value: 'other', label: 'Бусад', icon: '📋', color: '#9CA3AF' },
 ];
 
@@ -127,7 +133,7 @@ export default function AdminFinanceHub() {
     // payments-д sokh_id байхгүй — proxy нь resident_id-ээр tenant scope хийдэг
     const [{ data: allPay }, { data: items }, { data: plans }, { data: inv }, { data: rf }, { data: pyb, error: pybErr }] = await Promise.all([
       residentIds.length
-        ? adminFrom('payments').select('*').in('resident_id', residentIds).order('paid_at', { ascending: false })
+        ? adminSelectAll(() => adminFrom('payments').select('*').in('resident_id', residentIds).order('id', { ascending: true }))
         : Promise.resolve({ data: [] }),
       adminFrom('budget_items').select('*').eq('sokh_id', sokhId).eq('year', year).order('amount', { ascending: false }),
       adminFrom('budget_plans').select('*').eq('sokh_id', sokhId).eq('month', month).eq('year', year),
@@ -137,13 +143,10 @@ export default function AdminFinanceHub() {
     ]);
 
     // Тухайн сарын төлбөрийг JS талд шүүнэ (proxy нь огнооны хязгаар дэмждэггүй)
-    const allPayList = (allPay as unknown as Payment[]) || [];
-    const from = new Date(year, month - 1, 1).getTime();
-    const to = new Date(year, month, 1).getTime();
-    const monthPayments = allPayList.filter(p => {
-      const t = new Date(p.paid_at).getTime();
-      return !isNaN(t) && t >= from && t < to;
-    });
+    const allPayList = withPeriod(sokhId, (allPay as unknown as Payment[]) || [])
+      .sort((a, b) => (b.paid_at || '').localeCompare(a.paid_at || ''));
+    // Тайлант сараар (тасалбартай СӨХ-д хуанлийн сараас өөр байж болно)
+    const monthPayments = allPayList.filter(p => p.period_year === year && p.period_month === month);
 
     const orgRow = org as unknown as { monthly_fee?: number } | null;
     setMonthlyFee(orgRow?.monthly_fee || 0);
@@ -358,7 +361,7 @@ export default function AdminFinanceHub() {
       : `${residents.length} айл, ${feeVariants.length} янзын тариф (${feeVariants[0].toLocaleString()}–${feeVariants[feeVariants.length - 1].toLocaleString()}₮)`;
   const collectionRate = expectedMonthly > 0 ? (monthIncome / expectedMonthly * 100) : 0;
   const reserveBalance = reserveEntries.reduce((s, e) => s + (e.type === 'deposit' ? e.amount : -e.amount), 0);
-  const yearFeeIncome = allPayments.filter(p => new Date(p.paid_at).getFullYear() === year).reduce((s, p) => s + Number(p.amount), 0);
+  const yearFeeIncome = allPayments.filter(p => p.period_year === year).reduce((s, p) => s + Number(p.amount), 0);
   // Нэхэмжлэхийн тулгалт: төлсөн / төлөөгүй (хэсэгчлэн төлсөн нь төлөөгүйд)
   const invPaid = (i: Invoice) => i.status === 'paid';
   const invLeft = (i: Invoice) => Math.max(0, Number(i.amount) - Number(i.paid_amount || 0));
@@ -420,10 +423,7 @@ export default function AdminFinanceHub() {
   // 12 сарын chart дата
   const monthlyHistory = Array.from({ length: 12 }, (_, i) => {
     const m = i + 1;
-    const inc = allPayments.filter(p => {
-      const d = new Date(p.paid_at);
-      return d.getFullYear() === year && d.getMonth() + 1 === m;
-    }).reduce((s, p) => s + Number(p.amount), 0);
+    const inc = allPayments.filter(p => p.period_year === year && p.period_month === m).reduce((s, p) => s + Number(p.amount), 0);
     const exp = yearExpenseItems.filter(i => i.month === m).reduce((s, i) => s + Number(i.amount), 0);
     const other = yearIncomeItems.filter(i => i.month === m).reduce((s, i) => s + Number(i.amount), 0);
     return { month: m, income: inc + other, expense: exp, fees: inc, other };
@@ -433,7 +433,7 @@ export default function AdminFinanceHub() {
   const exportYearReport = () => {
     const wb = XLSX.utils.book_new();
     const incomeSheet = XLSX.utils.json_to_sheet(
-      allPayments.filter(p => new Date(p.paid_at).getFullYear() === year).map(p => ({
+      allPayments.filter(p => p.period_year === year).map(p => ({
         'Огноо': new Date(p.paid_at).toLocaleDateString('mn-MN'),
         'Айл': getResidentName(p.resident_id),
         'Тайлбар': p.description,
@@ -1077,7 +1077,7 @@ export default function AdminFinanceHub() {
           {tab === 'annual' && (
             <div className="space-y-6">
               <div className="grid grid-cols-4 gap-4">
-                <KpiCard label={`${year} оны орлого`} value={`${yearIncome.toLocaleString()}₮`} sub={`${allPayments.filter(p => new Date(p.paid_at).getFullYear() === year).length} төлөлт`} color="green" />
+                <KpiCard label={`${year} оны орлого`} value={`${yearIncome.toLocaleString()}₮`} sub={`${allPayments.filter(p => p.period_year === year).length} төлөлт`} color="green" />
                 <KpiCard label={`${year} оны зардал`} value={`${yearExpense.toLocaleString()}₮`} sub={`${yearBudgetItems.length} бүртгэл`} color="orange" />
                 <KpiCard label="Цэвэр дүн" value={`${yearNet.toLocaleString()}₮`} sub={yearNet >= 0 ? 'Ашигтай' : 'Алдагдалтай'} color={yearNet >= 0 ? 'blue' : 'red'} />
                 <KpiCard label="Жилийн цуглуулалт" value={`${yearCollectionRate.toFixed(1)}%`} sub={`хүлээгдэх ${yearExpected.toLocaleString()}₮`} color="cyan" />

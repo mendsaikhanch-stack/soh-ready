@@ -174,3 +174,22 @@ class AdminDeleteBuilder {
     }
   }
 }
+
+/**
+ * Бүх мөрийг хуудаслан уншина. PostgREST нэг удаад ≤1000 мөр буцаадаг тул
+ * төлбөр, нэхэмжлэх зэрэг хурдан өсдөг хүснэгтийг шууд уншвал чимээгүй дутна.
+ * build нь ТОГТВОРТОЙ эрэмбэтэй (жишээ нь .order('id')) query буцаах ёстой.
+ */
+export async function adminSelectAll<T = Row>(
+  build: () => AdminQueryBuilder,
+): Promise<{ data: T[]; error: string | null }> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await build().range(from, from + 999);
+    if (error) return { data: out, error };
+    const rows = ((data as unknown) as T[]) || [];
+    out.push(...rows);
+    if (rows.length < 1000) break;
+  }
+  return { data: out, error: null };
+}

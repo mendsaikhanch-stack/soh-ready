@@ -9,6 +9,7 @@
 // Зөвхөн НИЙЛБЭР буцаана — айл тус бүрийн мэдээлэл (хувийн) гарахгүй.
 
 import { NextRequest, NextResponse } from 'next/server';
+import { periodKey } from '@/app/lib/finance/period';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { rateLimit } from '@/app/lib/rate-limit';
 import { clientIp } from '@/app/lib/council';
@@ -27,11 +28,6 @@ async function allPages<T>(page: (from: number, to: number) => PromiseLike<{ dat
   }
 }
 
-/** Улаанбаатарын цагаар (UTC+8) он*100+сар */
-const ubYm = (iso: string) => {
-  const d = new Date(new Date(iso).getTime() + 8 * 3600 * 1000);
-  return d.getUTCFullYear() * 100 + d.getUTCMonth() + 1;
-};
 
 export async function GET(req: NextRequest) {
   const rl = limiter.check(clientIp(req));
@@ -71,7 +67,7 @@ export async function GET(req: NextRequest) {
         supabaseAdmin.from('invoices').select('amount, paid_amount, status').eq('sokh_id', sokhId).eq('year', year).eq('month', month).order('id').range(f, t)),
     ]);
 
-    const collected = payments.filter((p) => ubYm(p.paid_at) === target).reduce((s, p) => s + Number(p.amount), 0);
+    const collected = payments.filter((p) => periodKey(sokhId, p.paid_at) === target).reduce((s, p) => s + Number(p.amount), 0);
     const monthItems = items.filter((i) => i.year * 100 + i.month === target);
     const otherIncome = monthItems.filter(isIncomeItem).reduce((s, i) => s + Number(i.amount), 0);
     const expense = monthItems.filter((i) => !isIncomeItem(i)).reduce((s, i) => s + Number(i.amount), 0);
@@ -84,7 +80,7 @@ export async function GET(req: NextRequest) {
       const [oy, om] = openDate.split('-').map(Number);
       const from = oy * 100 + om;
       if (target >= from) {
-        const inc = payments.filter((p) => { const k = ubYm(p.paid_at); return k >= from && k <= target; })
+        const inc = payments.filter((p) => { const k = periodKey(sokhId, p.paid_at); return k >= from && k <= target; })
           .reduce((s, p) => s + Number(p.amount), 0);
         const rng = items.filter((i) => { const k = i.year * 100 + i.month; return k >= from && k <= target; });
         cashEnd = Number(org.opening_balance || 0) + inc

@@ -336,14 +336,22 @@ const ACTIONS: Record<string, Handler> = {
     const invoiceId = spread || b.invoiceId == null || b.invoiceId === '' ? null : id(b.invoiceId, 'invoiceId');
     const note = str(b.note, 300, 'Тэмдэглэл', false);
     const { data: tx } = await supabaseAdmin.from('bank_transactions')
-      .select('id, amount_mnt').eq('id', tid).eq('sokh_id', ctx.sokhId).maybeSingle();
+      .select('id, amount_mnt, transaction_date').eq('id', tid).eq('sokh_id', ctx.sokhId).maybeSingle();
     if (!tx) throw new HttpError(404, 'Гүйлгээ олдсонгүй');
+    // Төлбөрийн огноо = банкны гүйлгээний огноо (баталгаажуулсан өдөр биш). Эс бөгөөс
+    // тасалбараас өмнө орсон мөнгийг хожим баталгаажуулахад дараагийн сарын орлогод орно.
+    const backdate = async () => {
+      if (!tx.transaction_date) return;
+      await supabaseAdmin.from('payments').update({ paid_at: `${tx.transaction_date}T12:00:00+08:00` })
+        .or(`provider_txn_id.eq.banktx:${tid},provider_txn_id.like.banktx:${tid}:*`);
+    };
     try {
       if (spread) {
         const { paymentId, applied } = await applySpread(tid, residentId, Number(tx.amount_mnt), ctx.adminId, note);
         await audit(ctx, 'bank_sms.txn.confirm', 'bank_transactions', {
           id: tid, residentId, spread: true, applied, paymentId, amount: tx.amount_mnt,
         });
+        await backdate();
         return { ok: true, paymentId, applied };
       }
       const paymentId = await supabaseBankSmsStore.applyPayment({
@@ -352,6 +360,7 @@ const ACTIONS: Record<string, Handler> = {
       await audit(ctx, 'bank_sms.txn.confirm', 'bank_transactions', {
         id: tid, residentId, invoiceId, paymentId, amount: tx.amount_mnt,
       });
+      await backdate();
       return { ok: true, paymentId };
     } catch (e) {
       const msg = e instanceof Error ? e.message : '';

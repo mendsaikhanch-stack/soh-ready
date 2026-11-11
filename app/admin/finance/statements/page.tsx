@@ -20,12 +20,13 @@
 import { Suspense, useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { adminFrom } from '@/app/lib/admin-db';
+import { adminFrom, adminSelectAll } from '@/app/lib/admin-db';
+import { withPeriod } from '@/app/lib/finance/period';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import { isIncomeItem } from '@/app/lib/budget-items';
 
 interface BudgetItem { id: number; category: string; amount: number; month: number; year: number; description: string; type?: string; name?: string; }
-interface Payment { id: number; resident_id: number; amount: number; paid_at: string; }
+interface Payment { id: number; resident_id: number; amount: number; paid_at: string; period_year: number; period_month: number; }
 interface Resident { id: number; debt: number; monthly_fee: number | null; pending_claim: boolean; }
 interface Payable { id: number; vendor: string; amount: number; paid_amount: number; status: string; }
 interface ReserveEntry { id: number; type: string; amount: number; }
@@ -39,6 +40,7 @@ const categoryLabels: Record<string, string> = {
   cleaning: 'Цэвэрлэгээ', elevator: 'Лифт', security: 'Харуул', repair: 'Засвар',
   electricity: 'Цахилгаан', water: 'Ус', heating: 'Дулаан', garden: 'Тохижилт',
   reserve: 'Нөөц сан', insurance: 'Даатгал', salary: 'Цалин', garbage: 'Хог ачуулалт',
+  supplies: 'Материал, хэрэгсэл', bank_fee: 'Банкны шимтгэл', sms: 'Мсж / мэдэгдэл', software: 'Програм хангамж',
   parking_income: 'Зогсоолын орлого', other: 'Бусад',
 };
 const months = ['1-р сар','2-р сар','3-р сар','4-р сар','5-р сар','6-р сар','7-р сар','8-р сар','9-р сар','10-р сар','11-р сар','12-р сар'];
@@ -94,7 +96,7 @@ function StatementsContent() {
 
     const [{ data: pay }, { data: bi }, { data: pyb }, { data: rf }] = await Promise.all([
       residentIds.length
-        ? adminFrom('payments').select('*').in('resident_id', residentIds)
+        ? adminSelectAll(() => adminFrom('payments').select('*').in('resident_id', residentIds).order('id', { ascending: true }))
         : Promise.resolve({ data: [] }),
       adminFrom('budget_items').select('*').eq('sokh_id', sokhId).eq('year', year),
       adminFrom('payables').select('*').eq('sokh_id', sokhId),
@@ -108,7 +110,7 @@ function StatementsContent() {
     setOpenDate(o?.opening_balance_date || '');
     setVatPayer(Boolean(o?.is_vat_payer));
     setResidents(residentList);
-    setPayments((pay as unknown as Payment[]) || []);
+    setPayments(withPeriod(sokhId, (pay as unknown as Payment[]) || []));
     setItems((bi as unknown as BudgetItem[]) || []);
     setPayables((pyb as unknown as Payable[]) || []);
     setReserve((rf as unknown as ReserveEntry[]) || []);
@@ -137,7 +139,7 @@ function StatementsContent() {
   const incomeItems = items.filter(isIncomeItem);
 
   const feeIncome = payments
-    .filter(p => new Date(p.paid_at).getFullYear() === year)
+    .filter(p => p.period_year === year)
     .reduce((s, p) => s + Number(p.amount), 0);
   const otherIncome = incomeItems.reduce((s, i) => s + Number(i.amount), 0);
   const totalIncome = feeIncome + otherIncome;
@@ -165,10 +167,7 @@ function StatementsContent() {
     let running = openingBalance;
     return Array.from({ length: 12 }, (_, i) => {
       const m = i + 1;
-      const inc = payments.filter(p => {
-        const d = new Date(p.paid_at);
-        return d.getFullYear() === year && d.getMonth() + 1 === m;
-      }).reduce((s, p) => s + Number(p.amount), 0)
+      const inc = payments.filter(p => p.period_year === year && p.period_month === m).reduce((s, p) => s + Number(p.amount), 0)
         + incomeItems.filter(x => x.month === m).reduce((s, x) => s + Number(x.amount), 0);
       const exp = expenseItems.filter(x => x.month === m).reduce((s, x) => s + Number(x.amount), 0);
       const start = running;

@@ -5,6 +5,7 @@ import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import * as XLSX from 'xlsx';
 import { UNIT_SCHEMES } from '@/app/lib/bank-sms/unit-address';
+import { periodOf } from '@/app/lib/finance/period';
 
 interface Resident { id: number; name: string; apartment: string; debt: number; building: string | null; entrance: string | null; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
@@ -340,9 +341,11 @@ export default function AdminPayments() {
 
   // Сарын орлого тооцоо
   const now = new Date();
+  // Тайлант сар (СӨХ-ийн тасалбараар) — ICTown-д 11/10 хүртэлх нь 10-р сар
+  const curPeriod = periodOf(sokhId, now.toISOString());
   const thisMonthPayments = payments.filter(p => {
-    const d = new Date(p.paid_at);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    const pp = periodOf(sokhId, p.paid_at);
+    return !!pp && !!curPeriod && pp.year === curPeriod.year && pp.month === curPeriod.month;
   });
   const thisMonthTotal = thisMonthPayments.reduce((s, p) => s + Number(p.amount), 0);
 
