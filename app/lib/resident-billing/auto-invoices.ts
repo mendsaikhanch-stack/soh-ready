@@ -21,7 +21,8 @@
 // ОРОХГҮЙ (тайланд аль хэдийн шингэсэн).
 
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
-import { residentDueDate } from '@/app/lib/resident-billing/due-date';
+import { residentDueDate, billingSchedule } from '@/app/lib/resident-billing/due-date';
+import { UNIT_SCHEMES, isValidSchemeUnit } from '@/app/lib/bank-sms/unit-address';
 
 // PostgREST нэг хүсэлтэд max_rows (1000) мөр л буцаадаг. Хуудаслахгүй бол
 // 300–500 айлтай СӨХ-ийн нэхэмжлэх 2–3 сард 1000-аас давж, өр буруу бодогдоно.
@@ -49,7 +50,7 @@ function ubToday(now: Date) {
   const year = ub.getUTCFullYear();
   const month = ub.getUTCMonth() + 1;
   const iso = `${year}-${String(month).padStart(2, '0')}-${String(ub.getUTCDate()).padStart(2, '0')}`;
-  return { year, month, iso };
+  return { year, month, day: ub.getUTCDate(), iso };
 }
 
 const ym = (y: number, m: number) => y * 100 + m;
@@ -65,16 +66,16 @@ export function openingInvoiceRow(sokhId: number, residentId: number, debt: numb
     year: p.year,
     month: p.month,
     amount: debt,
-    due_date: residentDueDate(p.year, p.month),
+    due_date: residentDueDate(p.year, p.month, sokhId),
     status: 'pending',
     description: `Эхний үлдэгдэл (${asOf}-ны байдлаар)`,
   };
 }
 
 interface OrgRow { id: number; name: string; monthly_fee: number | null; auto_invoice_from: string }
-interface ResRow { id: number; debt: number | null; monthly_fee: number | null }
+interface ResRow { id: number; debt: number | null; monthly_fee: number | null; building: string | null; apartment: string | null }
 interface InvRow { id: number; resident_id: number; year: number; month: number; amount: number; status: string; paid_amount: number | null; paid_at: string | null; due_date: string | null; created_at: string }
-interface PayRow { resident_id: number; amount: number; paid_at: string }
+interface PayRow { resident_id: number; amount: number; paid_at: string; invoice_id: number | null }
 
 export interface ResidentInvoiceRunResult {
   ok: boolean;
@@ -106,7 +107,7 @@ export async function runResidentInvoices(now: Date = new Date()): Promise<Resid
 
     const { data: resData, error: resErr } = await fetchAllPages<ResRow>((from, to) => supabaseAdmin
       .from('residents')
-      .select('id, debt, monthly_fee')
+      .select('id, debt, monthly_fee, building, apartment')
       .eq('sokh_id', sokhId)
       .eq('pending_claim', false)
       .order('id')
@@ -114,9 +115,32 @@ export async function runResidentInvoices(now: Date = new Date()): Promise<Resid
     if (resErr) { result.errors.push(`${o.name}: айл уншиж чадсангүй — ${resErr.message}`); continue; }
     const residents = (resData || []) as ResRow[];
 
-    // 1) Энэ сарын нэхэмжлэх (өрөнд НЭМЭХГҮЙ — хугацаа нь болоогүй)
-    if (ym(today.year, today.month) >= ym(fy, fm)) {
-      const rows = residents
+    // 1) Энэ сарын нэхэмжлэх (өрөнд НЭМЭХГҮЙ — хугацаа нь болоогүй).
+    //    СӨХ-ийн хуваарь: M сарынх M сарын issueDay-нд үүснэ (анхдагч 1, ICTown 10).
+    const sched = billingSchedule(sokhId);
+    if (ym(today.year, today.month) >= ym(fy, fm) && today.day >= sched.issueDay) {
+      // Тоотын схемтэй СӨХ-д (ICTown) өөрөө бүртгүүлсэн давхар / буруу тоотын мөрт нэхэмжлэхгүй:
+      // схемд таарах тоот, нэг тоотод нэг мөр (өмнөх сард нэхэмжлэгдсэн мөрийг сонгоно).
+      const scheme = UNIT_SCHEMES[sokhId];
+      let billable = residents;
+      if (scheme) {
+        const pm = prevMonth(today.year, today.month);
+        const { data: prevInv } = await fetchAllPages<{ resident_id: number }>((from, to) => supabaseAdmin
+          .from('invoices').select('resident_id').eq('sokh_id', sokhId).eq('year', pm.year).eq('month', pm.month)
+          .order('id').range(from, to));
+        const billedBefore = new Set((prevInv || []).map(i => i.resident_id));
+        const byUnit = new Map<string, ResRow>();
+        for (const r of residents) {
+          if (!isValidSchemeUnit(scheme, r.building, r.apartment)) continue;
+          const key = `${r.building}-${String(r.apartment).trim()}`;
+          const cur = byUnit.get(key);
+          if (!cur || (billedBefore.has(r.id) && !billedBefore.has(cur.id)) || (billedBefore.has(r.id) === billedBefore.has(cur.id) && r.id < cur.id)) {
+            byUnit.set(key, r);
+          }
+        }
+        billable = [...byUnit.values()];
+      }
+      const rows = billable
         .map(r => ({ r, fee: Number(r.monthly_fee ?? o.monthly_fee) || 0 }))
         .filter(x => x.fee > 0)
         .map(({ r, fee }) => ({
@@ -125,7 +149,7 @@ export async function runResidentInvoices(now: Date = new Date()): Promise<Resid
           year: today.year,
           month: today.month,
           amount: fee,
-          due_date: residentDueDate(today.year, today.month),
+          due_date: residentDueDate(today.year, today.month, sokhId),
           status: 'pending',
           description: `${MONTH_NAMES[today.month - 1]} ${today.year} - сарын хураамж`,
         }));
@@ -174,14 +198,18 @@ export async function runResidentInvoices(now: Date = new Date()): Promise<Resid
       const chunk = resIds.slice(i, i + 100);
       const { data: payData, error: payErr } = await fetchAllPages<PayRow>((from, to) => supabaseAdmin
         .from('payments')
-        .select('resident_id, amount, paid_at')
+        .select('resident_id, amount, paid_at, invoice_id')
         .in('resident_id', chunk)
-        .gte('paid_at', earliest)
         .order('id')
         .range(from, to));
       if (payErr) { result.errors.push(`${o.name}: төлбөр уншиж чадсангүй — ${payErr.message}`); continue; }
+      // Тооцоонд орох төлбөр: айлын тооцоо эхэлснээс хойш төлсөн, ЭСВЭЛ тооцоонд орж буй
+      // нэхэмжлэхтэй шууд холбогдсон (хожим үүсгэсэн нэхэмжлэхийг өмнө нь төлсөн байж болно —
+      // ICTown 1-р давхар: нэхэмжлэх 11/02, төлбөр 10/31).
+      const invIds = new Set([...invByRes.values()].flat().map(i => i.id));
       for (const p of (payData || []) as PayRow[]) {
-        if (new Date(p.paid_at) < new Date(startOf.get(p.resident_id) || 0)) continue;
+        const linked = p.invoice_id != null && invIds.has(p.invoice_id);
+        if (!linked && new Date(p.paid_at) < new Date(startOf.get(p.resident_id) || 0)) continue;
         paidByRes.set(p.resident_id, (paidByRes.get(p.resident_id) || 0) + Number(p.amount || 0));
       }
     }

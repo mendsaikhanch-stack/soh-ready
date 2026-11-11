@@ -295,8 +295,8 @@ export default function AdminFinanceHub() {
     setGenerating(true);
     setGenMessage('');
     const sokhId = await getAdminSokhId();
-    // Төлөх хугацаа = дараа сарын 5 (автомат замтай ижил дүрэм)
-    const dueDate = residentDueDate(year, month);
+    // Төлөх хугацаа = дараа сарын 5, эсвэл СӨХ-ийн хуваарь (автомат замтай ижил дүрэм)
+    const dueDate = residentDueDate(year, month, sokhId);
     const rows = residents.filter(r => feeOf(r) > 0).map(r => ({
       sokh_id: sokhId,
       resident_id: r.id,

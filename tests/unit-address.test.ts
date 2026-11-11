@@ -240,3 +240,15 @@ describe('төлбөрийн урсгал', () => {
     assert.equal(m.txs[0].review_reason, 'no_mapping');
   });
 });
+
+test('isValidSchemeUnit: зөвхөн схемд таарах тоот', async () => {
+  const { isValidSchemeUnit, ICTOWN_SCHEME } = await import('../app/lib/bank-sms/unit-address.ts');
+  assert.equal(isValidSchemeUnit(ICTOWN_SCHEME, '2-2', '1510'), true);
+  assert.equal(isValidSchemeUnit(ICTOWN_SCHEME, '2-1', '1603'), true);
+  assert.equal(isValidSchemeUnit(ICTOWN_SCHEME, '2-2', '1602'), false); // 02 нь 1-р орц
+  assert.equal(isValidSchemeUnit(ICTOWN_SCHEME, '5-1', '2304'), false); // 23-р давхар алга
+  assert.equal(isValidSchemeUnit(ICTOWN_SCHEME, '5-2', '1601'), false);
+  assert.equal(isValidSchemeUnit(ICTOWN_SCHEME, '2-2', '****'), false);
+  assert.equal(isValidSchemeUnit(ICTOWN_SCHEME, '2-2', '1109 тоот'), false);
+  assert.equal(isValidSchemeUnit(ICTOWN_SCHEME, '1-1', '101'), true);
+});

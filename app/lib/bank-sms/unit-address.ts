@@ -124,6 +124,14 @@ function unitIn(b: SchemeBuilding, apartment: string): SchemeEntrance | null {
   return b.entrances.find((e) => idx >= e.from && idx <= e.to) ?? null;
 }
 
+/** residents.building («2-2») + тоот схемд таарах уу (байр, орц, давхар, тоотын муж) */
+export function isValidSchemeUnit(scheme: UnitScheme, residentBuilding: string | null, apartment: string | null): boolean {
+  if (!residentBuilding || !apartment) return false;
+  const [internal, entrance] = residentBuilding.split('-');
+  const b = scheme.buildings.find((x) => x.internal === internal);
+  return !!b && unitIn(b, String(apartment).trim())?.entrance === entrance;
+}
+
 function candidate(b: SchemeBuilding, e: SchemeEntrance, apartment: string): UnitCandidate {
   return {
     building_number: b.internal,
