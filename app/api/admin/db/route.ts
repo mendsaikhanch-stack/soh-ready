@@ -400,6 +400,12 @@ export async function POST(request: NextRequest) {
           if (params?.limit) {
             query = query.limit(params.limit as number);
           }
+          if (Array.isArray(params?.range) && params.range.length === 2) {
+            const [from, to] = (params.range as unknown[]).map(Number);
+            if (Number.isInteger(from) && Number.isInteger(to) && from >= 0 && to >= from && to - from < 1000) {
+              query = query.range(from, to);
+            }
+          }
           if (params?.single) {
             query = query.single();
           }

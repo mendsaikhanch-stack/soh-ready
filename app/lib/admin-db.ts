@@ -12,6 +12,8 @@ interface QueryParams {
   lte?: Record<string, DbValue>;
   order?: { column: string; ascending?: boolean }[];
   limit?: number;
+  /** [from, to] — PostgREST нэг удаад ≤1000 мөр буцаадаг тул хуудаслан уншихад */
+  range?: [number, number];
   single?: boolean;
   count?: boolean;
   data?: Record<string, unknown> | Record<string, unknown>[];
@@ -102,6 +104,11 @@ class AdminQueryBuilder<T = Rows> {
 
   limit(n: number) {
     this.params.limit = n;
+    return this;
+  }
+
+  range(from: number, to: number) {
+    this.params.range = [from, to];
     return this;
   }
 

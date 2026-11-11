@@ -8,6 +8,27 @@ import { UNIT_SCHEMES } from '@/app/lib/bank-sms/unit-address';
 
 interface Resident { id: number; name: string; apartment: string; debt: number; building: string | null; entrance: string | null; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
+interface MonthInvoice {
+  id: number; resident_id: number; year: number; month: number;
+  amount: number; total_amount: number | null; previous_balance: number | null; paid_amount: number | null; status: string;
+}
+const invTotal = (i: MonthInvoice) => Number(i.total_amount ?? Number(i.amount) + Number(i.previous_balance || 0));
+const invLeft = (i: MonthInvoice) => Math.max(0, invTotal(i) - Number(i.paid_amount || 0));
+const ymKey = (y: number, m: number) => `${y}-${String(m).padStart(2, '0')}`;
+
+// PostgREST нэг удаад ≤1000 мөр буцаадаг. ICTown-д сард ~575 нэхэмжлэх, төлбөр үүсдэг тул
+// хуудаслахгүй бол «Нийт өр», «Нийт цуглуулсан» чимээгүй дутуу тоологдоно.
+async function selectAll<T>(build: () => ReturnType<ReturnType<typeof adminFrom>['select']>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await build().range(from, from + 999);
+    if (error) throw new Error(String(error));
+    const rows = (data as unknown as T[]) || [];
+    out.push(...rows);
+    if (rows.length < 1000) break;
+  }
+  return out;
+}
 
 /** Оршин суугчийн "Би шилжүүлсэн" мэдэгдэл — дарга банкны хуулгатай тулгаж баталгаажуулна */
 interface PaymentNotice {
@@ -82,6 +103,11 @@ export default function AdminPayments() {
   const [saving, setSaving] = useState(false);
   const [sokhId, setSokhId] = useState(0);
   const [openEntrance, setOpenEntrance] = useState<string | null>(null);   // задалсан орц
+  // Орц орцоор: '' = нийт өр (бүх сар), 'YYYY-MM' = тухайн сарын нэхэмжлэх төлсөн/төлөөгүй
+  const [months, setMonths] = useState<string[]>([]);
+  const [selMonth, setSelMonth] = useState('');
+  const [monthInv, setMonthInv] = useState<MonthInvoice[]>([]);
+  const [monthLoading, setMonthLoading] = useState(false);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -94,21 +120,40 @@ export default function AdminPayments() {
     setResidents(residentList);
     // payments нь sokh_id шууд байхгүй — proxy resident_id-ээр scope хийдэг тул айлуудын id-аар уншина.
     const residentIds = residentList.map(r => r.id);
-    const { data: pay } = residentIds.length
-      ? await adminFrom('payments').select('*').in('resident_id', residentIds).order('paid_at', { ascending: false })
-      : { data: [] };
     // Өмнө нь .limit(50) байсан тул «Нийт цуглуулсан», «Энэ сарын орлого», Excel татах нь
     // зөвхөн сүүлийн 50 төлбөрийг (ихэвчлэн өнөөдрийнхийг) тоолж, хянах самбартай зөрдөг байв.
-    setPayments((pay as unknown as Payment[]) || []);
+    const pay = residentIds.length
+      ? await selectAll<Payment>(() => adminFrom('payments').select('*').in('resident_id', residentIds).order('id', { ascending: true }))
+      : [];
+    setPayments(pay.sort((a, b) => (b.paid_at || '').localeCompare(a.paid_at || '')));
 
-    const { data: openInv } = await adminFrom('invoices')
-      .select('resident_id,amount,paid_amount').eq('sokh_id', sokhId).in('status', ['pending', 'overdue', 'partial']);
+    const openInv = await selectAll<MonthInvoice>(() => adminFrom('invoices')
+      .select('id,resident_id,year,month,amount,total_amount,previous_balance,paid_amount,status')
+      .eq('sokh_id', sokhId).in('status', ['pending', 'overdue', 'partial']).order('id', { ascending: true }));
     const due: Record<number, number> = {};
-    for (const i of (openInv as unknown as { resident_id: number; amount: number; paid_amount: number | null }[]) || []) {
-      const left = Number(i.amount) - Number(i.paid_amount || 0);
+    for (const i of openInv) {
+      const left = invLeft(i);
       if (left > 0) due[i.resident_id] = (due[i.resident_id] || 0) + left;
     }
     setOpenDue(due);
+
+    // Нэхэмжлэхтэй саруудын жагсаалт (эхний ба сүүлийн сарын хооронд)
+    const [{ data: first }, { data: last }] = await Promise.all([
+      adminFrom('invoices').select('year,month').eq('sokh_id', sokhId).order('year', { ascending: true }).order('month', { ascending: true }).limit(1),
+      adminFrom('invoices').select('year,month').eq('sokh_id', sokhId).order('year', { ascending: false }).order('month', { ascending: false }).limit(1),
+    ]);
+    const f = (first as unknown as { year: number; month: number }[] | null)?.[0];
+    const l = (last as unknown as { year: number; month: number }[] | null)?.[0];
+    const ms: string[] = [];
+    if (f && l) {
+      let y = l.year, m = l.month;
+      while (ms.length < 36 && (y > f.year || (y === f.year && m >= f.month))) {
+        ms.push(ymKey(y, m));
+        m--;
+        if (m === 0) { m = 12; y--; }
+      }
+    }
+    setMonths(ms);
 
     // Баталгаажуулахыг хүлээж буй "Би шилжүүлсэн" мэдэгдлүүд
     // Сервер айлын нэхэмжлэхийн төлөв, давхар мэдэгдлийн тоог хамт буцаана
@@ -131,6 +176,24 @@ export default function AdminPayments() {
     setAgreements((agr as unknown as DebtAgreement[]) || []);
 
     setLoading(false);
+  };
+
+  const loadMonth = async (ym: string) => {
+    setSelMonth(ym);
+    setOpenEntrance(null);
+    if (!ym) { setMonthInv([]); return; }
+    setMonthLoading(true);
+    try {
+      const [y, m] = ym.split('-').map(Number);
+      const rows = await selectAll<MonthInvoice>(() => adminFrom('invoices')
+        .select('id,resident_id,year,month,amount,total_amount,previous_balance,paid_amount,status')
+        .eq('sokh_id', sokhId).eq('year', y).eq('month', m).order('id', { ascending: true }));
+      setMonthInv(rows);
+    } catch {
+      alert('Сарын нэхэмжлэх ачаалж чадсангүй');
+      setMonthInv([]);
+    }
+    setMonthLoading(false);
   };
 
   // Баталгаажуулах/татгалзах — /api/admin/payment-notices нэхэмжлэхтэй холбож НЭГ удаа бүртгэнэ.
@@ -257,41 +320,7 @@ export default function AdminPayments() {
     XLSX.utils.book_append_sheet(wb, debtSheet, 'Өртэй айлууд');
 
     if (entranceGroups.length >= 2) {
-      const entSheet = XLSX.utils.json_to_sheet(entranceGroups.map(g => ({
-        'Орц': g.label,
-        'Айл': g.units,
-        'Өргүй': g.paid,
-        'Өртэй': g.debtors,
-        'Төлөлт (%)': g.units ? Math.round((g.paid / g.units) * 100) : 0,
-        'Нийт өр (₮)': g.debt,
-        'Энэ сарын орлого (₮)': g.month,
-      })));
-      XLSX.utils.book_append_sheet(wb, entSheet, 'Орц орцоор');
-
-      // Орц бүр тусдаа хуудас — тухайн орцны айл бүрийн төлөв (дэлгэц дээр задлахтай ижил)
-      const used = new Set<string>(['Төлбөрийн түүх', 'Өртэй айлууд', 'Орц орцоор']);
-      for (const g of entranceGroups) {
-        // Excel: хуудасны нэр ≤31 тэмдэгт, : \ / ? * [ ] хориотой, давхцахгүй
-        const base = g.label.replace(' байр', '').replace(/[:\\/?*[\]]/g, '-').slice(0, 28);
-        let name = base;
-        for (let n = 2; used.has(name); n++) name = `${base} ${n}`;
-        used.add(name);
-        const rows = g.list.slice()
-          .sort((a, b) => a.apartment.localeCompare(b.apartment, undefined, { numeric: true }))
-          .map(r => ({
-            'Тоот': r.apartment,
-            'Нэр': r.name,
-            'Төлөв': debtOf(r) > 0 ? 'Өртэй' : 'Өргүй',
-            'Өр (₮)': debtOf(r),
-            'Энэ сарын орлого (₮)': monthPaidBy[r.id] || 0,
-          }));
-        rows.push({
-          'Тоот': 'Нийт', 'Нэр': `${g.units} айл · өргүй ${g.paid} · өртэй ${g.debtors}`,
-          'Төлөв': `${g.units ? Math.round((g.paid / g.units) * 100) : 0}%`,
-          'Өр (₮)': g.debt, 'Энэ сарын орлого (₮)': g.month,
-        });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), name);
-      }
+      appendEntranceSheets(wb, new Set(['Төлбөрийн түүх', 'Өртэй айлууд']));
     }
 
     const today = new Date().toISOString().slice(0, 10);
@@ -337,29 +366,91 @@ export default function AdminPayments() {
   };
   const monthPaidBy: Record<number, number> = {};
   for (const p of thisMonthPayments) monthPaidBy[p.resident_id] = (monthPaidBy[p.resident_id] || 0) + Number(p.amount);
+  // Айл бүрийн мөр: '' горимд нийт өр, сар сонгосон бол зөвхөн тэр сарын нэхэмжлэх
+  type UnitItem = { r: Resident; billed: number; paidAmt: number; left: number; state: 'paid' | 'partial' | 'unpaid' };
+  const monthInvBy = new Map(monthInv.map(i => [i.resident_id, i]));
+  const unitItems: UnitItem[] = selMonth
+    ? residents.filter(r => monthInvBy.has(r.id)).map(r => {
+        const i = monthInvBy.get(r.id)!;
+        const paidAmt = Number(i.paid_amount || 0), left = invLeft(i);
+        return { r, billed: invTotal(i), paidAmt, left, state: left === 0 ? 'paid' : paidAmt > 0 ? 'partial' : 'unpaid' };
+      })
+    : residents.map(r => {
+        const left = debtOf(r);
+        return { r, billed: 0, paidAmt: monthPaidBy[r.id] || 0, left, state: left > 0 ? 'unpaid' : 'paid' };
+      });
   const entranceGroups = (() => {
-    const m = new Map<string, { key: string; label: string; list: Resident[] }>();
-    for (const r of residents) {
-      const { key, label } = entranceOf(r);
-      if (!m.has(key)) m.set(key, { key, label, list: [] });
-      m.get(key)!.list.push(r);
+    const m = new Map<string, { key: string; label: string; items: UnitItem[] }>();
+    for (const it of unitItems) {
+      const { key, label } = entranceOf(it.r);
+      if (!m.has(key)) m.set(key, { key, label, items: [] });
+      m.get(key)!.items.push(it);
     }
     return [...m.values()]
-      .map(g => {
-        const debtors = g.list.filter(r => debtOf(r) > 0);
-        return {
-          ...g,
-          units: g.list.length,
-          debtors: debtors.length,
-          paid: g.list.length - debtors.length,
-          debt: debtors.reduce((s, r) => s + debtOf(r), 0),
-          month: g.list.reduce((s, r) => s + (monthPaidBy[r.id] || 0), 0),
-        };
-      })
+      .map(g => ({
+        ...g,
+        items: g.items.slice().sort((a, b) => a.r.apartment.localeCompare(b.r.apartment, undefined, { numeric: true })),
+        units: g.items.length,
+        paid: g.items.filter(x => x.state === 'paid').length,
+        debtors: g.items.filter(x => x.state !== 'paid').length,
+        debt: g.items.reduce((s, x) => s + x.left, 0),
+        billed: g.items.reduce((s, x) => s + x.billed, 0),
+        // '' горимд энэ сарын орлого, сар сонгосон бол тэр сарын нэхэмжлэхэд төлөгдсөн дүн
+        month: g.items.reduce((s, x) => s + x.paidAmt, 0),
+      }))
       // Тодорхойгүй бүлгийг хамгийн ард
       .sort((a, b) => Number(a.key.startsWith('?')) - Number(b.key.startsWith('?'))
         || a.key.localeCompare(b.key, undefined, { numeric: true }));
   })();
+  const gSum = (k: 'units' | 'paid' | 'debtors' | 'debt' | 'billed' | 'month') => entranceGroups.reduce((s, g) => s + g[k], 0);
+  const monthLabel = (ym: string) => { const [y, m] = ym.split('-'); return `${y} оны ${Number(m)}-р сар`; };
+  const stateLabel = (x: UnitItem) => selMonth
+    ? (x.state === 'paid' ? 'Төлсөн' : x.state === 'partial' ? 'Дутуу төлсөн' : 'Төлөөгүй')
+    : (x.state === 'paid' ? 'Өргүй' : 'Өртэй');
+
+  // Орц орцоор Excel: нэгдсэн хуудас + орц бүр тусдаа хуудас
+  const appendEntranceSheets = (wb: XLSX.WorkBook, used: Set<string>) => {
+    const summaryName = selMonth ? `${selMonth} орц орцоор` : 'Орц орцоор';
+    used.add(summaryName);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(entranceGroups.map(g => (selMonth ? {
+      'Орц': g.label, 'Нэхэмжилсэн айл': g.units, 'Төлсөн': g.paid, 'Төлөөгүй': g.debtors,
+      'Төлөлт (%)': g.units ? Math.round((g.paid / g.units) * 100) : 0,
+      'Нэхэмжилсэн (₮)': g.billed, 'Төлөгдсөн (₮)': g.month, 'Үлдэгдэл (₮)': g.debt,
+    } : {
+      'Орц': g.label, 'Айл': g.units, 'Өргүй': g.paid, 'Өртэй': g.debtors,
+      'Төлөлт (%)': g.units ? Math.round((g.paid / g.units) * 100) : 0,
+      'Нийт өр (₮)': g.debt, 'Энэ сарын орлого (₮)': g.month,
+    }))), summaryName);
+    for (const g of entranceGroups) {
+      // Excel: хуудасны нэр ≤31 тэмдэгт, : \ / ? * [ ] хориотой, давхцахгүй
+      const base = g.label.replace(' байр', '').replace(/[:\\/?*[\]]/g, '-').slice(0, 28);
+      let name = base;
+      for (let n = 2; used.has(name); n++) name = `${base} ${n}`;
+      used.add(name);
+      const rows: Record<string, string | number>[] = g.items.map((x): Record<string, string | number> => (selMonth ? {
+        'Тоот': x.r.apartment, 'Нэр': x.r.name, 'Төлөв': stateLabel(x),
+        'Нэхэмжилсэн (₮)': x.billed, 'Төлсөн (₮)': x.paidAmt, 'Үлдэгдэл (₮)': x.left,
+      } : {
+        'Тоот': x.r.apartment, 'Нэр': x.r.name, 'Төлөв': stateLabel(x),
+        'Өр (₮)': x.left, 'Энэ сарын орлого (₮)': x.paidAmt,
+      }));
+      rows.push(selMonth ? {
+        'Тоот': 'Нийт', 'Нэр': `${g.units} айл · төлсөн ${g.paid} · төлөөгүй ${g.debtors}`,
+        'Төлөв': `${g.units ? Math.round((g.paid / g.units) * 100) : 0}%`,
+        'Нэхэмжилсэн (₮)': g.billed, 'Төлсөн (₮)': g.month, 'Үлдэгдэл (₮)': g.debt,
+      } : {
+        'Тоот': 'Нийт', 'Нэр': `${g.units} айл · өргүй ${g.paid} · өртэй ${g.debtors}`,
+        'Төлөв': `${g.units ? Math.round((g.paid / g.units) * 100) : 0}%`,
+        'Өр (₮)': g.debt, 'Энэ сарын орлого (₮)': g.month,
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), name);
+    }
+  };
+  const exportEntrances = () => {
+    const wb = XLSX.utils.book_new();
+    appendEntranceSheets(wb, new Set());
+    XLSX.writeFile(wb, `орц-орцоор-${selMonth || 'нийт-өр-' + new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
 
   return (
     <div className="p-6">
@@ -529,21 +620,48 @@ export default function AdminPayments() {
               </a>
             </div>
           )}
-          {/* Орц орцоор төлбөрийн байдал — мөр дээр дарж тухайн орцны айлуудыг харна */}
-          {entranceGroups.length >= 2 && (
+          {/* Орц орцоор төлбөрийн байдал — нийт өрөөр эсвэл сар сараар. Мөр дээр дарж айлуудыг харна */}
+          {(entranceGroups.length >= 2 || selMonth) && (
             <>
-              <h3 className="font-semibold text-sm text-gray-500 mb-3">ОРЦ ОРЦООР ТӨЛБӨРИЙН БАЙДАЛ</h3>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <h3 className="font-semibold text-sm text-gray-500">
+                  ОРЦ ОРЦООР ТӨЛБӨРИЙН БАЙДАЛ{selMonth && ` — ${monthLabel(selMonth).toUpperCase()}`}
+                </h3>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selMonth}
+                    onChange={e => loadMonth(e.target.value)}
+                    className="border rounded-lg px-2 py-1.5 text-sm bg-white"
+                  >
+                    <option value="">Нийт өр (бүх сар)</option>
+                    {months.map(ym => <option key={ym} value={ym}>{monthLabel(ym)}</option>)}
+                  </select>
+                  <button
+                    onClick={exportEntrances}
+                    disabled={monthLoading || entranceGroups.length === 0}
+                    className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50"
+                  >
+                    📥 Excel
+                  </button>
+                </div>
+              </div>
               <div className="bg-white rounded-xl border overflow-hidden mb-6">
+                {monthLoading ? (
+                  <p className="text-gray-400 py-8 text-center text-sm">Ачаалж байна...</p>
+                ) : entranceGroups.length === 0 ? (
+                  <p className="text-gray-400 py-8 text-center text-sm">Энэ сард нэхэмжлэх үүсээгүй байна</p>
+                ) : (
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr className="text-left text-sm text-gray-500">
                       <th className="px-4 py-3">Орц</th>
-                      <th className="px-4 py-3 text-right">Айл</th>
-                      <th className="px-4 py-3 text-right">Өргүй</th>
-                      <th className="px-4 py-3 text-right">Өртэй</th>
+                      <th className="px-4 py-3 text-right">{selMonth ? 'Нэхэмжилсэн айл' : 'Айл'}</th>
+                      <th className="px-4 py-3 text-right">{selMonth ? 'Төлсөн' : 'Өргүй'}</th>
+                      <th className="px-4 py-3 text-right">{selMonth ? 'Төлөөгүй' : 'Өртэй'}</th>
                       <th className="px-4 py-3">Төлөлт</th>
-                      <th className="px-4 py-3 text-right">Нийт өр</th>
-                      <th className="px-4 py-3 text-right">Энэ сарын орлого</th>
+                      {selMonth && <th className="px-4 py-3 text-right">Нэхэмжилсэн</th>}
+                      <th className="px-4 py-3 text-right">{selMonth ? 'Төлөгдсөн' : 'Нийт өр'}</th>
+                      <th className="px-4 py-3 text-right">{selMonth ? 'Үлдэгдэл' : 'Энэ сарын орлого'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -566,22 +684,32 @@ export default function AdminPayments() {
                               <span className="text-xs text-gray-500">{pct}%</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-semibold text-red-500">{g.debt.toLocaleString()}₮</td>
-                          <td className="px-4 py-3 text-sm text-right text-green-600">{g.month.toLocaleString()}₮</td>
+                          {selMonth && <td className="px-4 py-3 text-sm text-right">{g.billed.toLocaleString()}₮</td>}
+                          {selMonth ? (
+                            <>
+                              <td className="px-4 py-3 text-sm text-right text-green-600">{g.month.toLocaleString()}₮</td>
+                              <td className="px-4 py-3 text-sm text-right font-semibold text-red-500">{g.debt.toLocaleString()}₮</td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="px-4 py-3 text-sm text-right font-semibold text-red-500">{g.debt.toLocaleString()}₮</td>
+                              <td className="px-4 py-3 text-sm text-right text-green-600">{g.month.toLocaleString()}₮</td>
+                            </>
+                          )}
                         </tr>,
                         isOpen && (
                           <tr key={`${g.key}-list`} className="bg-blue-50/40">
-                            <td colSpan={7} className="px-4 py-3">
+                            <td colSpan={selMonth ? 8 : 7} className="px-4 py-3">
                               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-1.5">
-                                {g.list.slice()
-                                  .sort((a, b) => a.apartment.localeCompare(b.apartment, undefined, { numeric: true }))
-                                  .map(r => (
-                                    <div key={r.id} title={r.name}
-                                         className={`text-xs rounded px-2 py-1 border ${debtOf(r) > 0
-                                           ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
-                                      <b>{r.apartment}</b> · {debtOf(r) > 0 ? `${debtOf(r).toLocaleString()}₮` : 'өргүй'}
-                                    </div>
-                                  ))}
+                                {g.items.map(x => (
+                                  <div key={x.r.id} title={`${x.r.name} — ${stateLabel(x)}`}
+                                       className={`text-xs rounded px-2 py-1 border ${
+                                         x.state === 'paid' ? 'bg-green-50 border-green-200 text-green-700'
+                                         : x.state === 'partial' ? 'bg-amber-50 border-amber-200 text-amber-700'
+                                         : 'bg-red-50 border-red-200 text-red-700'}`}>
+                                    <b>{x.r.apartment}</b> · {x.left > 0 ? `${x.left.toLocaleString()}₮` : selMonth ? 'төлсөн' : 'өргүй'}
+                                  </div>
+                                ))}
                               </div>
                             </td>
                           </tr>
@@ -592,17 +720,28 @@ export default function AdminPayments() {
                   <tfoot className="bg-gray-50 border-t">
                     <tr className="text-sm font-semibold">
                       <td className="px-4 py-3">Нийт</td>
-                      <td className="px-4 py-3 text-right">{residents.length}</td>
-                      <td className="px-4 py-3 text-right text-green-600">{residents.length - debtors}</td>
-                      <td className="px-4 py-3 text-right text-red-500">{debtors}</td>
+                      <td className="px-4 py-3 text-right">{gSum('units')}</td>
+                      <td className="px-4 py-3 text-right text-green-600">{gSum('paid')}</td>
+                      <td className="px-4 py-3 text-right text-red-500">{gSum('debtors')}</td>
                       <td className="px-4 py-3 text-xs text-gray-500">
-                        {residents.length ? Math.round(((residents.length - debtors) / residents.length) * 100) : 0}%
+                        {gSum('units') ? Math.round((gSum('paid') / gSum('units')) * 100) : 0}%
                       </td>
-                      <td className="px-4 py-3 text-right text-red-500">{totalDebt.toLocaleString()}₮</td>
-                      <td className="px-4 py-3 text-right text-green-600">{thisMonthTotal.toLocaleString()}₮</td>
+                      {selMonth && <td className="px-4 py-3 text-right">{gSum('billed').toLocaleString()}₮</td>}
+                      {selMonth ? (
+                        <>
+                          <td className="px-4 py-3 text-right text-green-600">{gSum('month').toLocaleString()}₮</td>
+                          <td className="px-4 py-3 text-right text-red-500">{gSum('debt').toLocaleString()}₮</td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3 text-right text-red-500">{gSum('debt').toLocaleString()}₮</td>
+                          <td className="px-4 py-3 text-right text-green-600">{gSum('month').toLocaleString()}₮</td>
+                        </>
+                      )}
                     </tr>
                   </tfoot>
                 </table>
+                )}
               </div>
             </>
           )}
