@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { isWorkPlanEnabled } from '@/app/lib/work-plan/shared';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { useAuth } from '@/app/lib/auth-context';
@@ -38,6 +39,7 @@ const tabMenus: Record<MainTab, { title: string; items: { icon: string; label: s
         { icon: '💰', label: 'Төлбөр', desc: 'СӨХ хураамж төлөх, үлдэгдэл', href: 'payments', color: 'bg-green-50 border-green-200' },
         { icon: '📋', label: 'Зарцуулалт', desc: 'СӨХ-ийн орлого зардлын ил тод тайлан', href: 'reports', color: 'bg-blue-50 border-blue-200' },
         { icon: '💰', label: 'Санхүү', desc: 'Төлбөр хаашаа зарцуулагдаж байна', href: 'finance', color: 'bg-cyan-50 border-cyan-200' },
+        { icon: '📅', label: 'Ажлын төлөвлөгөө', desc: 'СӨХ-ийн жилийн төлөвлөгөө, гүйцэтгэл', href: 'work-plan', color: 'bg-emerald-50 border-emerald-200' },
       ],
     },
     {
@@ -687,6 +689,8 @@ export default function SokhDashboard() {
           const disabled = sokh?.disabled_features || [];
           const filteredItems = cat.items
             .filter(item => !disabled.includes(item.href))
+            // Ажлын төлөвлөгөө — туршилтын СӨХ-д л (app/lib/work-plan/shared.ts)
+            .filter(item => item.href !== 'work-plan' || isWorkPlanEnabled(params.id as string))
             .filter(item => !q || item.label.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q));
           if (filteredItems.length === 0) return null;
           return (

@@ -96,3 +96,5 @@ export const adminBankSmsLimiter = rateLimit({ name: 'admin-bank-sms', windowMs:
 export const boardReportAdminLimiter = rateLimit({ name: 'board-report-admin', windowMs: 60 * 1000, maxRequests: 60 });
 export const boardReportMemberLimiter = rateLimit({ name: 'board-report-member', windowMs: 60 * 1000, maxRequests: 60 });
 export const councilLimiter = rateLimit({ name: 'council', windowMs: 60 * 1000, maxRequests: 90 });
+export const workPlanAdminLimiter = rateLimit({ name: 'work-plan-admin', windowMs: 60 * 1000, maxRequests: 120 });
+export const workPlanMemberLimiter = rateLimit({ name: 'work-plan-member', windowMs: 60 * 1000, maxRequests: 60 });

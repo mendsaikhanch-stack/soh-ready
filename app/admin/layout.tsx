@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import HotolLogo from '@/app/components/HotolLogo';
 import PWAInstallPrompt from '@/app/components/PWAInstallPrompt';
 import { isBankSmsEnabled } from '@/app/lib/bank-sms/enabled';
+import { isWorkPlanEnabled } from '@/app/lib/work-plan/shared';
 import { supabase } from '@/app/lib/supabase';
 import Image from 'next/image';
 import { DEMO_BLOCKED_PREFIXES } from '@/app/lib/demo-admin';
@@ -30,6 +31,7 @@ const navItems = [
   { icon: '🗳', label: 'Санал хураалт', href: '/admin/polls' },
   { icon: '⚖️', label: 'Цахим ТУЗ', href: '/admin/board' },
   { icon: '🏛', label: 'Гишүүдийн хурал', href: '/admin/meetings' },
+  { icon: '📅', label: 'Ажлын төлөвлөгөө', href: '/admin/work-plan' },
   { icon: '💬', label: 'Мессеж', href: '/admin/messages' },
   { icon: '🏪', label: 'Хөрш маркет', href: '/admin/marketplace' },
   { icon: '🚩', label: 'Мэдээлсэн контент', href: '/admin/moderation' },
@@ -159,6 +161,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Банкны SMS — зөвхөн асаалттай СӨХ-д (app/lib/bank-sms/enabled.ts)
   const visibleNavItems = navItems
     .filter((item) => item.href !== '/admin/bank-sms' || isBankSmsEnabled(sokhId))
+    // Ажлын төлөвлөгөө — туршилтын СӨХ-д л (app/lib/work-plan/shared.ts)
+    .filter((item) => item.href !== '/admin/work-plan' || isWorkPlanEnabled(sokhId))
     .filter((item) => !isDemo || !DEMO_BLOCKED_PREFIXES.some((prefix) => item.href.startsWith(prefix)));
 
   if (checking) {

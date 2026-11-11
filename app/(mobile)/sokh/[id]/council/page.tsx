@@ -4,14 +4,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ChatPanel, { type ChatMessage } from '@/app/components/council/ChatPanel';
 import { councilFetch, FinanceTab, IssuesTab, ProposalsTab, ReportsTab } from '@/app/components/council/CouncilTabs';
+import WorkPlanList from '@/app/components/work-plan/WorkPlanList';
+import { isWorkPlanEnabled } from '@/app/lib/work-plan/shared';
 
 // «🏛 Зөвлөл» — ТУЗ / Хяналтын зөвлөлийн гишүүдэд зориулсан хэсэг.
 // ТУЗ: бүгдийг харна + санал өгнө + чатад бичнэ. Хяналт: зөвхөн харна.
 
-type Tab = 'reports' | 'proposals' | 'finance' | 'issues' | 'chat';
+type Tab = 'reports' | 'proposals' | 'plan' | 'finance' | 'issues' | 'chat';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'reports', label: '📑 Тайлан' },
   { key: 'proposals', label: '🗳 Санал' },
+  { key: 'plan', label: '📅 Төлөвлөгөө' },
   { key: 'finance', label: '💰 Санхүү' },
   { key: 'issues', label: '📝 Гомдол/Засвар' },
   { key: 'chat', label: '💬 Чат' },
@@ -26,6 +29,9 @@ export default function CouncilPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [myResidentId, setMyResidentId] = useState<number | null>(null);
   const [tab, setTab] = useState<Tab>('reports');
+  const [pendingPlans, setPendingPlans] = useState(0);
+  // Ажлын төлөвлөгөө — туршилтын СӨХ-д л (app/lib/work-plan/shared.ts)
+  const tabs = TABS.filter((t) => t.key !== 'plan' || isWorkPlanEnabled(sokhId));
   useEffect(() => {
     const run = () => {
       const t = new URLSearchParams(window.location.search).get('tab') as Tab | null;
@@ -37,6 +43,10 @@ export default function CouncilPage() {
   const loadSummary = useCallback(async () => {
     const { ok, data } = await councilFetch(`/api/council?sokhId=${sokhId}&view=summary`);
     setSummary(ok ? data : { member: false });
+    if (isWorkPlanEnabled(sokhId)) {
+      const r = await councilFetch(`/api/work-plan?sokhId=${sokhId}&summary=1`);
+      setPendingPlans(r.ok ? Number(r.data.pending) || 0 : 0);
+    }
   }, [sokhId]);
   useEffect(() => {
     const run = async () => { await loadSummary(); };
@@ -74,8 +84,8 @@ export default function CouncilPage() {
         )}
         {summary?.member && (
           <div className="flex gap-1 mt-3 overflow-x-auto -mx-1 px-1 pb-0.5">
-            {TABS.map((t) => {
-              const badge = t.key === 'reports' ? summary.unread_reports : t.key === 'proposals' ? summary.pending_votes : 0;
+            {tabs.map((t) => {
+              const badge = t.key === 'reports' ? summary.unread_reports : t.key === 'proposals' ? summary.pending_votes : t.key === 'plan' ? pendingPlans : 0;
               return (
                 <button key={t.key} onClick={() => chooseTab(t.key)}
                   className={`relative shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold ${tab === t.key ? 'bg-white text-slate-800' : 'bg-white/10 text-white/80'}`}>
@@ -100,6 +110,8 @@ export default function CouncilPage() {
           <ReportsTab sokhId={sokhId} onRead={loadSummary} />
         ) : tab === 'proposals' ? (
           <ProposalsTab sokhId={sokhId} canAct={!!summary.can_act} onVoted={loadSummary} />
+        ) : tab === 'plan' ? (
+          <WorkPlanList sokhId={sokhId} onChanged={loadSummary} />
         ) : tab === 'finance' ? (
           <FinanceTab sokhId={sokhId} />
         ) : tab === 'issues' ? (

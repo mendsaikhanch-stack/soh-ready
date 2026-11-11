@@ -22,7 +22,7 @@ export interface CouncilMember {
 }
 
 /** Bearer токеноос Supabase хэрэглэгчийг гаргана. */
-async function userFromRequest(req: Request): Promise<string | null> {
+export async function userFromRequest(req: Request): Promise<string | null> {
   const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) return null;
   const userClient = createClient(
