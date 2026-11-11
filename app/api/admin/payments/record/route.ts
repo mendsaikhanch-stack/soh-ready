@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { checkAnyAuth } from '@/app/lib/session-token';
 import { DEMO_READONLY_MESSAGE } from '@/app/lib/demo-admin';
+import { openInvoicesOldestFirst, writeAllocatedPayment } from '@/app/lib/payments/allocate';
 
 // POST /api/admin/payments/record { resident_id, amount, description, force? }
 // «Төлбөр & Орлого ▸ Төлбөр бүртгэх» — даргын гараар бүртгэх төлбөр.
@@ -16,22 +17,6 @@ import { DEMO_READONLY_MESSAGE } from '@/app/lib/demo-admin';
 // Нэхэмжлэх бүрд тусдаа payments мөр (payments.invoice_id ганц). Илүү гарсан дүн
 // нэхэмжлэхгүй урьдчилгаа болж бичигдэнэ.
 // Нэхэмжлэх нь бүгд хаагдсан айлд (ихэвчлэн банкаар аль хэдийн орсон) force-гүйгээр бичихгүй.
-
-const OPEN = ['pending', 'overdue', 'partial'];
-
-interface InvoiceRow {
-  id: number;
-  amount: number;
-  previous_balance: number | null;
-  total_amount: number | null;
-  paid_amount: number | null;
-  status: string;
-  year: number;
-  month: number;
-}
-
-const invTotal = (i: InvoiceRow) => Number(i.total_amount ?? Number(i.amount) + Number(i.previous_balance || 0));
-const invLeft = (i: InvoiceRow) => Math.max(0, invTotal(i) - Number(i.paid_amount || 0));
 
 export async function POST(req: NextRequest) {
   const a = await checkAnyAuth('admin', 'superadmin');
@@ -65,73 +50,31 @@ export async function POST(req: NextRequest) {
     }, { status: 409 });
   }
 
-  const { data: invData } = await supabaseAdmin
-    .from('invoices')
-    .select('id, amount, previous_balance, total_amount, paid_amount, status, year, month')
-    .eq('resident_id', residentId);
-  const invoices = (invData || []) as InvoiceRow[];
-  const open = invoices
-    .filter((i) => OPEN.includes(i.status) && invLeft(i) > 0)
-    .sort((x, y) => x.year - y.year || x.month - y.month || x.id - y.id);
+  const { count: invCount } = await supabaseAdmin
+    .from('invoices').select('id', { count: 'exact', head: true }).eq('resident_id', residentId);
+  const open = await openInvoicesOldestFirst(residentId);
 
-  if (!force && invoices.length > 0 && open.length === 0) {
+  if (!force && (invCount || 0) > 0 && open.length === 0) {
     return NextResponse.json({
       error: 'no_open_invoice',
       message: 'Энэ айлын нэхэмжлэх бүгд төлөгдсөн байна (банкны хуулгаар орсон байж магадгүй). Давхар бичихгүйн тулд шалгана уу.',
     }, { status: 409 });
   }
 
-  const nowIso = new Date().toISOString();
-  const batch = randomUUID();
-  let left = amount;
-  const applied: { invoice_id: number | null; month: string | null; amount: number; payment_id: number }[] = [];
-
-  const insertPayment = async (invoiceId: number | null, amt: number, label: string) => {
-    const { data, error } = await supabaseAdmin.from('payments').insert({
-      resident_id: residentId,
-      sokh_id: sokhId,
-      invoice_id: invoiceId,
-      amount: amt,
-      description: label,
-      provider: 'manual',
-      provider_txn_id: `record:${batch}:${invoiceId ?? 'advance'}`,
-      status: 'paid',
-      paid_at: nowIso,
-      updated_at: nowIso,
-    }).select('id').single();
-    if (error || !data) throw new Error(error?.message || 'payment insert');
-    return data.id as number;
-  };
-
+  let result;
   try {
-    for (const inv of open) {
-      if (left <= 0) break;
-      const part = Math.min(left, invLeft(inv));
-      const label = open.length > 1 || part < amount ? `${description} (${inv.month}-р сар)` : description;
-      const pid = await insertPayment(inv.id, part, label);
-      const newPaid = Number(inv.paid_amount || 0) + part;
-      const full = newPaid >= invTotal(inv);
-      await supabaseAdmin.from('invoices').update({
-        paid_amount: newPaid, status: full ? 'paid' : 'partial', paid_at: full ? nowIso : null, updated_at: nowIso,
-      }).eq('id', inv.id);
-      applied.push({ invoice_id: inv.id, month: `${inv.year}-${String(inv.month).padStart(2, '0')}`, amount: part, payment_id: pid });
-      left -= part;
-    }
-    // Нэхэмжлэхгүй СӨХ, эсвэл илүү төлсөн дүн → урьдчилгаа
-    if (left > 0) {
-      const pid = await insertPayment(null, left, open.length ? `${description} (урьдчилгаа)` : description);
-      applied.push({ invoice_id: null, month: null, amount: left, payment_id: pid });
-    }
+    result = await writeAllocatedPayment({
+      sokhId, residentId, amount, description, provider: 'manual', txnPrefix: `record:${randomUUID()}`, open,
+    });
   } catch (e) {
-    console.error('[payments/record]', (e as Error).message, { residentId, applied });
+    console.error('[payments/record]', (e as Error).message, { residentId });
     return NextResponse.json({
       error: 'Төлбөр бүрэн бүртгэгдсэнгүй. Жагсаалтыг шинэчилж шалгаад дахин оролдоно уу.',
-      applied,
     }, { status: 500 });
   }
 
   await supabaseAdmin.from('residents')
     .update({ debt: Math.max(0, Number(resident.debt || 0) - amount) }).eq('id', residentId);
 
-  return NextResponse.json({ ok: true, applied, advance: left > 0 ? left : 0 });
+  return NextResponse.json({ ok: true, applied: result.applied, advance: result.advance });
 }

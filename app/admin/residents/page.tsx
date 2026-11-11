@@ -58,6 +58,8 @@ export default function AdminResidents() {
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState<number | null>(null);
   const [orgFee, setOrgFee] = useState(0);                                  // СӨХ-ийн ерөнхий тариф
+  // Нээлттэй нэхэмжлэх: өмнөх саруудын үлдэгдэл + энэ сарын нэхэмжлэхийн үлдэгдэл (байвал)
+  const [dueBy, setDueBy] = useState<Record<number, { past: number; cur: number | null }>>({});
   const [platesByApt, setPlatesByApt] = useState<Record<string, string[]>>({}); // тоот → улсын дугаарууд
   const [agreementFor, setAgreementFor] = useState<number | null>(null);    // өрийн гэрээ байгуулах айл
   const [appById, setAppById] = useState<Record<number, AppUsageResident>>({}); // айл → апп-д нэвтэрсэн эсэх
@@ -75,6 +77,10 @@ export default function AdminResidents() {
 
   // Айлын сарын төлбөр: тусгай тариф байвал түүнийг, үгүй бол СӨХ-ийн ерөнхий дүнг
   const feeOf = (r: Resident) => Number(r.monthly_fee ?? orgFee) || 0;
+  // Айлаас нэхэх дүн = өмнөх саруудын үлдэгдэл + энэ сарын (нэхэмжлэх үүссэн бол түүний үлдэгдэл)
+  const prevOf = (r: Resident) => Math.max(Number(r.debt) || 0, dueBy[r.id]?.past || 0);
+  const curOf = (r: Resident) => dueBy[r.id]?.cur ?? feeOf(r);
+  const totalOf = (r: Resident) => prevOf(r) + curOf(r);
 
   // Тоотын доор зөвхөн байрны нэрийг харуулна (талбай нь өөрийн баганатай)
   const locationOf = (r: Resident) => (r.building || '').trim();
@@ -229,6 +235,30 @@ export default function AdminResidents() {
     }
 
     setOrgFee(Number((org as unknown as { monthly_fee?: number } | null)?.monthly_fee) || 0);
+
+    // Өр = нэхэмжлэхээс. residents.debt нь нэхэмжлэх үүсэхэд өөрчлөгддөггүй (ICTown-д бүгд 0)
+    // тул зөвхөн түүнийг харуулбал төлөөгүй айлын өр 0 гэж харагддаг байв.
+    // Сар бүр тусдаа нэхэмжлэх хэвээр — энд зөвхөн нийлүүлж харуулна.
+    const now = new Date();
+    const curKey = now.getFullYear() * 12 + now.getMonth() + 1;
+    const due: Record<number, { past: number; cur: number | null }> = {};
+    for (let from = 0; ; from += 1000) {
+      const { data: inv } = await adminFrom('invoices')
+        .select('resident_id,year,month,amount,total_amount,previous_balance,paid_amount,status')
+        .eq('sokh_id', sokhId).order('id', { ascending: true }).range(from, from + 999);
+      const rows = (inv as unknown as { resident_id: number; year: number; month: number; amount: number; total_amount: number | null;
+        previous_balance: number | null; paid_amount: number | null; status: string }[]) || [];
+      for (const i of rows) {
+        const key = i.year * 12 + i.month;
+        if (key > curKey) continue;                     // урьдчилж үүсгэсэн ирээдүйн сар
+        const total = Number(i.total_amount ?? Number(i.amount) + Number(i.previous_balance || 0));
+        const left = ['pending', 'overdue', 'partial'].includes(i.status) ? Math.max(0, total - Number(i.paid_amount || 0)) : 0;
+        const d = (due[i.resident_id] = due[i.resident_id] || { past: 0, cur: null });
+        if (key === curKey) d.cur = (d.cur || 0) + left; else d.past += left;
+      }
+      if (rows.length < 1000) break;
+    }
+    setDueBy(due);
     setPlatesByApt(plates);
     setResidents(rows);
     setLoading(false);
@@ -516,8 +546,8 @@ export default function AdminResidents() {
   const confirmed = residents.filter(r => !r.pending_claim);
   const pendingCount = residents.length - confirmed.length;
   const businessCount = confirmed.filter(isBusiness).length;
-  const totalDebt = visible.filter(r => !r.pending_claim).reduce((s, r) => s + r.debt, 0);
-  const totalFee = visible.filter(r => !r.pending_claim).reduce((s, r) => s + feeOf(r), 0);
+  const totalDebt = visible.filter(r => !r.pending_claim).reduce((s, r) => s + prevOf(r), 0);
+  const totalFee = visible.filter(r => !r.pending_claim).reduce((s, r) => s + curOf(r), 0);
   const completedCount = confirmed.filter(isComplete).length;
   const completedPct = confirmed.length ? Math.round((completedCount / confirmed.length) * 100) : 0;
   // Апп татаж нэвтэрсэн айл (бүх мөрөөр — өөрөө бүртгүүлсэн нь ч аппаараа орсон)
@@ -589,7 +619,7 @@ export default function AdminResidents() {
             {confirmed.length - businessCount} айл
             {businessCount > 0 && <> &middot; {businessCount} аж ахуйн нэгж</>}
             &middot; Өмнөх үлдэгдэл: {totalDebt.toLocaleString()}₮
-            &middot; Сарын төлбөр: {totalFee.toLocaleString()}₮
+            &middot; Энэ сар: {totalFee.toLocaleString()}₮
             &middot; Нийт: <b>{(totalDebt + totalFee).toLocaleString()}₮</b>
             &middot; <span className={completedPct >= 80 ? 'text-green-600' : completedPct >= 40 ? 'text-amber-600' : 'text-red-500'}>
               Бүрдэлт: {completedCount}/{confirmed.length} ({completedPct}%)
@@ -729,11 +759,11 @@ export default function AdminResidents() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-xs text-gray-400">Өмнөх үлдэгдэл + сарын төлбөр</div>
-              <div className={`text-sm font-semibold ${focused.debt > 0 ? 'text-red-500' : 'text-green-600'}`}>
-                {focused.debt.toLocaleString()}₮ + {feeOf(focused).toLocaleString()}₮
+              <div className="text-xs text-gray-400">Өмнөх үлдэгдэл + энэ сар = нэхэх дүн</div>
+              <div className={`text-sm font-semibold ${prevOf(focused) > 0 ? 'text-red-500' : 'text-green-600'}`}>
+                {prevOf(focused).toLocaleString()}₮ + {curOf(focused).toLocaleString()}₮
               </div>
-              <div className="text-lg font-bold">{(focused.debt + feeOf(focused)).toLocaleString()}₮</div>
+              <div className="text-lg font-bold">{totalOf(focused).toLocaleString()}₮</div>
             </div>
           </div>
 
@@ -748,7 +778,7 @@ export default function AdminResidents() {
             {focused.pending_claim && (
               <button onClick={() => approveResident(focused)} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm">✓ Баталгаажуулах</button>
             )}
-            {focused.debt > 0 && (
+            {prevOf(focused) > 0 && (
               <button onClick={() => { setAgreementFor(focused.id); setShowAgreement(true); }}
                       className="px-3 py-2 bg-amber-100 text-amber-800 rounded-lg text-sm">🤝 Гэрээ</button>
             )}
@@ -796,8 +826,8 @@ export default function AdminResidents() {
                   <th className="px-3 py-3" title="ТУЗ / Хяналтын зөвлөлийн гишүүнд апп дээр «🏛 Зөвлөл» хэсэг нээгдэнэ">Зөвлөл</th>
                   <th className="px-3 py-3">Машины бүртгэл</th>
                   <th className="px-3 py-3 text-right">Өмнөх үлдэгдэл</th>
-                  <th className="px-3 py-3 text-right">Сарын төлбөр</th>
-                  <th className="px-3 py-3 text-right">Нийт дүн</th>
+                  <th className="px-3 py-3 text-right" title="Энэ сарын нэхэмжлэхийн үлдэгдэл (нэхэмжлэх үүсээгүй бол тариф)">Энэ сар</th>
+                  <th className="px-3 py-3 text-right" title="Айлаас нэхэх дүн = өмнөх үлдэгдэл + энэ сар">Нэхэх дүн</th>
                   <th className="px-3 py-3"></th>
                 </tr>
               </thead>
@@ -879,15 +909,16 @@ export default function AdminResidents() {
                         ? platesOf(platesByApt, r).join(', ')
                         : <span className="text-gray-300">-</span>}
                     </td>
-                    <td className={`px-3 py-2.5 text-right font-semibold ${r.debt > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                      {r.debt > 0 ? `${r.debt.toLocaleString()}₮` : '0₮'}
+                    <td className={`px-3 py-2.5 text-right font-semibold ${prevOf(r) > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                      {prevOf(r) > 0 ? `${prevOf(r).toLocaleString()}₮` : '0₮'}
                     </td>
                     <td className="px-3 py-2.5 text-right text-gray-600">
-                      {feeOf(r) ? `${feeOf(r).toLocaleString()}₮` : <span className="text-gray-300">-</span>}
-                      {r.monthly_fee == null && orgFee > 0 && <div className="text-[10px] text-gray-300">ерөнхий</div>}
+                      {curOf(r) ? `${curOf(r).toLocaleString()}₮` : dueBy[r.id]?.cur === 0 ? <span className="text-green-500">төлсөн</span> : <span className="text-gray-300">-</span>}
+                      {dueBy[r.id]?.cur == null && r.monthly_fee == null && orgFee > 0 && <div className="text-[10px] text-gray-300">ерөнхий</div>}
+                      {dueBy[r.id]?.cur != null && curOf(r) > 0 && curOf(r) !== feeOf(r) && <div className="text-[10px] text-gray-400">тариф {feeOf(r).toLocaleString()}</div>}
                     </td>
                     <td className="px-3 py-2.5 text-right font-bold text-gray-800">
-                      {(r.debt + feeOf(r)).toLocaleString()}₮
+                      {totalOf(r).toLocaleString()}₮
                     </td>
                     <td className="px-3 py-2.5 text-right whitespace-nowrap">
                       {r.pending_claim && (
@@ -895,7 +926,7 @@ export default function AdminResidents() {
                           ✓ Баталгаажуулах
                         </button>
                       )}
-                      {r.debt > 0 && (
+                      {prevOf(r) > 0 && (
                         <button
                           onClick={() => { setAgreementFor(r.id); setShowAgreement(true); }}
                           title="Өрөө хуваан төлөх гэрээ байгуулах"
@@ -929,7 +960,7 @@ export default function AdminResidents() {
       {/* Өр төлөх гэрээ байгуулах цонх */}
       {showAgreement && (
         <CreateDebtAgreementModal
-          residents={residents.map(r => ({ id: r.id, name: r.name, apartment: r.apartment, debt: r.debt }))}
+          residents={residents.map(r => ({ id: r.id, name: r.name, apartment: r.apartment, debt: prevOf(r) }))}
           initialResidentId={agreementFor}
           onClose={() => setShowAgreement(false)}
           onCreated={fetchResidents}

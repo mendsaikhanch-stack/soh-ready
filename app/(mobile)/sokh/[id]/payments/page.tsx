@@ -13,6 +13,8 @@ interface BillItem {
   amount: number;
   paid: boolean;
   color: string;
+  /** Нийлүүлсэн нэхэмжлэхийн задаргаа: «10-р сар (хоцорсон) 55,000₮» гэх мэт */
+  detail?: { label: string; amount: number; paid?: boolean }[];
 }
 
 interface QPayInvoice {
@@ -215,20 +217,30 @@ export default function PaymentsPage() {
         }
 
         // Өмнөх сарын төлөгдөөгүй нэхэмжлэх (эхний үлдэгдэл, хоцорсон сар).
-        // Өмнө нь зөвхөн энэ сарынх харагддаг байсан тул айлууд өрөө аппаар
-        // төлж чаддаггүй байв. Хуучнаас нь эхэлж жагсаана.
+        // Нэхэмжлэх сар бүр тусдаа хадгалагддаг ч айлаас НИЙЛҮҮЛЖ нэг дүнгээр нэхнэ:
+        // «СӨХ хураамж — нийт төлөх» = өмнөх саруудын үлдэгдэл + энэ сар, доор нь задаргаа.
+        // Төлбөр орж ирэхэд хамгийн хуучин сараас нь эхэлж хаагдана.
         const pastUnpaid = (invs || [])
           .filter(i => i !== thisMonthInv && invoiceRemaining(i) > 0)
           .sort((a, b) => a.year - b.year || a.month - b.month);
-        for (const inv of pastUnpaid) {
-          baseBills.push({
-            id: inv.id + 50000,
-            name: `${inv.month}-р сар — ${/үлдэгдэл/i.test(inv.description || '') ? 'өмнөх үлдэгдэл' : 'хоцорсон төлбөр'}`,
-            icon: '📌',
+        if (pastUnpaid.length > 0) {
+          const sokhIdx = baseBills.findIndex(b => /СӨХ|хураамж/i.test(b.name));
+          const cur = sokhIdx >= 0 ? baseBills[sokhIdx] : null;
+          const detail: NonNullable<BillItem['detail']> = pastUnpaid.map(inv => ({
+            label: `${inv.month}-р сар — ${/үлдэгдэл/i.test(inv.description || '') ? 'өмнөх үлдэгдэл' : 'хоцорсон'}`,
             amount: invoiceRemaining(inv),
+          }));
+          if (cur) detail.push({ label: `${currentMonth}-р сар`, amount: cur.amount, paid: cur.paid });
+          const merged: BillItem = {
+            id: (thisMonthInv?.id ?? pastUnpaid[pastUnpaid.length - 1].id) + 50000,
+            name: 'СӨХ хураамж — нийт төлөх',
+            icon: '🏢',
+            amount: detail.reduce((s, d) => s + (d.paid ? 0 : d.amount), 0),
             paid: false,
             color: 'bg-red-50 border-red-200',
-          });
+            detail,
+          };
+          if (sokhIdx >= 0) baseBills[sokhIdx] = merged; else baseBills.unshift(merged);
         }
       }
 
@@ -567,6 +579,16 @@ export default function PaymentsPage() {
                       <span className="text-xl">{bill.icon}</span>
                       <div className="flex-1">
                         <p className="font-medium text-sm">{bill.name}</p>
+                        {bill.detail && (
+                          <div className="mt-0.5 mb-1 space-y-0.5">
+                            {bill.detail.map(d => (
+                              <p key={d.label} className="text-[11px] text-gray-500 flex justify-between gap-2">
+                                <span>{d.label}</span>
+                                <span className={d.paid ? 'text-green-600' : ''}>{d.paid ? 'төлсөн' : `${d.amount.toLocaleString()}₮`}</span>
+                              </p>
+                            ))}
+                          </div>
+                        )}
                         <p className="text-red-500 font-semibold text-sm">{bill.amount.toLocaleString()}₮</p>
                       </div>
                       {(bankAccount || PAYMENTS_ENABLED) && (

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { openInvoicesOldestFirst, planAllocation, addToInvoice, invoiceTotal } from '@/app/lib/payments/allocate';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { checkAnyAuth, type AuthRole } from '@/app/lib/session-token';
 import { adminBankSmsLimiter } from '@/app/lib/rate-limit';
@@ -330,12 +331,21 @@ const ACTIONS: Record<string, Handler> = {
   async 'txn.confirm'(ctx, b) {
     const tid = id(b.id);
     const residentId = id(b.residentId, 'residentId');
-    const invoiceId = b.invoiceId == null || b.invoiceId === '' ? null : id(b.invoiceId, 'invoiceId');
+    // invoiceId = 'fifo' → нээлттэй нэхэмжлэхүүдэд хуучнаас нь хуваарилна (110,000₮ = 10 + 11-р сар)
+    const spread = b.invoiceId === 'fifo';
+    const invoiceId = spread || b.invoiceId == null || b.invoiceId === '' ? null : id(b.invoiceId, 'invoiceId');
     const note = str(b.note, 300, 'Тэмдэглэл', false);
     const { data: tx } = await supabaseAdmin.from('bank_transactions')
       .select('id, amount_mnt').eq('id', tid).eq('sokh_id', ctx.sokhId).maybeSingle();
     if (!tx) throw new HttpError(404, 'Гүйлгээ олдсонгүй');
     try {
+      if (spread) {
+        const { paymentId, applied } = await applySpread(tid, residentId, Number(tx.amount_mnt), ctx.adminId, note);
+        await audit(ctx, 'bank_sms.txn.confirm', 'bank_transactions', {
+          id: tid, residentId, spread: true, applied, paymentId, amount: tx.amount_mnt,
+        });
+        return { ok: true, paymentId, applied };
+      }
       const paymentId = await supabaseBankSmsStore.applyPayment({
         transactionId: tid, residentId, invoiceId, adminId: ctx.adminId, mode: 'manual', note,
       });
@@ -418,4 +428,53 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     return fail(e);
   }
+}
+
+// Нэг банкны гүйлгээг хэд хэдэн нэхэмжлэхэд хуучнаас нь хуваарилна.
+// bank_sms_apply_payment (SQL) нь нэг нэхэмжлэхэд бүтэн дүнг бичдэг тул эхлээд хамгийн хуучин
+// нэхэмжлэхээр дуудаж (гүйлгээний түгжээ, payment_id холбоос, residents.debt нь тэнд атомаар),
+// дараа нь тэр төлбөрийг эхний хэсгээр нь багасгаж, үлдсэнийг дараагийн нэхэмжлэхүүдэд бичнэ.
+async function applySpread(tid: number, residentId: number, amount: number, adminId: number | null, note: string | null) {
+  const { data: res } = await supabaseAdmin.from('residents').select('sokh_id').eq('id', residentId).single();
+  const open = await openInvoicesOldestFirst(residentId);
+  const { parts, advance } = planAllocation(open, amount);
+  if (parts.length === 0) {
+    const paymentId = await supabaseBankSmsStore.applyPayment({ transactionId: tid, residentId, invoiceId: null, adminId, mode: 'manual', note });
+    return { paymentId, applied: [] as { invoice_id: number | null; amount: number }[] };
+  }
+  const first = parts[0];
+  const paymentId = await supabaseBankSmsStore.applyPayment({
+    transactionId: tid, residentId, invoiceId: first.invoice.id, adminId, mode: 'manual', note,
+  });
+  const nowIso = new Date().toISOString();
+  const applied: { invoice_id: number | null; amount: number }[] = [{ invoice_id: first.invoice.id, amount: first.amount }];
+  if (first.amount < amount) {
+    const { data: p0 } = await supabaseAdmin.from('payments').select('description').eq('id', paymentId).single();
+    const desc = String(p0?.description || 'Банкны шилжүүлэг');
+    await supabaseAdmin.from('payments').update({ amount: first.amount, description: `${desc} (${first.invoice.month}-р сар)`.slice(0, 300), updated_at: nowIso }).eq('id', paymentId);
+    // RPC бүтэн дүнг нэмсэн — зөвхөн эхний хэсгийг үлдээнэ
+    const fixedPaid = Number(first.invoice.paid_amount || 0) + first.amount;
+    const full = fixedPaid >= invoiceTotal(first.invoice);
+    await supabaseAdmin.from('invoices').update({
+      paid_amount: fixedPaid, status: full ? 'paid' : 'partial', paid_at: full ? nowIso : null, updated_at: nowIso,
+    }).eq('id', first.invoice.id);
+    const insert = async (invoiceId: number | null, amt: number, label: string) => {
+      const { error } = await supabaseAdmin.from('payments').insert({
+        resident_id: residentId, sokh_id: res?.sokh_id, invoice_id: invoiceId, amount: amt,
+        description: label.slice(0, 300), provider: 'bank_sms', provider_txn_id: `banktx:${tid}:${invoiceId ?? 'advance'}`,
+        status: 'paid', paid_at: nowIso, updated_at: nowIso,
+      });
+      if (error) throw new Error(error.message);
+    };
+    for (const p of parts.slice(1)) {
+      await insert(p.invoice.id, p.amount, `${desc} (${p.invoice.month}-р сар)`);
+      await addToInvoice(p.invoice, p.amount, nowIso);
+      applied.push({ invoice_id: p.invoice.id, amount: p.amount });
+    }
+    if (advance > 0) {
+      await insert(null, advance, `${desc} (урьдчилгаа)`);
+      applied.push({ invoice_id: null, amount: advance });
+    }
+  }
+  return { paymentId, applied };
 }

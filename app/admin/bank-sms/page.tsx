@@ -332,8 +332,14 @@ function ConfirmPanel({ t, residents, busy, run, onDone }: {
     adminFrom('invoices').select('id,year,month,amount,total_amount,paid_amount,status')
       .eq('resident_id', Number(residentId)).in('status', ['pending', 'overdue', 'partial'])
       .order('year').order('month')
-      .then(({ data }) => setInvoices((data as Invoice[]) || []));
-  }, [residentId]);
+      .then(({ data }) => {
+        const list = (data as Invoice[]) || [];
+        setInvoices(list);
+        // Олон сар нээлттэй, гүйлгээ нэг нэхэмжлэхээс их бол хуучнаас нь хуваарилахыг санал болгоно
+        const left = (i: Invoice) => Number(i.total_amount ?? i.amount) - Number(i.paid_amount || 0);
+        if (list.length > 1 && !list.some(i => left(i) === Number(t.amount_mnt))) setInvoiceId(prev => prev || 'fifo');
+      });
+  }, [residentId, t.amount_mnt]);
 
   const shown = q
     ? residents.filter(r => `${r.building}-${r.apartment} ${r.name}`.toLowerCase().includes(q.toLowerCase()))
@@ -347,7 +353,7 @@ function ConfirmPanel({ t, residents, busy, run, onDone }: {
       `Баталгаажуулбал төлбөр бүртгэгдэж, өрөөс хасагдана. Үргэлжлүүлэх үү?`
     )) return;
     const d = await run(`cf${t.id}`, 'txn.confirm', {
-      id: t.id, residentId: chosen.id, invoiceId: invoiceId ? Number(invoiceId) : null,
+      id: t.id, residentId: chosen.id, invoiceId: invoiceId === 'fifo' ? 'fifo' : invoiceId ? Number(invoiceId) : null,
     });
     if (d) onDone();
   };
@@ -366,6 +372,11 @@ function ConfirmPanel({ t, residents, busy, run, onDone }: {
       <select value={invoiceId} onChange={e => setInvoiceId(e.target.value)} disabled={!residentId}
         className="w-full px-2 py-1.5 border rounded text-xs">
         <option value="">Нэхэмжлэхгүй (зөвхөн өрөөс хасна)</option>
+        {residentId && invoices.length > 1 && (
+          <option value="fifo">
+            Хуучнаас нь хуваарилах ({invoices.length} сар, нийт {mnt(invoices.reduce((s, i) => s + Number(i.total_amount ?? i.amount) - Number(i.paid_amount || 0), 0))})
+          </option>
+        )}
         {(residentId ? invoices : []).map(i => {
           const total = i.total_amount ?? i.amount;
           return <option key={i.id} value={i.id}>{i.year}/{i.month} · үлдэгдэл {mnt(Number(total) - Number(i.paid_amount || 0))}</option>;

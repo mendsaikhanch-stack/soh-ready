@@ -128,6 +128,7 @@ export default function SokhDashboard() {
   const [notifCount, setNotifCount] = useState(0);
   const [recentAnnouncements, setRecentAnnouncements] = useState<{ id: number; title: string; type: string; created_at: string }[]>([]);
   const [myDebt, setMyDebt] = useState(0);
+  const [myPastDebt, setMyPastDebt] = useState(0);   // нийт төлөх дүнгийн өмнөх саруудын хэсэг
   const [myRequests, setMyRequests] = useState<{ id: number; title: string; status: string; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -221,10 +222,14 @@ export default function SokhDashboard() {
       // орсон байж болох тул нэмэхгүй, ихийг нь авна).
       const now = new Date();
       const curKey = now.getFullYear() * 12 + now.getMonth() + 1;
-      const pastUnpaid = ((myInvRes.data || []) as { year: number; month: number; amount: number; paid_amount: number | null }[])
-        .filter(i => i.year * 12 + i.month < curKey)
-        .reduce((s, i) => s + Math.max(0, Number(i.amount) - Number(i.paid_amount || 0)), 0);
-      setMyDebt(Math.max(Number(profile.debt) || 0, pastUnpaid));
+      const open = ((myInvRes.data || []) as { year: number; month: number; amount: number; paid_amount: number | null }[]);
+      const leftOf = (i: { amount: number; paid_amount: number | null }) => Math.max(0, Number(i.amount) - Number(i.paid_amount || 0));
+      const pastUnpaid = open.filter(i => i.year * 12 + i.month < curKey).reduce((s, i) => s + leftOf(i), 0);
+      // Айлаас нийлүүлж нэхнэ: өмнөх үлдэгдэл + энэ сарын нэхэмжлэх (төлбөр хуудастай ижил дүн)
+      const curUnpaid = open.filter(i => i.year * 12 + i.month === curKey).reduce((s, i) => s + leftOf(i), 0);
+      const past = Math.max(Number(profile.debt) || 0, pastUnpaid);
+      setMyDebt(past + curUnpaid);
+      setMyPastDebt(past);
       setElectricityBill(elecBillRes.data || null);
     }
 
@@ -484,7 +489,8 @@ export default function SokhDashboard() {
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-700">Төлбөрийн үлдэгдэл</p>
             <p className="text-xs text-red-600">
-              {myDebt.toLocaleString()}₮ төлөгдөөгүй байна
+              Нийт {myDebt.toLocaleString()}₮ төлөх
+              {myPastDebt > 0 && myPastDebt < myDebt && ` (өмнөх үлдэгдэл ${myPastDebt.toLocaleString()}₮)`}
             </p>
           </div>
           <span className="text-red-300">›</span>

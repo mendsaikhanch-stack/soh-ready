@@ -88,6 +88,10 @@ export default function AdminEBilling() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [includeDebt, setIncludeDebt] = useState(true);
+  // Нэхэмжлэх (сар бүр тусдаа) — нэхэх дүнг эндээс тооцно. residents.debt нь нэхэмжлэх
+  // үүсэхэд өөрчлөгддөггүй (ICTown-д бүгд 0) тул өр банк руу очихгүй байв.
+  const [invRows, setInvRows] = useState<{ resident_id: number; year: number; month: number; amount: number;
+    total_amount: number | null; previous_balance: number | null; paid_amount: number | null; status: string }[]>([]);
   const [skipZero, setSkipZero] = useState(true);
 
   // Импорт
@@ -115,13 +119,28 @@ export default function AdminEBilling() {
     const o = org as unknown as { monthly_fee?: number } | null;
     setOrgFee(Number(o?.monthly_fee) || 0);
 
+    // PostgREST ≤1000 мөр буцаадаг тул хуудаслан уншина
+    const inv: typeof invRows = [];
+    for (let from = 0; ; from += 1000) {
+      const { data } = await adminFrom('invoices')
+        .select('resident_id,year,month,amount,total_amount,previous_balance,paid_amount,status')
+        .eq('sokh_id', sokhId).order('id', { ascending: true }).range(from, from + 999);
+      const page = (data as unknown as typeof invRows) || [];
+      inv.push(...page);
+      if (page.length < 1000) break;
+    }
+    setInvRows(inv);
+
     // Импортод давхардал шалгахад ашиглана
     const ids = rows.map(r => r.id);
     if (ids.length) {
-      const { data: pays } = await adminFrom('payments').select('external_ref').in('resident_id', ids);
       const refs = new Set<string>();
-      for (const p of (pays as unknown as { external_ref: string | null }[]) || []) {
-        if (p.external_ref) refs.add(p.external_ref);
+      for (let from = 0; ; from += 1000) {
+        const { data: pays } = await adminFrom('payments').select('external_ref')
+          .in('resident_id', ids).order('id', { ascending: true }).range(from, from + 999);
+        const page = (pays as unknown as { external_ref: string | null }[]) || [];
+        for (const p of page) if (p.external_ref) refs.add(p.external_ref);
+        if (page.length < 1000) break;
       }
       setExistingRefs(refs);
     }
@@ -131,7 +150,25 @@ export default function AdminEBilling() {
   // ---------- ЭКСПОРТ ----------
 
   const feeOf = (r: Resident) => Number(r.monthly_fee ?? orgFee) || 0;
-  const billOf = (r: Resident) => feeOf(r) + (includeDebt ? Number(r.debt) || 0 : 0);
+  // Нэхэх дүн = сонгосон сарын нэхэмжлэхийн үлдэгдэл (үүсээгүй бол тариф) + өмнөх саруудын үлдэгдэл.
+  // Сар бүрийн нэхэмжлэх тусдаа хэвээр — банк руу нийлүүлж нэг дүнгээр явуулна.
+  const selKey = year * 12 + month;
+  const dueMap = (() => {
+    const m = new Map<number, { cur: number | null; past: number }>();
+    for (const i of invRows) {
+      const key = i.year * 12 + i.month;
+      if (key > selKey) continue;
+      const total = Number(i.total_amount ?? Number(i.amount) + Number(i.previous_balance || 0));
+      const left = ['pending', 'overdue', 'partial'].includes(i.status) ? Math.max(0, total - Number(i.paid_amount || 0)) : 0;
+      const d = m.get(i.resident_id) || { cur: null, past: 0 };
+      if (key === selKey) d.cur = (d.cur || 0) + left; else d.past += left;
+      m.set(i.resident_id, d);
+    }
+    return m;
+  })();
+  const curOf = (r: Resident) => dueMap.get(r.id)?.cur ?? feeOf(r);
+  const pastOf = (r: Resident) => Math.max(Number(r.debt) || 0, dueMap.get(r.id)?.past || 0);
+  const billOf = (r: Resident) => curOf(r) + (includeDebt ? pastOf(r) : 0);
 
   const exportRows = residents
     .filter(r => !r.pending_claim)

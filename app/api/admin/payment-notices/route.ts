@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { checkAnyAuth } from '@/app/lib/session-token';
 import { DEMO_READONLY_MESSAGE } from '@/app/lib/demo-admin';
+import { writeAllocatedPayment, type AllocInvoice } from '@/app/lib/payments/allocate';
 
 // /api/admin/payment-notices — оршин суугчийн «Би шилжүүлсэн» мэдэгдэл
 //   GET                                   → pending мэдэгдлүүд + айлын нэхэмжлэхийн төлөв, давхардлын тоо
@@ -153,38 +154,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Энэ мэдэгдэл аль хэдийн шийдэгдсэн' }, { status: 409 });
   }
 
-  const target = open[0] || null;
-  const { data: pay, error: payErr } = await supabaseAdmin
-    .from('payments')
-    .insert({
-      resident_id: residentId,
-      sokh_id: a.sokhId,
-      invoice_id: target?.id ?? null,
-      amount,
+  // Хуучнаас нь эхлэн хуваарилна: 110,000₮ мэдэгдэл → 10-р сар + 11-р сар хоёулаа хаагдана.
+  // Өмнө нь бүхэлд нь хамгийн хуучин нэхэмжлэх рүү бичиж, дараагийн сар нээлттэй үлддэг байв.
+  let result;
+  try {
+    result = await writeAllocatedPayment({
+      sokhId: a.sokhId, residentId, amount,
       description: notice.description || 'Банкаар шилжүүлсэн',
-      provider: 'manual',
-      provider_txn_id: `notice:${id}`,
-      status: 'paid',
-      paid_at: nowIso,
-      updated_at: nowIso,
-    })
-    .select('id')
-    .single();
-  if (payErr || !pay) {
+      provider: 'manual', txnPrefix: `notice:${id}`, open: open as AllocInvoice[], nowIso,
+    });
+  } catch (e) {
     // Төлбөр бичигдээгүй — мэдэгдлийг буцааж нээнэ, дарга дахин оролдоно.
     await supabaseAdmin.from('payment_notices').update({ status: 'pending', resolved_at: null }).eq('id', id);
-    console.error('[payment-notices] payment insert', payErr?.message);
+    console.error('[payment-notices] payment insert', (e as Error).message);
     return NextResponse.json({ error: 'Төлбөр бүртгэж чадсангүй. Дахин оролдоно уу.' }, { status: 500 });
-  }
-
-  let full = false;
-  if (target) {
-    const newPaid = Number(target.paid_amount || 0) + amount;
-    full = newPaid >= invTotal(target);
-    await supabaseAdmin
-      .from('invoices')
-      .update({ paid_amount: newPaid, status: full ? 'paid' : 'partial', paid_at: full ? nowIso : null, updated_at: nowIso })
-      .eq('id', target.id);
   }
 
   const { data: r } = await supabaseAdmin.from('residents').select('debt').eq('id', residentId).single();
@@ -192,13 +175,18 @@ export async function POST(req: NextRequest) {
     await supabaseAdmin.from('residents').update({ debt: Math.max(0, Number(r.debt || 0) - amount) }).eq('id', residentId);
   }
 
-  // Нэхэмжлэх бүгд хаагдсан бол тухайн айлын бусад pending мэдэгдэл давхар гэсэн үг.
-  let closed = 0;
-  if (full && open.length === 1) {
-    closed = await closeOtherPending(a.sokhId, residentId, nowIso);
-  }
+  // Нээлттэй нэхэмжлэх бүгд хаагдсан бол тухайн айлын бусад pending мэдэгдэл давхар гэсэн үг.
+  const paidInvoices = result.applied.filter((x) => x.invoice_id).length;
+  const allClosed = open.length > 0 && paidInvoices === open.length
+    && result.applied.reduce((s, x) => s + (x.invoice_id ? x.amount : 0), 0) >= open.reduce((s, i) => s + invLeft(i), 0);
+  const closed = allClosed ? await closeOtherPending(a.sokhId, residentId, nowIso) : 0;
 
-  return NextResponse.json({ ok: true, status: 'confirmed', payment_id: pay.id, invoice_id: target?.id ?? null, closed_others: closed });
+  return NextResponse.json({
+    ok: true, status: 'confirmed',
+    payment_id: result.applied[0]?.payment_id ?? null,
+    invoice_id: result.applied[0]?.invoice_id ?? null,
+    applied: result.applied, advance: result.advance, closed_others: closed,
+  });
 }
 
 async function closeOtherPending(sokhId: number, residentId: number, nowIso: string) {
