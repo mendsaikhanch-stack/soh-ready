@@ -66,7 +66,8 @@ const nums = homes.map(u => String(u.apartment ?? '').trim())
   .filter(s => /^\d+$/.test(s)).map(Number);
 const range = nums.length ? `${Math.min(...nums)}–${Math.max(...nums)}` : '';
 // Олон байртай СӨХ-д тоот давхцдаг тул байраа заавал бичүүлнэ
-const buildings = [...new Set(homes.map(u => (u.building || '').trim()).filter(Boolean))];
+const buildings = [...new Set(homes.map(u => (u.building || '').trim()).filter(Boolean))]
+  .sort((a, b) => a.localeCompare(b, 'mn', { numeric: true }));
 const multiBuilding = buildings.length > 1;
 
 const url = `${SITE}/register?sokh=${sokhId}`;
