@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { requiredApprovals } from '@/app/lib/board-threshold';
 
 interface ProposalFull {
   id: number;
@@ -127,7 +128,7 @@ export default function ResultPage() {
         <strong>Асуудал:</strong> ${escapeHtml(proposal.title)}<br/>
         ${proposal.description ? `<span class="muted">${escapeHtml(proposal.description)}</span><br/>` : ''}
         ${proposal.budget_amount != null ? `<strong>Төсөв:</strong> ${Number(proposal.budget_amount).toLocaleString()}₮<br/>` : ''}
-        <span class="muted">Батлах босго: зөвшөөрөл ≥ ${proposal.pass_threshold_percentage}%${proposal.auto_approve_on_timeout ? ' · Хугацаа хэтэрвэл хариу өгөөгүйг зөвшөөрсөнд тооцно' : ''}</span>
+        <span class="muted">Батлах босго: ${proposal.pass_threshold_percentage === 50 ? 'энгийн олонхи (>50%)' : `${proposal.pass_threshold_percentage}%`} — ${tally.total} гишүүнээс дор хаяж ${requiredApprovals(tally.total, proposal.pass_threshold_percentage)} зөвшөөрөл${proposal.auto_approve_on_timeout ? ' · Хугацаа хэтэрвэл хариу өгөөгүйг зөвшөөрсөнд тооцно' : ''}</span>
       </div>
 
       <div class="stats">

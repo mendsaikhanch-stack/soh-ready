@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
+import { isPassed } from '@/app/lib/board-threshold';
 
 // Сервер талын санал тооллого / шийдвэрлэлтийн логик.
 // GET болон cast route-д давхардуулахгүйн тулд энд төвлөрүүлэв.
@@ -92,7 +93,8 @@ async function autoApproveNonVoters(proposalId: number, sokhId: number | null): 
 
 /**
  * Хугацаа дуусах эсвэл бүх гишүүн санал өгсөн бол статусыг шийдвэрлэнэ.
- * ДҮРЭМ 1 (босго): зөвшөөрсөн / нийт эрхтэй гишүүн * 100 >= pass_threshold_percentage.
+ * ДҮРЭМ 1 (босго): зөвшөөрсөн >= requiredApprovals(нийт эрхтэй гишүүн, pass_threshold_percentage)
+ *   (50% = талаас илүү, 67% = ⅔ — app/lib/board-threshold.ts).
  * ДҮРЭМ 2 (авто зөвшөөрөл): хугацаа хэтэрсэн үед идэвхжинэ.
  * Идэвхтэй хэвээр байвал 'active' буцаана.
  */
@@ -111,8 +113,7 @@ export async function finalizeIfNeeded(proposal: ProposalRow): Promise<string> {
 
   if (!expired && !allVoted) return 'active';
 
-  const percentApprove = tally.total > 0 ? (tally.approve / tally.total) * 100 : 0;
-  const newStatus = percentApprove >= Number(proposal.pass_threshold_percentage || 50) ? 'passed' : 'rejected';
+  const newStatus = isPassed(tally.approve, tally.total, Number(proposal.pass_threshold_percentage || 50)) ? 'passed' : 'rejected';
 
   await supabaseAdmin
     .from('proposals')

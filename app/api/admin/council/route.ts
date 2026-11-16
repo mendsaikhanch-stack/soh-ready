@@ -85,7 +85,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Энэ оршин суугчид 8 оронтой утас бүртгэгдээгүй байна — эхлээд утсыг нь оруулна уу' }, { status: 400 });
       }
       const name = String(r.name || '').trim() || phone;
-      const position = body.position ? String(body.position).trim().slice(0, 60) : null;
+      // Албан тушаал: хүсэлтэд ирээгүй бол өмнөх тэмдэглэгээ эсвэл ижил утастай гараар нэмсэн
+      // мөрийнхийг авна (шингээх үед «ТУЗ-н дарга» гэх мэт нь арилдаг байсан).
+      let position = body.position ? String(body.position).trim().slice(0, 60) : null;
+      if (!position) {
+        const { data: prev } = await supabaseAdmin
+          .from('board_members').select('position, resident_id')
+          .eq('sokh_id', a.sokhId)
+          .or(`resident_id.eq.${residentId},and(phone_number.eq.${phone},resident_id.is.null)`);
+        const rows = (prev as { position: string | null; resident_id: number | null }[]) || [];
+        position = (rows.find((x) => x.resident_id === residentId)?.position
+          || rows.find((x) => x.resident_id == null)?.position) ?? null;
+      }
 
       // Өмнөх тэмдэглэгээг арилгаад, ижил утастай гараар нэмсэн (resident_id-гүй) мөрийг шингээнэ
       await supabaseAdmin.from('board_members').delete().eq('sokh_id', a.sokhId).eq('resident_id', residentId);

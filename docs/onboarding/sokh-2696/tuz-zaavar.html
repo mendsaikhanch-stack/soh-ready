@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<title>Цахим ТУЗ — заавар</title>
+<style>
+  @page { size: A4; margin: 13mm 13mm 13mm 13mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #111827; font-size: 12.5pt; line-height: 1.45; margin: 0; }
+  header { border-bottom: 4px solid #1e3a8a; padding-bottom: 8px; margin-bottom: 14px; }
+  .brand { color: #1e3a8a; font-weight: 700; font-size: 10pt; letter-spacing: .6px; }
+  h1 { font-size: 24pt; margin: 2px 0 2px; color: #1e3a8a; }
+  .sub { color: #4b5563; font-size: 11.5pt; }
+  h2 { font-size: 17pt; margin: 22px 0 10px; padding: 7px 14px; border-radius: 10px; color: #fff; break-after: avoid; }
+  h2.a { background: #1d4ed8; } h2.b { background: #059669; } h2.c { background: #7c3aed; } h2.d { background: #b45309; }
+  .step { display: flex; gap: 12px; align-items: flex-start; margin: 10px 0 14px; break-inside: avoid; }
+  .num { flex: none; width: 38px; height: 38px; border-radius: 50%; background: #111827; color: #fff;
+         font-size: 17pt; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .step > div:last-child { flex: 1; min-width: 0; }
+  .step b.t { font-size: 13.5pt; }
+  .step p { margin: 5px 0 0; }
+  ul, ol { margin: 4px 0; padding-left: 22px; } li { margin: 2px 0; }
+  .menu { background: #e0e7ff; color: #1e3a8a; border-radius: 5px; padding: 0 6px; font-weight: 700; white-space: nowrap; }
+  .btn { border: 1.5px solid #6b7280; border-radius: 6px; padding: 0 6px; font-weight: 700; white-space: nowrap; background: #fff; }
+  .btn.blue { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .btn.dark { background: #111827; border-color: #111827; color: #fff; }
+  .ok { background: #dcfce7; border-left: 7px solid #16a34a; padding: 9px 14px; border-radius: 8px; margin: 10px 0; break-inside: avoid; }
+  .warn { background: #fee2e2; border-left: 7px solid #dc2626; padding: 9px 14px; border-radius: 8px; margin: 10px 0; break-inside: avoid; }
+  .info { background: #eff6ff; border-left: 7px solid #2563eb; padding: 9px 14px; border-radius: 8px; margin: 10px 0; break-inside: avoid; }
+  .who { width: 100%; border-collapse: collapse; font-size: 11.5pt; margin: 6px 0 4px; }
+  .who th, .who td { border: 1px solid #d1d5db; padding: 6px 9px; text-align: left; vertical-align: top; }
+  .who th { background: #f3f4f6; }
+  .yes { color: #15803d; font-weight: 700; } .no { color: #9ca3af; }
+  /* Дэлгэцийн дуураймал */
+  .screen { border: 2px solid #cbd5e1; border-radius: 10px; background: #f8fafc; padding: 10px 12px; margin-top: 8px; font-size: 10.5pt; }
+  .screen .bar { font-weight: 700; color: #334155; margin-bottom: 6px; }
+  .screen .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 7px; padding: 5px 9px; margin: 4px 0; }
+  .tag { font-size: 9pt; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+  .tag.tuz { background: #dbeafe; color: #1d4ed8; } .tag.audit { background: #ede9fe; color: #6d28d9; }
+  .s-green { color: #16a34a; font-weight: 700; } .s-amber { color: #d97706; font-weight: 700; } .s-red { color: #dc2626; font-weight: 700; } .s-gray { color: #94a3b8; font-weight: 700; }
+  .phone { width: 62%; margin: 8px auto 0; border: 3px solid #1f2937; border-radius: 22px; padding: 12px; background: #f9fafb; font-size: 10.5pt; }
+  .choice { border: 2px solid #e5e7eb; border-radius: 9px; padding: 6px 10px; margin: 5px 0; background: #fff; font-weight: 600; }
+  .choice.sel { border-color: #16a34a; background: #f0fdf4; }
+  .bigbtn { background: #2563eb; color: #fff; text-align: center; border-radius: 9px; padding: 7px; font-weight: 700; margin-top: 6px; }
+  table.faq { width: 100%; border-collapse: collapse; font-size: 11.5pt; }
+  table.faq td { border: 1px solid #d1d5db; padding: 7px 9px; vertical-align: top; }
+  table.faq td:first-child { width: 37%; font-weight: 600; background: #f9fafb; }
+  .page-break { page-break-before: always; }
+  .cut { border-top: 2px dashed #9ca3af; margin: 18px 0 6px; text-align: center; color: #6b7280; font-size: 10pt; }
+  footer { margin-top: 14px; text-align: center; color: #374151; font-size: 10.5pt; border-top: 1px solid #e5e7eb; padding-top: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">ХОТОЛ · АМАН ХУУР ДИЖИТАЛ СӨХ</div>
+  <h1>Цахим ТУЗ — алхам алхмаар заавар</h1>
+  <div class="sub">ТУЗ болон Хяналтын зөвлөлийн хурлыг цуглаж хийхгүйгээр утсаар санал хураах, тайлан илгээх, ярилцах</div>
+</header>
+
+<div class="info"><b>Цахим ТУЗ гэж юу вэ?</b> Дарга асуудлаа (жишээ нь «Дээврийн засварт 3 сая ₮ зарцуулах») програмд бичнэ.
+Гишүүн бүрт <b>хувийн линк</b> илгээнэ. Гишүүд утсаараа линкийг нээж <b>Зөвшөөрөх / Татгалзах / Түдгэлзэх</b> гэж дарна.
+Програм саналыг өөрөө тоолж, <b>протокол</b> гаргана. Кодын SMS, нууц үг шаардахгүй.</div>
+
+<table class="who">
+  <tr><th></th><th>СӨХ-ийн дарга</th><th>ТУЗ-ийн гишүүн</th><th>Хяналтын зөвлөл</th></tr>
+  <tr><td>Санал хураалт үүсгэх, линк илгээх</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+  <tr><td>Линкээр санал өгөх</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓ (урьсан бол)</td></tr>
+  <tr><td>Апп дахь «🏛 Зөвлөл»: тайлан, санхүү, гомдол/засвар харах</td><td>админаас</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+  <tr><td>Зөвлөлийн чатад бичих</td><td class="yes">✓</td><td class="yes">✓</td><td>зөвхөн уншина</td></tr>
+</table>
+
+<!-- ===================================================== -->
+<h2 class="a">А. Даргад: нэвтрэх, гишүүдээ шалгах</h2>
+
+<div class="step"><div class="num">1</div><div>
+  <b class="t">Админ хэсэгт нэвтэрнэ.</b>
+  <p>Компьютер эсвэл утасны хөтчөөр (Chrome) <b>www.khotol.com/admin</b> хаягийг нээгээд өөрийн нэвтрэх нэр, нууц үгээр орно.</p>
+  <p>Зүүн талын цэснээс <span class="menu">⚖️ Цахим ТУЗ</span> дээр дарна. Утсан дээр цэс харагдахгүй бол зүүн дээд булангийн <b>☰</b> товчийг дарна.</p>
+</div></div>
+
+<div class="step"><div class="num">2</div><div>
+  <b class="t">«👥 Зөвлөлийн гишүүд» хэсгийг шалгана.</b>
+  <p>Танай СӨХ-д <b>ТУЗ-ийн 5</b>, <b>Хяналтын зөвлөлийн 3</b> гишүүн бүртгэлтэй байгаа. Нэр, утас нь зөв эсэхийг нягтална.
+  Нэр бүрийн хажууд жижиг тэмдэг байна:</p>
+  <div class="screen">
+    <div class="bar">Төлөөлөн удирдах зөвлөл (ТУЗ) (5)</div>
+    <div class="row"><span>Гишүүн А · ТУЗ-н дарга <span class="s-green">📱 апп идэвхтэй</span></span><span>✕</span></div>
+    <div class="row"><span>Гишүүн Б · ТУЗ-н гишүүн <span class="s-amber">⏳ бүртгүүлээгүй</span></span><span>✕</span></div>
+    <div class="row"><span>Гишүүн В · ТУЗ-н гишүүн <span class="s-gray">зөвхөн линк</span></span><span>✕</span></div>
+  </div>
+  <ul>
+    <li><span class="s-green">📱 апп идэвхтэй</span>: гишүүн Хотол аппын «🏛 Зөвлөл» хэсгийг ашиглаж чадна.</li>
+    <li><span class="s-amber">⏳ бүртгүүлээгүй</span>: тэмдэглэсэн, гэхдээ гишүүн аппад хараахан бүртгүүлээгүй. Бүртгүүлмэгц автоматаар нээгдэнэ.</li>
+    <li><span class="s-gray">зөвхөн линк</span>: санал өгч чадна, апп дахь тайлан, санхүүг харахгүй. <b>Одоо танай 8 гишүүн бүгд ийм байна.</b></li>
+    <li><span class="s-red">⚠️ утас зөрсөн</span>: гишүүний утас өөрчлөгдсөн. 3-р алхмын «батлах»-ыг үзнэ үү.</li>
+  </ul>
+  <p>Шинэ гишүүн нэмэх: доод мөрөнд <b>ТУЗ / Хяналтын зөвлөл</b> сонгоод нэр, 8 оронтой утас, албан тушаалыг бичээд <span class="btn dark">+ Нэмэх</span>.
+  Гишүүнийг хасах бол нэрийн баруун талын <b>✕</b>.</p>
+</div></div>
+
+<div class="step"><div class="num">3</div><div>
+  <b class="t">Гишүүдэд апп дахь «🏛 Зөвлөл» хэсгийг нээж өгнө.</b> <span style="color:#6b7280">(зөвлөмж, ганц удаа)</span>
+  <p>Ингэвэл гишүүд тайлан, санхүүгийн хураангуй, гомдол/засварын явцыг утсаараа харж, чатаар ярилцана.</p>
+  <ol>
+    <li>Цэснээс <span class="menu">Оршин суугчид</span> руу орно.</li>
+    <li>Хайх нүдэнд гишүүний <b>тоот эсвэл нэрийг</b> бичнэ.</li>
+    <li>Тухайн мөрийн <b>«Зөвлөл»</b> баганад байгаа <b>—</b> гэсэн жижиг цэснээс <b>ТУЗ</b> эсвэл <b>Хяналт</b>-ыг сонгоно. Шууд хадгалагдана.</li>
+  </ol>
+  <div class="warn">Оршин суугчийн мөрөнд <b>8 оронтой утас</b> бичигдсэн байх ёстой. Тэр утас нь гишүүний жинхэнэ утас мөн эсэхийг заавал нягтална:
+  апп нь хүнийг <b>тэр утсаар</b> таньдаг.<br>
+  Гишүүн хожим утсаа солих үед <span class="s-red">⚠️ утас зөрсөн · батлах</span> гэж гарна. Мөн тэр хүн гэдгийг утсаар ярьж шалгасны дараа л дарна.</div>
+  <p style="color:#4b5563;font-size:11pt">Гишүүн Хотол аппад хараахан бүртгүүлээгүй бол урьдчилж тэмдэглэж болно. Гишүүн аппад тоотоо сонгож бүртгүүлмэгц нүүр хуудсанд нь
+  <b>«🏛 Зөвлөл»</b> товч гарч ирнэ.</p>
+</div></div>
+
+<!-- ===================================================== -->
+<h2 class="a page-break">Б. Даргад: санал хураалт явуулах</h2>
+
+<div class="step"><div class="num">4</div><div>
+  <b class="t">Шинэ санал үүсгэнэ.</b>
+  <p><span class="menu">⚖️ Цахим ТУЗ</span> хуудасны баруун дээд буланд байгаа <span class="btn blue">+ Шинэ санал</span> товчийг дарна. Дараах зүйлсийг бөглөнө:</p>
+  <ul>
+    <li><b>Асуудал</b> (заавал): товч, ойлгомжтой гарчиг. Жишээ нь «33Б байрны дээврийн засвар».</li>
+    <li><b>Тайлбар</b>: юу хийх, хэн гүйцэтгэх, яагаад хэрэгтэй.</li>
+    <li><b>Төсвийн дүн (₮)</b>: мөнгөтэй асуудал бол дүнг бичнэ. Үгүй бол хоосон орхино.</li>
+    <li><b>Хугацаа (хоног)</b>: гишүүд хэдэн хоногийн дотор санал өгөх (1–30). Ихэвчлэн <b>3</b>.</li>
+  </ul>
+</div></div>
+
+<div class="step"><div class="num">5</div><div>
+  <b class="t">«⚡ Шийдвэрлэх дүрэм»-ийг сонгоно.</b>
+  <p><b>Батлагдах босго</b> нь нийт урьсан гишүүний хэдэн хувь нь <b>«Зөвшөөрөх»</b> дарвал батлагдахыг заана:</p>
+  <ul>
+    <li><b>Энгийн олонхи</b>: 5 гишүүнээс <b>3</b> нь зөвшөөрвөл батлагдана.</li>
+    <li><b>Гуравны хоёр (67%)</b>: 5 гишүүнээс <b>4</b> нь зөвшөөрөх ёстой.</li>
+    <li><b>Бүх гишүүн (100%)</b>: нэг ч хүн татгалзаж болохгүй.</li>
+  </ul>
+  <div class="warn"><b>Анхаар:</b> хувийг <b>санал өгсөн</b> хүнээр биш, <b>нийт урьсан</b> гишүүнээр тооцно. «Түдгэлзэх» болон санал өгөөгүй гишүүн
+  «зөвшөөрөөгүй»-д тооцогдоно.<br>
+  <b>«Хугацаанд хариу өгөөгүй гишүүнийг автоматаар “Зөвшөөрсөн”-д тооцох»</b> гэсэн сонголт байгаа. Ингэхийг СӨХ-ийн дүрэмд заасан бол л чагтална.
+  Эргэлзэж байвал <b>чагтлахгүй</b>.</div>
+  <p style="color:#4b5563;font-size:11pt">Хууль, дүрмээр заавал хурлаар шийдэх асуудал (жишээ нь дарга сонгох) байвал СӨХ-ийн дүрмээ шалгана.</p>
+</div></div>
+
+<div class="step"><div class="num">6</div><div>
+  <b class="t">Санал өгөх гишүүдээ сонгоод «Үүсгэх» дарна.</b>
+  <p><b>ТУЗ-ийн бүх гишүүн</b> автоматаар чагттай байна. Хяналтын зөвлөлийн гишүүдийг оролцуулах бол тэдний нэрийг өөрөө чагтална.
+  Жагсаалтад байхгүй хүн нэмэх бол <b>«+ Жагсаалтад ороогүй хүн нэмэх»</b>.</p>
+  <p>Хамгийн доор байгаа <span class="btn blue">Үүсгэх</span> товчийг дарна. Санал жагсаалтад <b>«Явагдаж байна»</b> төлөвтэй гарна.</p>
+  <div class="warn">Үүсгэсний дараа асуудлын текст, гишүүдийн жагсаалтыг <b>өөрчлөх боломжгүй</b>. «Үүсгэх» дарахаасаа өмнө сайн уншина.</div>
+</div></div>
+
+<div class="step"><div class="num">7</div><div>
+  <b class="t">Гишүүн бүрт хувийн линкийг илгээнэ.</b>
+  <p>Үүсгэмэгц гишүүдийн жагсаалт нээгдэнэ (дараа нь саналын мөрөн дээрх <span class="btn">Гишүүд / Линк</span> товчоор дахин нээнэ).</p>
+  <div class="screen">
+    <div class="row"><span>Гишүүн А <span class="tag tuz">ТУЗ</span></span><span><span class="btn blue">SMS</span> <span class="btn">Хуулах</span></span></div>
+    <div class="row"><span>Гишүүн Б <span class="tag tuz">ТУЗ</span> <span class="s-green">✓ санал өгсөн</span></span><span></span></div>
+    <div class="row"><span>Гишүүн Г <span class="tag audit">Хяналтын зөвлөл</span></span><span><span class="btn blue">SMS</span> <span class="btn">Хуулах</span></span></div>
+  </div>
+  <ul>
+    <li><b>Утсаар орсон бол:</b> <span class="btn blue">SMS</span> дарна. Таны утасны мессеж бэлэн бичигдсэн байдлаар нээгдэнэ. <b>Илгээх</b> товчийг дарахад болно.</li>
+    <li><b>Компьютерээр орсон бол:</b> <span class="btn">Хуулах</span> дарна. Тэр гишүүний Messenger эсвэл Viber чатад <b>Ctrl + V</b> дараад илгээнэ.</li>
+  </ul>
+  <div class="warn">Линк бүр <b>тухайн нэг хүнийх</b>. Нэг гишүүний линкийг өөр хүнд, эсвэл бүлгийн чатад <b>бүү</b> илгээнэ: линк эзэмшсэн хүн тэр гишүүний нэрээр санал өгнө.</div>
+  <p>Санал өгсөн гишүүний хажууд <span class="s-green">✓ санал өгсөн</span> гарна. Өгөөгүй хүнд дахин сануулах бол мөн товчоор дахин илгээнэ.</p>
+</div></div>
+
+<div class="step"><div class="num">8</div><div>
+  <b class="t">Үр дүн, протоколоо авна.</b>
+  <p>Санал хураалт <b>бүх гишүүн санал өгмөгц</b>, эсвэл <b>хугацаа дуусмагц</b> автоматаар хаагдаж <b>«Батлагдсан»</b> эсвэл <b>«Татгалзсан»</b> болно.</p>
+  <p>Саналын мөрөн дээрх <span class="btn dark">Үр дүн / Протокол</span> товчийг дарна. Шинэ цонхонд хэн хэрхэн санал өгснийг харуулна.
+  <b>«📄 Протокол хэвлэх (PDF)»</b> дарж хэвлэх эсвэл PDF болгож хадгална. Хэвлэх цонхонд «Save as PDF»-ийг сонгоно.</p>
+  <div class="ok">Протоколыг хадгалж, СӨХ-ийн баримт бичгийн хавтсанд хийнэ. Өмнөх санал хураалтын протокол ч энэ жагсаалтад үргэлж хадгалагдана.</div>
+</div></div>
+
+<!-- ===================================================== -->
+<h2 class="a">В. Даргад: тайлан илгээх, чатлах</h2>
+
+<div class="step"><div class="num">9</div><div>
+  <b class="t">Зөвлөлд тайлан илгээнэ.</b>
+  <p><span class="menu">⚖️ Цахим ТУЗ</span> → <span class="btn">📑 Тайлан илгээх</span>. <b>Гарчиг</b> (жишээ нь «10-р сарын санхүүгийн тайлан»), <b>Тайлбар</b>-аа бичнэ.
+  <b>Файл</b> хэсгээс зураг, PDF, Excel, Word хавсаргана (15 хүртэл файл). Дараа нь <span class="btn blue">Зөвлөлд илгээх</span>.</p>
+  <p style="color:#4b5563;font-size:11pt">Тайланг <b>зөвхөн ТУЗ, Хяналтын зөвлөлийн гишүүд</b> апп дээрээ харна (энгийн оршин суугчид харахгүй).
+  Харахын тулд гишүүн <span class="s-green">📱 апп идэвхтэй</span> байх ёстой (3-р алхам). Буруу илгээсэн бол жагсаалтаас <b>«Устгах»</b>.</p>
+</div></div>
+
+<div class="step"><div class="num">10</div><div>
+  <b class="t">Зөвлөлийн чат.</b>
+  <p><span class="menu">⚖️ Цахим ТУЗ</span> → <span class="btn">💬 Зөвлөлийн чат</span>. Энд бичсэн мессежийг зөвхөн зөвлөлийн гишүүд харна.
+  Хуудсыг нээлттэй байлгавал шинэ мессеж өөрөө гарч ирнэ.</p>
+</div></div>
+
+<!-- ===================================================== -->
+<div class="page-break"></div>
+<div class="cut">✂ Энэ хуудсыг хэвлэж эсвэл зургийг нь ТУЗ, Хяналтын зөвлөлийн гишүүддээ илгээж болно</div>
+<h2 class="b">Г. ТУЗ, Хяналтын зөвлөлийн гишүүнд: санал өгөх</h2>
+
+<div class="step"><div class="num">1</div><div>
+  <b class="t">Даргаас ирсэн мессежийн линк дээр дарна.</b>
+  <p>Мессеж «Сайн байна уу… ТУЗ-ийн санал өгнө үү… <b>khotol.com/vote/…</b>» гэсэн байдалтай ирнэ. Линк утасны хөтөчид нээгдэнэ.
+  <b>Апп татах, нууц үг, код хэрэггүй.</b></p>
+</div></div>
+
+<div class="step"><div class="num">2</div><div>
+  <b class="t">Асуудлыг уншаад шийдвэрээ сонгоно.</b>
+  <div class="phone">
+    <div style="text-align:center;color:#2563eb;font-weight:800">Хотол</div>
+    <div style="font-size:9.5pt;color:#6b7280">Аман хуур дижитал СӨХ</div>
+    <div style="font-weight:700;margin:3px 0">33Б байрны дээврийн засвар</div>
+    <div style="font-size:9.5pt;color:#6b7280">Гишүүн: <b>Таны нэр</b> · Таны шийдвэр</div>
+    <div class="choice sel">✅ Зөвшөөрөх</div>
+    <div class="choice">❌ Татгалзах</div>
+    <div class="choice">➖ Түдгэлзэх</div>
+    <div class="choice" style="color:#9ca3af;font-weight:400">Сэтгэгдэл (заавал биш)</div>
+    <div class="bigbtn">Санал өгөх</div>
+  </div>
+  <p><b>«Гишүүн:»</b> гэдгийн ард <b>өөрийн нэр</b> байгаа эсэхийг шалгана. Өөр хүний нэр байвал санал бүү өг, даргад хэл.</p>
+  <ul>
+    <li><b>✅ Зөвшөөрөх</b>: дэмжиж байна.</li>
+    <li><b>❌ Татгалзах</b>: эсрэг байна.</li>
+    <li><b>➖ Түдгэлзэх</b>: аль алинд нь биш. <i>Батлах тоонд орохгүй гэдгийг санаарай.</i></li>
+  </ul>
+  <p>Санал хэлэх зүйл байвал <b>Сэтгэгдэл</b> нүдэнд бичнэ. Дараа нь <b>«Санал өгөх»</b> дарна.</p>
+</div></div>
+
+<div class="step"><div class="num">3</div><div>
+  <b class="t">«Таны санал бүртгэгдлээ. Баярлалаа!» гэж гарвал болсон.</b>
+  <p>Нэг удаа өгсөн саналыг <b>өөрчлөх боломжгүй</b>. Тиймээс сонголтоо сайн бодоод дарна. Тэр хуудсанд одоогийн тооллого харагдана.</p>
+</div></div>
+
+<div class="step"><div class="num">4</div><div>
+  <b class="t">Хотол апп дахь «🏛 Зөвлөл» хэсэг.</b> <span style="color:#6b7280">(дарга нээж өгсөн бол)</span>
+  <p>Хотол аппаа нээгээд СӨХ-ийн нүүр хуудсанд <b>«🏛 Зөвлөл»</b> гэсэн бараан товчийг дарна. Улаан тоо нь уншаагүй тайлан болон санал өгөөгүй асуудлын тоо.
+  Дотор нь дараах хэсгүүд байна:</p>
+  <ul>
+    <li><b>📑 Тайлан</b>: даргын илгээсэн тайлан, баримтын зураг, файл.</li>
+    <li><b>🗳 Санал</b>: санал хураалтууд. Эндээс ч санал өгч болно.</li>
+    <li><b>💰 Санхүү</b>: сарын нэхэмжилсэн ба цугларсан дүн, нийт авлага, орлого, зарлага, нөөц сан.</li>
+    <li><b>📝 Гомдол/Засвар</b>: оршин суугчдын гомдол, засварын ажлын явц.</li>
+    <li><b>💬 Чат</b>: зөвлөлийн дотоод чат.</li>
+  </ul>
+  <div class="info"><b>Хяналтын зөвлөлийн гишүүд</b> бүх хэсгийг харна, гэхдээ чатад бичихгүй. Санал хураалтад дарга урьсан үед л санал өгнө.</div>
+  <p style="color:#4b5563;font-size:11pt">«🏛 Зөвлөл» товч харагдахгүй байвал: аппад өөрийн тоотоор, <b>даргад өгсөн утсаараа</b> бүртгүүлсэн эсэхээ шалгаад даргад хэлнэ.</p>
+</div></div>
+
+<!-- ===================================================== -->
+<h2 class="d">Д. Ямар нэг юм болохгүй бол</h2>
+<table class="faq">
+  <tr><td>Гишүүн «Линк хүчингүй» гэж хэлж байна</td>
+      <td>Санал хураалт хаагдсан (бүгд санал өгсөн эсвэл хугацаа дууссан), эсвэл линк бүтэн хуулагдаагүй байна. Дарга «Гишүүд / Линк»-ээс дахин хуулж илгээнэ.</td></tr>
+  <tr><td>Гишүүн линкийг нээхэд «утасны дугаараа оруулна уу» гэж асууж байна</td>
+      <td>Линкийн төгсгөл (<b>?t=…</b> хэсэг) тасарсан байна. Бүтэн линкийг дахин илгээнэ. Кодын SMS одоогоор ирэхгүй тул утсаар орох арга ажиллахгүй.</td></tr>
+  <tr><td>Санал өгөөгүй гишүүн байна, хугацаа дуусах гэж байна</td>
+      <td>Тэр гишүүнд дахин SMS, Messenger илгээх эсвэл утсаар ярьж сануулна. Хугацааг сунгах боломжгүй. Шаардлагатай бол шинэ санал үүсгэнэ.</td></tr>
+  <tr><td>Буруу санал үүсгэчихлээ</td>
+      <td>Линкийг илгээлгүй орхиод зөв агуулгатай шинээр үүсгэнэ. Цуцлах шаардлагатай бол Хотолын дэмжлэгт хандана.</td></tr>
+  <tr><td>«Зөвлөл» баганаас сонгоход «8 оронтой утас бүртгэгдээгүй» гэж гарлаа</td>
+      <td>Тэр оршин суугчийн мөрийг нээж утсыг нь оруулаад, дахин сонгоно.</td></tr>
+  <tr><td>Гишүүн тайлан харахгүй байна</td>
+      <td>⚖️ Цахим ТУЗ хуудсанд тэр гишүүн <span class="s-green">📱 апп идэвхтэй</span> болсон эсэхийг шалгана. Үгүй бол А хэсгийн 3-р алхмыг хийнэ.</td></tr>
+  <tr><td>ТУЗ-ийн гишүүн солигдлоо</td>
+      <td>Хуучин гишүүнийг ✕-ээр хасна (эсвэл Оршин суугчид хуудсанд «Зөвлөл»-ийг <b>—</b> болгоно). Шинэ гишүүнийг нэмнэ. Өмнөх протоколууд хэвээр үлдэнэ.</td></tr>
+</table>
+
+<footer>Асуудал гарвал дэлгэцийн зургаа аваад Хотолын дэмжлэгт илгээнэ үү · <b>khotolapp@gmail.com</b> · khotol.com</footer>
+
+</body>
+</html>
