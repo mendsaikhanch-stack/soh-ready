@@ -25,7 +25,7 @@ export const PROVIDER = {
   register: '5063299',     // улсын бүртгэлийн дугаар (тамган дээрх)
   address: 'Улаанбаатар хот',
   phone: '9401-9927',
-  email: 'tugsorchin@yahoo.com',
+  email: 'khotolapp@gmail.com',
   website: 'khotol.com',
   bank: 'Хас',             // банкны нэр
   bankAccount: '5005176240',

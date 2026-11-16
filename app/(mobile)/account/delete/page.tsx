@@ -9,7 +9,7 @@ export const metadata = {
     'Хотол дахь өөрийн бүртгэлээ устгуулах хүсэлт илгээх заавар, холбоо барих суваг, боловсруулах хугацаа.',
 };
 
-const SUPPORT_EMAIL = 'tugsorchin@yahoo.com';
+const SUPPORT_EMAIL = 'khotolapp@gmail.com';
 const PHONE = '9401-9927';
 
 export default function AccountDeletePage() {

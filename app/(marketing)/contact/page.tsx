@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   description: 'Хотолтой холбогдох утас, и-мэйл, хаяг. СӨХ админ, оршин суугч, апп дэлгүүрийн шалгагчдад зориулсан холбоо барих хуудас.',
 };
 
-const SUPPORT_EMAIL = 'tugsorchin@yahoo.com';
-const ADMIN_EMAIL = 'tugsorchin@yahoo.com';
+const SUPPORT_EMAIL = 'khotolapp@gmail.com';
+const ADMIN_EMAIL = 'khotolapp@gmail.com';
 const PHONE = '9401-9927';
 const FACEBOOK = 'https://www.facebook.com/profile.php?id=61574235339013';
 const MESSENGER = 'https://m.me/61574235339013';

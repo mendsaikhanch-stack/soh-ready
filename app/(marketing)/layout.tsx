@@ -67,7 +67,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               <h4 className="font-semibold mb-3">Холбоо барих</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>📞 9401-9927</li>
-                <li>📧 tugsorchin@yahoo.com</li>
+                <li>📧 khotolapp@gmail.com</li>
                 <li>📍 Улаанбаатар хот</li>
                 <li className="flex gap-2 pt-1">
                   <a

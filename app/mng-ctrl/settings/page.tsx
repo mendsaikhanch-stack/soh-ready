@@ -43,7 +43,7 @@ const STORAGE_KEY = 'sokh-platform-settings';
 export default function SettingsPage() {
   const [settings, setSettings] = useState<PlatformSettings>({
     platformName: 'Хотол',
-    email: 'tugsorchin@yahoo.com',
+    email: 'khotolapp@gmail.com',
     phone: '9401-9927',
     sokhBaseFee: 50000,
     perHouseholdFee: 1000,

@@ -231,7 +231,7 @@ export default function PrivacyPage() {
         <p>Нууцлал, мэдээлэл хамгаалалттай холбоотой асуулт, хүсэлт, гомдлыг дараах хаягаар ирүүлнэ:</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>Байгууллагын нэр: Хотол / Төгс Орчин ХХК</li>
-          <li>И-мэйл: tugsorchin@yahoo.com</li>
+          <li>И-мэйл: khotolapp@gmail.com</li>
           <li>Утас: 9401-9927</li>
           <li>Хаяг: Улаанбаатар хот</li>
           <li>

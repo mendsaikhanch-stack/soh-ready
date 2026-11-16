@@ -299,7 +299,7 @@ export default function HelpPage() {
         <p>Асуудал гарвал дараах сувгаар холбоо барина:</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>Утас: 9401-9927</li>
-          <li>И-мэйл: tugsorchin@yahoo.com</li>
+          <li>И-мэйл: khotolapp@gmail.com</li>
           <li>
             Холбоо барих хуудас:{' '}
             <Link href="/contact" className="text-blue-600 underline">

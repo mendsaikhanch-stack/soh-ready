@@ -113,7 +113,7 @@ export default function AdminContractPage() {
           <p className="text-sm mt-3 text-amber-900">
             📞 <a href="tel:+97694019927" className="underline">9401-9927</a>
             {' · '}
-            ✉️ <a href="mailto:tugsorchin@yahoo.com" className="underline">tugsorchin@yahoo.com</a>
+            ✉️ <a href="mailto:khotolapp@gmail.com" className="underline">khotolapp@gmail.com</a>
           </p>
         </div>
         <p className="text-xs text-gray-500 mt-4">
