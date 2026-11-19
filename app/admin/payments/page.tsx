@@ -109,6 +109,9 @@ export default function AdminPayments() {
   const [selMonth, setSelMonth] = useState('');
   const [monthInv, setMonthInv] = useState<MonthInvoice[]>([]);
   const [monthLoading, setMonthLoading] = useState(false);
+  // Excel татах хугацаа (YYYY-MM-DD, хоосон = хязгааргүй)
+  const [exportFrom, setExportFrom] = useState('');
+  const [exportTo, setExportTo] = useState('');
 
   useEffect(() => { fetchData(); }, []);
 
@@ -298,18 +301,66 @@ export default function AdminPayments() {
     return r ? `${r.name} (${r.apartment})` : 'Тодорхойгүй';
   };
 
-  const exportToExcel = () => {
-    const wb = XLSX.utils.book_new();
+  // paid_at (UTC) → хэрэглэгчийн орон нутгийн огноо 'YYYY-MM-DD' (УБ = UTC+8, шөнийн 00–08 цагийн
+  // гүйлгээ өмнөх өдөрт орчихгүйн тулд toISOString ашиглахгүй)
+  const localDay = (iso: string) => {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const inRange = (p: Payment) => {
+    const day = localDay(p.paid_at);
+    if (!day) return !exportFrom && !exportTo;
+    return (!exportFrom || day >= exportFrom) && (!exportTo || day <= exportTo);
+  };
 
-    // Төлбөрийн түүх sheet
-    const payData = payments.map(p => ({
-      'Огноо': new Date(p.paid_at).toLocaleDateString('mn-MN'),
+  const exportToExcel = () => {
+    if (exportFrom && exportTo && exportFrom > exportTo) {
+      alert('Эхлэх огноо дуусах огнооноос хойш байна.');
+      return;
+    }
+    const ranged = payments.filter(inRange);
+    if (ranged.length === 0 && !confirm('Сонгосон хугацаанд төлбөр алга. Өртэй айлуудын хуудастай хоосон файл татах уу?')) return;
+    const wb = XLSX.utils.book_new();
+    const rangeLabel = exportFrom || exportTo
+      ? `${exportFrom || 'эхнээс'} – ${exportTo || 'өнөөдөр'}`
+      : 'Бүх хугацаа';
+
+    // Төлбөрийн түүх sheet (сонгосон хугацаанд)
+    const payData: Record<string, string | number>[] = ranged.map(p => ({
+      'Огноо': localDay(p.paid_at),
       'Оршин суугч': getResidentName(p.resident_id),
       'Тайлбар': p.description,
       'Дүн (₮)': Number(p.amount),
     }));
+    payData.push({
+      'Огноо': 'Нийт',
+      'Оршин суугч': `${rangeLabel} · ${ranged.length} гүйлгээ`,
+      'Тайлбар': '',
+      'Дүн (₮)': ranged.reduce((s, p) => s + Number(p.amount), 0),
+    });
     const paySheet = XLSX.utils.json_to_sheet(payData);
     XLSX.utils.book_append_sheet(wb, paySheet, 'Төлбөрийн түүх');
+
+    // Айл бүрээр — сонгосон хугацаанд хэн хэдийг төлсөн (төлөөгүй айл 0-ээр)
+    const byRes: Record<number, { sum: number; n: number; last: string }> = {};
+    for (const p of ranged) {
+      const x = byRes[p.resident_id] || (byRes[p.resident_id] = { sum: 0, n: 0, last: '' });
+      x.sum += Number(p.amount); x.n++;
+      const d = localDay(p.paid_at);
+      if (d > x.last) x.last = d;
+    }
+    const perUnit = residents
+      .slice().sort((a, b) => a.apartment.localeCompare(b.apartment, undefined, { numeric: true }))
+      .map(r => ({
+        'Тоот': r.apartment,
+        'Нэр': r.name,
+        'Төлсөн (₮)': byRes[r.id]?.sum || 0,
+        'Гүйлгээ': byRes[r.id]?.n || 0,
+        'Сүүлд төлсөн': byRes[r.id]?.last || '',
+        'Одоогийн өр (₮)': debtOf(r),
+      }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perUnit), 'Айл бүрээр');
 
     // Өртэй айлууд sheet
     const debtData = residents.filter(r => debtOf(r) > 0).sort((a, b) => debtOf(b) - debtOf(a)).map(r => ({
@@ -321,11 +372,13 @@ export default function AdminPayments() {
     XLSX.utils.book_append_sheet(wb, debtSheet, 'Өртэй айлууд');
 
     if (entranceGroups.length >= 2) {
-      appendEntranceSheets(wb, new Set(['Төлбөрийн түүх', 'Өртэй айлууд']));
+      appendEntranceSheets(wb, new Set(['Төлбөрийн түүх', 'Айл бүрээр', 'Өртэй айлууд']));
     }
 
-    const today = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `төлбөр-${today}.xlsx`);
+    const today = localDay(new Date().toISOString());
+    XLSX.writeFile(wb, exportFrom || exportTo
+      ? `төлбөр-${exportFrom || 'эхнээс'}_${exportTo || today}.xlsx`
+      : `төлбөр-${today}.xlsx`);
   };
 
   // Нээлттэй гэрээ = хүчин төгөлдөр эсвэл айлын зөвшөөрөл хүлээж буй нь
@@ -457,15 +510,36 @@ export default function AdminPayments() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold">💰 Төлбөр & Орлого</h1>
-        <button
-          onClick={exportToExcel}
-          disabled={loading || payments.length === 0}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
-        >
-          📥 Excel татах
-        </button>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="text-xs text-gray-500 flex flex-col">
+            Эхлэх огноо
+            <input type="date" value={exportFrom} max={exportTo || undefined}
+              onChange={e => setExportFrom(e.target.value)}
+              className="mt-0.5 px-2 py-1.5 border rounded-lg text-sm text-gray-800" />
+          </label>
+          <label className="text-xs text-gray-500 flex flex-col">
+            Дуусах огноо
+            <input type="date" value={exportTo} min={exportFrom || undefined}
+              onChange={e => setExportTo(e.target.value)}
+              className="mt-0.5 px-2 py-1.5 border rounded-lg text-sm text-gray-800" />
+          </label>
+          {(exportFrom || exportTo) && (
+            <button onClick={() => { setExportFrom(''); setExportTo(''); }}
+              className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-800" title="Бүх хугацаа">
+              ✕ Цэвэрлэх
+            </button>
+          )}
+          <button
+            onClick={exportToExcel}
+            disabled={loading || (payments.length === 0 && residents.length === 0)}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
+            title={exportFrom || exportTo ? 'Сонгосон хугацааны төлбөрийг татна' : 'Огноо сонгоогүй бол бүх хугацааны төлбөр'}
+          >
+            📥 Excel татах{exportFrom || exportTo ? ` (${payments.filter(inRange).length})` : ''}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
