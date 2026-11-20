@@ -26,6 +26,37 @@ function normBuilding(v: unknown): string {
     .replace(/^(\d+)р$/, '$1');   // «11-р байр» → «11»
 }
 
+/** Тоотыг харьцуулах хэлбэрт: «03», «3 тоот», «№3» → «3» */
+function normUnit(v: unknown): string {
+  return String(v ?? '')
+    .toLowerCase()
+    .replace(/тоот|toot|дугаар/g, '')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .replace(/[a-z]/g, (ch) => LOOKALIKE[ch] ?? ch)
+    .replace(/^0+(?=\d)/, '');
+}
+
+/** Ийм ба түүнээс олон баталгаажсан айлтай бол СӨХ-д даргын жагсаалт бий гэж үзнэ */
+const ROSTER_MIN = 10;
+
+/** Даргын баталгаажсан айлууд (өөрөө бүртгүүлж хүлээгдэж буйг оруулахгүй) */
+async function loadRoster(sokhId: number): Promise<{ building: string | null; apartment: string | null }[]> {
+  const out: { building: string | null; apartment: string | null }[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabaseAdmin
+      .from('residents')
+      .select('building, apartment')
+      .eq('sokh_id', sokhId)
+      .eq('pending_claim', false)
+      .order('id')
+      .range(from, from + 999);
+    if (error) { console.error('[register] roster', error.message); return []; }
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') || 'unknown';
   const { allowed, retryAfterSec } = registerLimiter.check(ip);
@@ -62,6 +93,7 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanPhone = phone.trim();
+    let rosterUnit: string | null = null;
 
     // sokh_id шалгах
     if (sokh_id) {
@@ -87,6 +119,27 @@ export async function POST(req: NextRequest) {
             error: `Байраа зөв сонгоно уу (${buildings.join(', ')}). Аппаа шинэчлээд дахин оролдоно уу.`,
           }, { status: 400 });
         }
+      }
+      // Даргын айлын жагсаалттай СӨХ-д байхгүй тоотоор бүртгүүлэхийг ХОРИГЛОНО.
+      // Өмнө нь «13-03» (жагсаалтад «3») гэх мэт бичихэд шинэ хоосон мөр үүсч,
+      // айл нэвтэрсэн ч нэхэмжлэх, өр юу ч харагддаггүй байв (2026-11-20).
+      const roster = await loadRoster(sokh_id);
+      if (roster.length >= ROSTER_MIN) {
+        const scope = buildings.length > 1
+          ? roster.filter((r) => normBuilding(r.building) === normBuilding(building))
+          : roster;
+        const want = normUnit(unit);
+        if (!want) {
+          return NextResponse.json({ error: 'Тоотоо оруулна уу' }, { status: 400 });
+        }
+        const hit = scope.find((r) => normUnit(r.apartment) === want);
+        if (!hit) {
+          return NextResponse.json({
+            error: `${buildings.length > 1 && building ? `${String(building).trim()} байранд ` : ''}«${String(unit).trim()}» тоот СӨХ-ийн бүртгэлд байхгүй байна. Тоотоо шалгаад дахин оруулна уу. Зөв бол СӨХ-ийн даргадаа хандана уу.`,
+            code: 'unit_not_found',
+          }, { status: 400 });
+        }
+        rosterUnit = String(hit.apartment);   // «03» → жагсаалтын «3»
       }
     } else if (sokh_name) {
       // Хэрэглэгч өөрөө СӨХ-ийн нэрээ оруулсан тохиолдолд шинэ байгууллага үүсгэх
@@ -199,7 +252,7 @@ export async function POST(req: NextRequest) {
     // Өмнө нь энд болзолгүйгээр INSERT хийдэг байсан тул даргын импортолсон
     // айл өөр утсаар бүртгүүлбэл тэр тоот давхар мөр болж, айлын тоо ба нийт
     // дүн буруу гардаг байв. Одоо эхлээд байгаа мөрийг хайна.
-    const cleanUnit = typeof unit === 'string' ? unit.trim() : '';
+    const cleanUnit = rosterUnit ?? (typeof unit === 'string' ? unit.trim() : '');
     const cleanBuilding = typeof building === 'string' ? building.trim() : '';
     let resident: { id: number } | null = null;
     let claimedExisting = false;
