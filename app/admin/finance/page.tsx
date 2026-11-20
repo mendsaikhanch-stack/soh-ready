@@ -16,7 +16,7 @@ interface BudgetPlan { id: number; category: string; planned_amount: number; mon
 // period_year/period_month = тайлант сар (СӨХ-ийн тасалбараар, app/lib/finance/period.ts)
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; period_year: number; period_month: number; }
 interface Invoice { id: number; resident_id: number; year: number; month: number; amount: number; status: string; paid_amount: number; due_date: string; paid_at: string | null; description: string; }
-interface Resident { id: number; name: string; apartment: string; building?: string | null; debt: number; entrance: number | null; monthly_fee: number | null; pending_claim: boolean; }
+interface Resident { id: number; name: string; apartment: string; building?: string | null; phone?: string | null; debt: number; entrance: number | null; monthly_fee: number | null; pending_claim: boolean; }
 interface ReserveEntry { id: number; type: string; amount: number; description: string; occurred_at: string; }
 // Өглөг — СӨХ ХЭНД өртэй (авлагын эсрэг тал). supabase-payables-migration.sql
 interface Payable { id: number; vendor: string; category: string; amount: number; paid_amount: number; due_date: string | null; status: string; paid_at: string | null; description: string; }
@@ -122,7 +122,7 @@ export default function AdminFinanceHub() {
     // Бүх уншилт adminFrom proxy-гоор (service_role + tenant scope) явна.
     const [{ data: org }, { data: res }] = await Promise.all([
       adminFrom('sokh_organizations').select('monthly_fee, name, address, phone').eq('id', sokhId).single(),
-      adminFrom('residents').select('id,name,apartment,building,debt,entrance,monthly_fee,pending_claim').eq('sokh_id', sokhId).order('apartment', { ascending: true }),
+      adminFrom('residents').select('id,name,apartment,building,phone,debt,entrance,monthly_fee,pending_claim').eq('sokh_id', sokhId).order('apartment', { ascending: true }),
     ]);
 
     // Дарга баталгаажуулаагүй (өөрөө бүртгүүлсэн) хүнд нэхэмжлэх үүсгэхгүй,
@@ -394,6 +394,34 @@ export default function AdminFinanceHub() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paid.map(row)), `Төлсөн (${paid.length})`);
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(unpaid.map(row)), `Төлөөгүй (${unpaid.length})`);
     XLSX.writeFile(wb, `төлөлт-${year}-${String(month).padStart(2, '0')}.xlsx`);
+  };
+
+  // Өртэй айлын жагсаалт (хугацаа хэтэрсэн үлдэгдэл = residents.debt) — байр, тоотоор эрэмбэлж
+  // утастай нь гаргана: дарга залгаж, мсж явуулахад
+  const debtorList = residents
+    .filter(r => Number(r.debt || 0) > 0)
+    .slice()
+    .sort((a, b) => (a.building || '').localeCompare(b.building || '', undefined, { numeric: true })
+      || (Number(a.apartment) || 0) - (Number(b.apartment) || 0) || String(a.apartment).localeCompare(String(b.apartment)));
+  const exportDebtors = () => {
+    const rows = debtorList.map(r => {
+      const fee = feeOf(r);
+      return {
+        'Байр': r.building || '',
+        'Тоот': r.apartment || '',
+        'Нэр': r.name || '',
+        'Утас': r.phone || '',
+        'Өр (₮)': Number(r.debt),
+        'Хэдэн сар': fee > 0 ? Math.round(Number(r.debt) / fee * 10) / 10 : '',
+      };
+    });
+    rows.push({ 'Байр': 'НИЙТ', 'Тоот': `${debtorList.length} айл`, 'Нэр': '', 'Утас': '', 'Өр (₮)': totalDebt, 'Хэдэн сар': '' });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{ wch: 8 }, { wch: 8 }, { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 10 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `Өртэй айл (${debtorList.length})`);
+    const d = new Date();
+    XLSX.writeFile(wb, `өртэй-айл-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.xlsx`);
   };
 
   const pendingInvoices = invoices.filter(i => i.status === 'pending' || i.status === 'overdue').length;
@@ -966,26 +994,37 @@ export default function AdminFinanceHub() {
                 <KpiCard label="Дундаж өр" value={`${(debtors > 0 ? totalDebt / debtors : 0).toLocaleString()}₮`} sub="айл бүрд" color="amber" />
               </div>
 
-              <div className="bg-white border rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-500">Хугацаа нь хэтэрсэн, төлөгдөөгүй нэхэмжлэхтэй айлууд — байр, тоотын дарааллаар.</p>
+                <button onClick={exportDebtors} disabled={debtors === 0}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-40">
+                  ⬇ Excel (утастай)
+                </button>
+              </div>
+              <div className="bg-white border rounded-xl overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b">
                     <tr>
+                      <th className="px-4 py-3 text-left text-xs text-gray-500">Байр</th>
                       <th className="px-4 py-3 text-left text-xs text-gray-500">Тоот</th>
                       <th className="px-4 py-3 text-left text-xs text-gray-500">Нэр</th>
-                      <th className="px-4 py-3 text-left text-xs text-gray-500">Орц</th>
+                      <th className="px-4 py-3 text-left text-xs text-gray-500">Утас</th>
                       <th className="px-4 py-3 text-right text-xs text-gray-500">Өр</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {residents.filter(r => Number(r.debt || 0) > 0).sort((a, b) => Number(b.debt) - Number(a.debt)).map(r => (
+                    {debtorList.map(r => (
                       <tr key={r.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3 text-gray-500">{r.building || '—'}</td>
                         <td className="px-4 py-3 font-mono">{r.apartment}</td>
                         <td className="px-4 py-3">{r.name}</td>
-                        <td className="px-4 py-3 text-gray-500">{r.entrance ? `${r.entrance}-р` : '—'}</td>
+                        <td className="px-4 py-3 font-mono">
+                          {r.phone ? <a href={`tel:${r.phone}`} className="text-blue-600 hover:underline">{r.phone}</a> : <span className="text-gray-400">—</span>}
+                        </td>
                         <td className="px-4 py-3 text-right font-semibold text-red-600">{Number(r.debt).toLocaleString()}₮</td>
                       </tr>
                     ))}
-                    {debtors === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Өртэй айл байхгүй ✓</td></tr>}
+                    {debtors === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Өртэй айл байхгүй ✓</td></tr>}
                   </tbody>
                 </table>
               </div>

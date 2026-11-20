@@ -27,6 +27,8 @@ import { UNIT_SCHEMES, isValidSchemeUnit } from '@/app/lib/bank-sms/unit-address
 // PostgREST нэг хүсэлтэд max_rows (1000) мөр л буцаадаг. Хуудаслахгүй бол
 // 300–500 айлтай СӨХ-ийн нэхэмжлэх 2–3 сард 1000-аас давж, өр буруу бодогдоно.
 const PAGE = 1000;
+/** Нэг дор зэрэг явуулах UPDATE-ийн тоо */
+const WRITE_BATCH = 25;
 async function fetchAllPages<T>(
   page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
 ): Promise<{ data: T[]; error: { message: string } | null }> {
@@ -214,6 +216,10 @@ export async function runResidentInvoices(now: Date = new Date()): Promise<Resid
       }
     }
 
+    // Өөрчлөлтийг эхлээд цуглуулаад, дараа нь багцаар зэрэг бичнэ. Нэг нэгээр
+    // бичихэд ICTown-ий (575 айл) сарын эхний тооцоо 60 секундэд багтахгүй,
+    // cron шөнө бүр дундуур тасарч 237 нэхэмжлэх «хэтэрсэн» болоогүй үлдсэн (2026-11-20).
+    const writes: (() => Promise<void>)[] = [];
     for (const r of residents) {
       const list = invByRes.get(r.id);
       if (!list) continue;
@@ -232,15 +238,22 @@ export async function runResidentInvoices(now: Date = new Date()): Promise<Resid
         const patch: Record<string, unknown> = { status, paid_amount: paid };
         if (status === 'paid' && !inv.paid_at) patch.paid_at = now.toISOString();
         if (status !== 'paid') patch.paid_at = null;
-        const { error } = await supabaseAdmin.from('invoices').update(patch).eq('id', inv.id);
-        if (error) { result.errors.push(`${o.name}: нэхэмжлэх #${inv.id} төлөв — ${error.message}`); continue; }
-        summary.statusChanged++;
+        writes.push(async () => {
+          const { error } = await supabaseAdmin.from('invoices').update(patch).eq('id', inv.id);
+          if (error) { result.errors.push(`${o.name}: нэхэмжлэх #${inv.id} төлөв — ${error.message}`); return; }
+          summary.statusChanged++;
+        });
       }
       if (overdue !== (Number(r.debt) || 0)) {
-        const { error } = await supabaseAdmin.from('residents').update({ debt: overdue }).eq('id', r.id);
-        if (error) { result.errors.push(`${o.name}: айл #${r.id} өр — ${error.message}`); continue; }
-        summary.debtChanged++;
+        writes.push(async () => {
+          const { error } = await supabaseAdmin.from('residents').update({ debt: overdue }).eq('id', r.id);
+          if (error) { result.errors.push(`${o.name}: айл #${r.id} өр — ${error.message}`); return; }
+          summary.debtChanged++;
+        });
       }
+    }
+    for (let i = 0; i < writes.length; i += WRITE_BATCH) {
+      await Promise.all(writes.slice(i, i + WRITE_BATCH).map((w) => w()));
     }
   }
 
