@@ -76,15 +76,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (profileUserIdRef.current === u.id) return;
     profileUserIdRef.current = u.id;
 
-    // user metadata-н утсаар, утасгүй бол auth_user_id-аар resident хайх.
+    // Эхлээд auth_user_id-аар (нэвтрэлттэй холбогдсон мөр), олдохгүй бол metadata-н утсаар хайна.
+    // Зөвхөн утсаар хайхад даргын мөрт өөр утас бичигдсэн айл (ICTown 5-2-606, 2026-11-20)
+    // нэвтэрсэн ч профайлгүй болж, нэхэмжлэх, төлбөр юу ч харагддаггүй байв.
     // Шүүлтгүй query нь RLS-ийн хүрээнд ӨӨР оршин суугчийн мөрийг буцаадаг байсан.
     const phone = u.user_metadata?.phone;
 
-    const query = phone
-      ? supabase.from('residents').select('*').eq('phone', phone)
-      : supabase.from('residents').select('*').eq('auth_user_id', u.id);
-
-    const { data, error } = await query.limit(1).maybeSingle();
+    let { data, error } = await supabase.from('residents').select('*').eq('auth_user_id', u.id)
+      .order('pending_claim', { ascending: true }).order('id', { ascending: true }).limit(1).maybeSingle();
+    if (!data && !error && phone) {
+      ({ data, error } = await supabase.from('residents').select('*').eq('phone', phone).limit(1).maybeSingle());
+    }
     if (error) profileUserIdRef.current = null; // дараагийн auth event дээр дахин оролдоно
 
     if (data) {

@@ -82,12 +82,21 @@ function LoginInner() {
         // ignore
       }
 
-      const { data: resident } = await supabase
+      // Нэвтрэлттэй холбогдсон мөрийг эхэлж, олдохгүй бол утсаар (auth-context-тэй ижил)
+      let { data: resident } = await supabase
         .from('residents')
         .select('sokh_id')
-        .eq('phone', userPhone)
+        .eq('auth_user_id', loggedInUser.id)
         .limit(1)
-        .single();
+        .maybeSingle();
+      if (!resident) {
+        ({ data: resident } = await supabase
+          .from('residents')
+          .select('sokh_id')
+          .eq('phone', userPhone)
+          .limit(1)
+          .maybeSingle());
+      }
 
       if (resident?.sokh_id) {
         router.replace(`/sokh/${resident.sokh_id}`);

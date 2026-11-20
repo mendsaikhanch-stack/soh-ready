@@ -382,6 +382,7 @@ export default function AdminFinanceHub() {
         'Байр': r?.building || '',
         'Тоот': r?.apartment || '',
         'Нэр': r?.name || 'Тодорхойгүй',
+        'Утас': r?.phone || '',
         'Нэхэмжилсэн (₮)': Number(i.amount),
         'Төлсөн (₮)': Number(i.paid_amount || 0),
         'Үлдэгдэл (₮)': invLeft(i),
@@ -890,6 +891,7 @@ export default function AdminFinanceHub() {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs text-gray-500">Тоот</th>
                       <th className="px-4 py-3 text-left text-xs text-gray-500">Айл</th>
+                      <th className="px-4 py-3 text-left text-xs text-gray-500">Утас</th>
                       <th className="px-4 py-3 text-right text-xs text-gray-500">Дүн</th>
                       <th className="px-4 py-3 text-left text-xs text-gray-500">Төлөв</th>
                       <th className="px-4 py-3 text-left text-xs text-gray-500">Хугацаа</th>
@@ -905,6 +907,9 @@ export default function AdminFinanceHub() {
                         <tr key={inv.id} className="border-b hover:bg-gray-50">
                           <td className="px-4 py-3 font-mono text-xs">{unitOf(r)}</td>
                           <td className="px-4 py-3">{r?.name || 'Тодорхойгүй'}</td>
+                          <td className="px-4 py-3 font-mono text-xs">
+                            {r?.phone ? <a href={`tel:${r.phone}`} className="text-blue-600 hover:underline">{r.phone}</a> : <span className="text-gray-400">—</span>}
+                          </td>
                           <td className="px-4 py-3 text-right font-medium">{inv.amount.toLocaleString()}₮</td>
                           <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${overdue ? STATUS_LABEL.overdue.color : st.color}`}>{overdue ? 'Хугацаа хэтэрсэн' : st.label}</span></td>
                           <td className="px-4 py-3 text-gray-500">{inv.due_date ? new Date(inv.due_date).toLocaleDateString('mn-MN') : '—'}</td>
@@ -917,7 +922,7 @@ export default function AdminFinanceHub() {
                         </tr>
                       );
                     })}
-                    {invoices.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Энэ сарын нэхэмжлэх үүсгээгүй байна</td></tr>}
+                    {invoices.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Энэ сарын нэхэмжлэх үүсгээгүй байна</td></tr>}
                   </tbody>
                 </table>
               </div>
