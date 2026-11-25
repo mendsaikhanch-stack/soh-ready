@@ -5,6 +5,7 @@ import { supabase } from '@/app/lib/supabase';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 
 interface Resident {
+  id: number;
   name: string;
   apartment: string;
   entrance: number | null;
@@ -32,6 +33,7 @@ interface EntranceStats {
 export default function AdminReports() {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [openDueMap, setOpenDueMap] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [selectedEntrance, setSelectedEntrance] = useState<number | null>(null);
 
@@ -40,7 +42,7 @@ export default function AdminReports() {
       const sokhId = await getAdminSokhId();
       const { data: res } = await supabase
         .from('residents')
-        .select('name,apartment,entrance,floor,debt,phone')
+        .select('id,name,apartment,entrance,floor,debt,phone')
         .eq('sokh_id', sokhId).eq('pending_claim', false)
         .order('entrance')
         .order('apartment');
@@ -52,6 +54,17 @@ export default function AdminReports() {
         .eq('residents.sokh_id', sokhId)
         .order('paid_at', { ascending: false });
       setPayments(pay || []);
+      const { data: openInv } = await supabase
+        .from('invoices')
+        .select('resident_id,amount,paid_amount,status')
+        .eq('sokh_id', sokhId)
+        .in('status', ['pending', 'overdue', 'partial']);
+      const dueMap: Record<number, number> = {};
+      for (const inv of (openInv as { resident_id: number; amount: number; paid_amount: number | null }[]) || []) {
+        const left = Math.max(0, Number(inv.amount || 0) - Number(inv.paid_amount || 0));
+        dueMap[inv.resident_id] = (dueMap[inv.resident_id] || 0) + left;
+      }
+      setOpenDueMap(dueMap);
       setLoading(false);
     };
     fetchData();
@@ -67,10 +80,11 @@ export default function AdminReports() {
     entranceMap.get(ent)!.push(r);
   });
 
+  const effectiveDebt = (r: Resident) => Math.max(Number(r.debt || 0), openDueMap[r.id] || 0);
   const entrances: EntranceStats[] = Array.from(entranceMap.entries())
     .map(([entrance, res]) => {
-      const totalDebt = res.reduce((s, r) => s + Number(r.debt), 0);
-      const debtors = res.filter(r => Number(r.debt) > 0).length;
+      const totalDebt = res.reduce((s, r) => s + effectiveDebt(r), 0);
+      const debtors = res.filter(r => effectiveDebt(r) > 0).length;
       const totalPaid = payments.reduce((s, p) => s + Number(p.amount), 0) / (entranceMap.size || 1);
       const collectionRate = totalDebt + totalPaid > 0
         ? Math.round((totalPaid / (totalDebt + totalPaid)) * 100) : 100;
@@ -79,9 +93,9 @@ export default function AdminReports() {
     .sort((a, b) => a.entrance - b.entrance);
 
   const totalResidents = residents.length;
-  const totalDebt = residents.reduce((s, r) => s + Number(r.debt), 0);
+  const totalDebt = residents.reduce((s, r) => s + effectiveDebt(r), 0);
   const totalPaid = payments.reduce((s, p) => s + Number(p.amount), 0);
-  const totalDebtors = residents.filter(r => Number(r.debt) > 0).length;
+  const totalDebtors = residents.filter(r => effectiveDebt(r) > 0).length;
   const overallRate = totalDebt + totalPaid > 0 ? Math.round((totalPaid / (totalDebt + totalPaid)) * 100) : 100;
 
   const selectedData = selectedEntrance !== null ? entrances.find(e => e.entrance === selectedEntrance) : null;
@@ -126,7 +140,7 @@ export default function AdminReports() {
                   <tbody>
                     ${ent.residents.map((r, i) => `<tr>
                       <td>${i + 1}</td><td>${r.name}</td><td>${r.apartment}</td><td>${r.phone || '-'}</td>
-                      <td class="text-right ${Number(r.debt) > 0 ? 'text-red' : ''}">${Number(r.debt) > 0 ? Number(r.debt).toLocaleString() + '₮' : '0₮'}</td>
+                      <td class="text-right ${effectiveDebt(r) > 0 ? 'text-red' : ''}">${effectiveDebt(r) > 0 ? effectiveDebt(r).toLocaleString() + '₮' : '0₮'}</td>
                     </tr>`).join('')}
                   </tbody>
                 </table>
@@ -260,18 +274,18 @@ export default function AdminReports() {
             </thead>
             <tbody>
               {selectedData.residents
-                .sort((a, b) => Number(b.debt) - Number(a.debt))
+                .sort((a, b) => effectiveDebt(b) - effectiveDebt(a))
                 .map((r, i) => (
                 <tr key={i} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-2 text-sm text-gray-400">{i + 1}</td>
                   <td className="px-4 py-2 text-sm font-medium">{r.name}</td>
                   <td className="px-4 py-2 text-sm">{r.apartment}</td>
                   <td className="px-4 py-2 text-sm text-gray-500">{r.phone || '-'}</td>
-                  <td className={`px-4 py-2 text-sm text-right font-semibold ${Number(r.debt) > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    {Number(r.debt) > 0 ? `${Number(r.debt).toLocaleString()}₮` : '0₮'}
+                  <td className={`px-4 py-2 text-sm text-right font-semibold ${effectiveDebt(r) > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                    {effectiveDebt(r) > 0 ? `${effectiveDebt(r).toLocaleString()}₮` : '0₮'}
                   </td>
                   <td className="px-4 py-2 text-center">
-                    {Number(r.debt) === 0 ? (
+                    {effectiveDebt(r) === 0 ? (
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Төлсөн</span>
                     ) : (
                       <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Өртэй</span>
@@ -303,8 +317,8 @@ export default function AdminReports() {
             <tbody>
               {entrances.flatMap(ent =>
                 ent.residents
-                  .filter(r => Number(r.debt) > 0)
-                  .sort((a, b) => Number(b.debt) - Number(a.debt))
+                  .filter(r => effectiveDebt(r) > 0)
+                  .sort((a, b) => effectiveDebt(b) - effectiveDebt(a))
                   .map((r, i) => (
                     <tr key={`${ent.entrance}-${i}`} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-2 text-sm">
@@ -316,7 +330,7 @@ export default function AdminReports() {
                       <td className="px-4 py-2 text-sm">{r.apartment}</td>
                       <td className="px-4 py-2 text-sm text-gray-500">{r.phone || '-'}</td>
                       <td className="px-4 py-2 text-sm text-right text-red-500 font-semibold">
-                        {Number(r.debt).toLocaleString()}₮
+                        {effectiveDebt(r).toLocaleString()}₮
                       </td>
                     </tr>
                   ))
