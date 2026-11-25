@@ -494,8 +494,8 @@ export default function AdminFinanceHub() {
 
     // Авлага (айл СӨХ-д өртэй)
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
-      residents.filter(r => Math.max(Number(r.debt || 0), openDue[r.id] || 0) > 0).sort((a, b) => Math.max(Number(b.debt || 0), openDue[b.id] || 0) - Math.max(Number(a.debt || 0), openDue[a.id] || 0))
-        .map(r => ({ 'Байр': r.building || '', 'Тоот': r.apartment, 'Нэр': r.name, 'Утас': r.phone || '', 'Өр (₮)': Math.max(Number(r.debt || 0), openDue[r.id] || 0) }))
+      residents.filter(r => activeDebtOf(r) > 0).sort((a, b) => activeDebtOf(b) - activeDebtOf(a))
+        .map(r => ({ 'Байр': r.building || '', 'Тоот': r.apartment, 'Нэр': r.name, 'Утас': r.phone || '', 'Өр (₮)': activeDebtOf(r) }))
     ), 'Авлага');
 
     // Өглөг (СӨХ хэнд өртэй)
