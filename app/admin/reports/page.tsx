@@ -41,7 +41,7 @@ export default function AdminReports() {
       const { data: res } = await supabase
         .from('residents')
         .select('name,apartment,entrance,floor,debt,phone')
-        .eq('sokh_id', sokhId)
+        .eq('sokh_id', sokhId).eq('pending_claim', false)
         .order('entrance')
         .order('apartment');
       setResidents(res || []);
@@ -92,8 +92,7 @@ export default function AdminReports() {
         <h1 className="text-2xl font-bold">📋 Тайлан — Орц орцоор</h1>
         <button
           onClick={() => {
-            const printArea = document.getElementById('report-print-area');
-            if (!printArea) return;
+            
             const win = window.open('', '_blank');
             if (!win) return;
             win.document.write(`
