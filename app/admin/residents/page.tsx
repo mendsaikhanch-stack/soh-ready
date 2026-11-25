@@ -533,7 +533,7 @@ export default function AdminResidents() {
   const exportCSV = () => {
     const header = 'name,apartment,phone,building,block,entrance,floor,area_sqm,debt,monthly_fee,unit_kind,plates\n';
     const rows = residents.map(r =>
-      `"${r.name}","${r.apartment}","${r.phone || ''}","${r.building || ''}","${r.block || ''}","${r.entrance || ''}","${r.floor || ''}",${r.area_sqm || 0},${r.debt},${r.monthly_fee ?? ''},"${isBusiness(r) ? 'ААН' : 'айл'}","${platesOf(platesByApt, r).join(' ')}"`
+      `"${r.name}","${r.apartment}","${r.phone || ''}","${r.building || ''}","${r.block || ''}","${r.entrance || ''}","${r.floor || ''}",${r.area_sqm || 0},${prevOf(r)},${r.monthly_fee ?? ''},"${isBusiness(r) ? 'ААН' : 'айл'}","${platesOf(platesByApt, r).join(' ')}"`
     ).join('\n');
     const blob = new Blob(['\ufeff' + header + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
