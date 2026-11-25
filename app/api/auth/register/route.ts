@@ -38,7 +38,7 @@ async function loadRoster(sokhId: number): Promise<{ building: string | null; ap
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabaseAdmin
       .from('residents')
-       param($m) $s = $m.Groups[1].Value; if ($s -notmatch "apartment") { $s = "$s, apartment" }; ".select('$s')" 
+      .select('building, apartment')
       .eq('sokh_id', sokhId)
       .eq('pending_claim', false)
       .order('id')
@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
     if (sokh_id && cleanUnit) {
       const { data: matches } = await supabaseAdmin
         .from('residents')
-         param($m) $s = $m.Groups[1].Value; if ($s -notmatch "apartment") { $s = "$s, apartment" }; ".select('$s')" 
+        .select('id, auth_user_id, building, apartment, phone')
         .eq('sokh_id', sokh_id);
 
       const normTargetUnit = normUnit(cleanUnit);
