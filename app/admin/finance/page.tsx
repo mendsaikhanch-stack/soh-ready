@@ -66,6 +66,7 @@ export default function AdminFinanceHub() {
   const [budgetPlans, setBudgetPlans] = useState<BudgetPlan[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invFilter, setInvFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
+  const [filterByMonth, setFilterByMonth] = useState(false);
   const [reserveEntries, setReserveEntries] = useState<ReserveEntry[]>([]);
   const [payables, setPayables] = useState<Payable[]>([]);
   // Миграц гараар ажиллуулдаг тул хүснэгт үүсээгүй байж болно — чимээгүй
@@ -370,7 +371,8 @@ export default function AdminFinanceHub() {
     const ra = residents.find(x => x.id === a.resident_id), rb = residents.find(x => x.id === b.resident_id);
     return (ra?.building || '').localeCompare(rb?.building || '') || (Number(ra?.apartment) || 0) - (Number(rb?.apartment) || 0);
   };
-  const shownInvoices = invoices
+  const monthScopedInvoices = filterByMonth ? invoices.filter(i => i.year === year && i.month === month) : invoices;
+  const shownInvoices = monthScopedInvoices
     .filter(i => invFilter === 'all' || (invFilter === 'paid' ? invPaid(i) : !invPaid(i)))
     .slice().sort(unitSort);
 
@@ -425,7 +427,7 @@ export default function AdminFinanceHub() {
     XLSX.writeFile(wb, `өртэй-айл-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.xlsx`);
   };
 
-  const pendingInvoices = invoices.filter(i => i.status === 'pending' || i.status === 'overdue').length;
+  const pendingInvoices = monthScopedInvoices.filter(i => i.status === 'pending' || i.status === 'overdue').length;
 
   // Жилийн нийт орлого = гишүүдийн хураамж + бусад орлого
   const yearIncome = yearFeeIncome + yearIncomeItems.reduce((s, i) => s + Number(i.amount), 0);
@@ -533,6 +535,7 @@ export default function AdminFinanceHub() {
           <button onClick={() => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); }} className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm">→</button>
           <Link href={`/admin/finance/report?year=${year}`} className="ml-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">📄 Жилийн тайлан</Link>
           <Link href={`/admin/finance/statements?year=${year}`} className="px-3 py-1.5 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800">🏛 Албан ёсны тайлан</Link>
+          <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-gray-50 border px-2.5 py-1.5 rounded-lg cursor-pointer select-none"><input type="checkbox" checked={filterByMonth} onChange={e => setFilterByMonth(e.target.checked)} className="w-3.5 h-3.5" />Он сараар шүүх</label>
           <button onClick={exportYearReport} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">📥 Excel</button>
         </div>
       </div>
