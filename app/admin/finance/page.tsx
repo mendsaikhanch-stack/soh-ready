@@ -461,6 +461,7 @@ export default function AdminFinanceHub() {
   });
   const maxMonthlyInc = Math.max(...monthlyHistory.map(h => h.income), 1);
 
+  const scopedOpenDue: Record<number, number> = {}; for (const inv of monthScopedInvoices) { if (!invPaid(inv)) { const left = Math.max(0, Number(inv.amount || 0) - Number(inv.paid_amount || 0)); scopedOpenDue[inv.resident_id] = (scopedOpenDue[inv.resident_id] || 0) + left; } } const activeDebtOf = (r: Resident) => filterByMonth ? (scopedOpenDue[r.id] || 0) : Math.max(Number(r.debt || 0), openDue[r.id] || 0);
   const exportYearReport = () => {
     const wb = XLSX.utils.book_new();
     const incomeSheet = XLSX.utils.json_to_sheet(

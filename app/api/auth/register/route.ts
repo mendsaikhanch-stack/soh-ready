@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { registerLimiter } from '@/app/lib/rate-limit';
 import { linkManualSignupToUser, type LinkReport } from '@/app/lib/directory/link-manual-signup';
@@ -38,7 +38,7 @@ async function loadRoster(sokhId: number): Promise<{ building: string | null; ap
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabaseAdmin
       .from('residents')
-      .select('building, apartment')
+       param($m) $s = $m.Groups[1].Value; if ($s -notmatch "apartment") { $s = "$s, apartment" }; ".select('$s')" 
       .eq('sokh_id', sokhId)
       .eq('pending_claim', false)
       .order('id')
@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
     if (sokh_id && cleanUnit) {
       const { data: matches } = await supabaseAdmin
         .from('residents')
-        .select('id, auth_user_id, building, phone')
+         param($m) $s = $m.Groups[1].Value; if ($s -notmatch "apartment") { $s = "$s, apartment" }; ".select('$s')" 
         .eq('sokh_id', sokh_id);
 
       const normTargetUnit = normUnit(cleanUnit);
