@@ -137,7 +137,7 @@ export default function AdminFinanceHub() {
         : Promise.resolve({ data: [] }),
       adminFrom('budget_items').select('*').eq('sokh_id', sokhId).eq('year', year).order('amount', { ascending: false }),
       adminFrom('budget_plans').select('*').eq('sokh_id', sokhId).eq('month', month).eq('year', year),
-      adminFrom('invoices').select('*').eq('sokh_id', sokhId).eq('year', year).eq('month', month).order('id', { ascending: true }),
+      adminFrom('invoices').select('*').eq('sokh_id', sokhId).in('status', ['pending', 'overdue', 'partial']).order('id', { ascending: true }),
       adminFrom('reserve_fund').select('*').eq('sokh_id', sokhId).order('occurred_at', { ascending: false }).limit(100),
       adminFrom('payables').select('*').eq('sokh_id', sokhId).order('due_date', { ascending: true }),
     ]);
