@@ -73,6 +73,13 @@ export function validateSessionToken(token: string, maxAgeMs: number, expectedRo
   };
 }
 
+// Token үүссэн цаг (ms). Гарын үсгийг шалгадаггүй — зөвхөн validateSessionToken
+// амжилттай болсны дараа сунгах эсэхийг шийдэхэд ашиглана.
+export function tokenIssuedAt(token: string): number | null {
+  const ts = parseInt(token.split(':')[0], 10);
+  return isNaN(ts) ? null : ts;
+}
+
 // ============ Shared auth helpers ============
 
 export type AuthRole = 'admin' | 'superadmin' | 'osnaa' | 'inspector';
