@@ -531,7 +531,16 @@ export default function AdminFinanceHub() {
         <h1 className="text-2xl font-bold">💰 Санхүүгийн систем</h1>
         <div className="flex items-center gap-2">
           <button onClick={() => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); }} className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm">←</button>
-          <span className="font-bold text-sm min-w-[120px] text-center">{year} · {months[month - 1]}</span>
+          <select value={year} onChange={e => setYear(Number(e.target.value))} className="px-2 py-1.5 bg-white border rounded-lg text-sm font-bold">
+            {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y} он</option>)}
+          </select>
+          <select value={month} onChange={e => setMonth(Number(e.target.value))} className="px-2 py-1.5 bg-white border rounded-lg text-sm font-bold">
+            {months.map((m, idx) => <option key={idx + 1} value={idx + 1}>{m}</option>)}
+          </select>
+          <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg cursor-pointer select-none">
+            <input type="checkbox" checked={!filterByMonth} onChange={e => setFilterByMonth(!e.target.checked)} className="w-3.5 h-3.5" />
+            Бүх сар хамт
+          </label>
           <button onClick={() => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); }} className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm">→</button>
           <Link href={`/admin/finance/report?year=${year}`} className="ml-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">📄 Жилийн тайлан</Link>
           <Link href={`/admin/finance/statements?year=${year}`} className="px-3 py-1.5 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800">🏛 Албан ёсны тайлан</Link>
