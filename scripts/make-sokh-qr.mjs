@@ -146,41 +146,55 @@ const postHtml = `<!doctype html><html lang="mn"><head><meta charset="utf-8"><st
 const posterHtml = `<!doctype html><html lang="mn"><head><meta charset="utf-8"><style>${CSS}
   @page { size: A4; margin: 0; }
   body { background:#fff; }
-  .sheet { width:210mm; min-height:297mm; padding:18mm 16mm; }
+  .sheet { width:210mm; height:297mm; padding:14mm 14mm 10mm; }  /* яг 1 хуудас — өмнө нь 2 хуудас болж байсан */
   .brandbar .dot { width:52px; height:52px; font-size:28px; border-radius:18px; }
   .brandbar .wordmark { font-size:32px; }
   .brandbar .tag { font-size:17px; margin-left:auto; }
-  h1 { font-size:44px; margin-top:26px; }
-  .lede { font-size:19px; margin-top:14px; }
-  .qrwrap { text-align:center; margin:26px 0; }
-  .qrframe { width:300px; height:300px; margin:0 auto; }
-  .qrframe svg { width:255px; height:255px; }
-  .scan { font-size:17px; color:#4a5b76; margin:12px 0 4px; }
-  .steps li { font-size:19px; margin-bottom:14px; line-height:1.45; }
-  .steps li::before { width:32px; height:32px; font-size:17px; }
-  .keep { font-size:16px; padding:14px 18px; margin-top:16px; line-height:1.5; }
-  .keep > b { display:block; font-size:17px; margin-bottom:8px; }  /* зөвхөн гарчиг — мөр доторх <b> инлайн хэвээр */
-  .keep .row { gap:10px; margin-bottom:6px; }
-  .keep .os { width:78px; font-size:13px; padding:3px 0; }
-  .keep .tail { margin:8px 0 0; font-size:14px; color:#4a5b76; }
-  .note { font-size:14px; padding:12px 18px; margin-top:14px; line-height:1.5; }
-  .foot { margin-top:auto; padding-top:16px; border-top:2px solid #d9e1ee; font-size:15px; color:#4a5b76; }
+  /* Гарчиг зүүн талд, QR баруун талд — босоо зайг доорх тайлбарт үлдээнэ */
+  .hero { display:flex; gap:22px; align-items:center; margin-top:18px; }
+  .hero .txt { flex:1; }
+  h1 { font-size:34px; }
+  .lede { font-size:17px; margin-top:10px; }
+  .qrwrap { text-align:center; flex:none; }
+  .qrframe { width:230px; height:230px; margin:0 auto; }
+  .qrframe svg { width:200px; height:200px; }
+  .scan { font-size:15px; color:#4a5b76; margin:6px 0 0; }
+  .hero .url { font-size:15px; margin:10px 0 0; }
+  .below { margin-top:18px; }
+  /* QR-ын доорх тайлбар — --k коэффициентоор томруулна; доорх fit алхам нь
+     A4-т багтах хамгийн том --k-г сонгоно (айлд жижиг цаасан дээр хэвлэдэг тул). */
+  .below { --k:1; }
+  .steps li { font-size:calc(19px * var(--k)); margin-bottom:calc(14px * var(--k)); line-height:1.4; }
+  .steps li::before { width:calc(32px * var(--k)); height:calc(32px * var(--k)); font-size:calc(17px * var(--k)); }
+  .steps li > span { flex:1; }
+  .keep { font-size:calc(16px * var(--k)); padding:calc(14px * var(--k)) calc(18px * var(--k)); margin-top:calc(16px * var(--k)); line-height:1.45; }
+  .keep > b { display:block; font-size:calc(17px * var(--k)); margin-bottom:calc(8px * var(--k)); }  /* зөвхөн гарчиг — мөр доторх <b> инлайн хэвээр */
+  .keep .row { gap:calc(10px * var(--k)); margin-bottom:calc(6px * var(--k)); }
+  .keep .os { width:calc(84px * var(--k)); font-size:calc(15px * var(--k)); padding:calc(3px * var(--k)) 0; }
+  .keep .tail { margin:calc(8px * var(--k)) 0 0; font-size:calc(16px * var(--k)); color:#4a5b76; }
+  .note { font-size:calc(16px * var(--k)); padding:calc(12px * var(--k)) calc(18px * var(--k)); margin-top:calc(14px * var(--k)); line-height:1.45; }
+  .foot { margin-top:auto; padding-top:8px; border-top:2px solid #d9e1ee; font-size:13px; color:#4a5b76; }
 </style></head><body><div class="sheet">
   <div class="brandbar"><div class="dot">Х</div><div class="wordmark">Хотол</div><div class="tag">${esc(org.name)}</div></div>
-  <h1>Байрныхаа мэдээллийг<br><em>утаснаасаа</em> хараарай</h1>
-  <p class="lede">Манай СӨХ Хотол системд шилжлээ. ${count} айл бүгд бүртгэгдсэн байгаа —
-     та зөвхөн өөрийгөө холбоно.</p>
-  <div class="qrwrap">
-    <div class="qrframe">${qr(255)}</div>
-    <p class="scan">Утасныхаа камераар уншуулна уу</p>
-    <p class="url" style="font-size:17px">${esc(url)}</p>
+  <div class="hero">
+    <div class="txt">
+      <h1>Байрныхаа мэдээллийг<br><em>утаснаасаа</em> хараарай</h1>
+      <p class="lede">Манай СӨХ Хотол системд шилжлээ. ${count} айл бүгд бүртгэгдсэн байгаа —
+         та зөвхөн өөрийгөө холбоно.</p>
+      <p class="url">${esc(url)}</p>
+    </div>
+    <div class="qrwrap">
+      <div class="qrframe">${qr(200)}</div>
+      <p class="scan">Камераар уншуулна уу</p>
+    </div>
   </div>
+  <div class="below">
   <ol class="steps">
-    <li>QR кодыг утасныхаа камераар уншуулна</li>
-    ${multiBuilding ? `<li><b>Байрны дугаар</b> хэсэгт байраа бичнэ (${esc(buildings.join(' / '))})</li>` : ''}
-    <li><b>Тоот</b> хэсэгт хаалганыхаа дугаарыг бичнэ${range ? ` (${esc(range)})` : ''}</li>
-    <li>Нэр, утасны дугаараа бичээд өөрийн нууц үгээ тохируулна</li>
-    <li>Болоо. Төлбөр, зарлал, засварын хүсэлт бүгд утсанд тань байна</li>
+    <li><span>QR кодыг утасныхаа камераар уншуулна</span></li>
+    ${multiBuilding ? `<li><span><b>Байрны дугаар</b> хэсэгт байраа бичнэ (${esc(buildings.join(' / '))})</span></li>` : ''}
+    <li><span><b>Тоот</b> хэсэгт хаалганыхаа дугаарыг бичнэ${range ? ` (${esc(range)})` : ''}</span></li>
+    <li><span>Нэр, утасны дугаараа бичээд өөрийн нууц үгээ тохируулна</span></li>
+    <li><span>Болоо. Төлбөр, зарлал, засварын хүсэлт бүгд утсанд тань байна</span></li>
   </ol>
   <div class="keep">
     <b>Дараа нь утсандаа апп болгож хадгална уу</b>
@@ -191,6 +205,7 @@ const posterHtml = `<!doctype html><html lang="mn"><head><meta charset="utf-8"><
   <div class="note">
     <b>Апп татах шаардлагагүй</b> — QR-аар шууд нээгдэнэ. Утасны дугаар нь таны нэвтрэх нэр болно.
     Нэг тоотод нэг хүн бүртгүүлнэ. Асуудал гарвал СӨХ-ийн даргад хандана уу.
+  </div>
   </div>
   <div class="foot">${esc(org.name)} · Хотол — ${esc(SITE.replace(/^https?:\/\//, ''))}</div>
 </div></body></html>`;
@@ -211,6 +226,18 @@ await post.close();
 
 const poster = await browser.newPage();
 await poster.goto('file:///' + path.join(outDir, 'poster.html').replace(/\\/g, '/'), { waitUntil: 'networkidle0' });
+// QR-ын доорх тайлбарыг A4-т багтах хэмжээгээр хамгийн том болгоно: хуудсыг 297мм-т
+// түгжиж, агуулга хэтрэхгүй хамгийн том --k-г хоёртын хайлтаар олно.
+const k = await poster.evaluate(() => {
+  const sheet = document.querySelector('.sheet'), below = document.querySelector('.below');
+  const fits = (v) => { below.style.setProperty('--k', v); return sheet.scrollHeight <= sheet.clientHeight; };
+  let lo = 0.5, hi = 3;
+  for (let i = 0; i < 20; i++) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+  const best = Math.floor(lo * 100) / 100;
+  fits(best);
+  return best;
+});
+fs.writeFileSync(path.join(outDir, 'poster.html'), posterHtml.replace('.below { --k:1; }', `.below { --k:${k}; }`), 'utf8');
 await poster.pdf({ path: path.join(outDir, 'poster.pdf'), printBackground: true, preferCSSPageSize: true });
 const box = await poster.$('.sheet');
 await poster.setViewport({ width: 900, height: 1273, deviceScaleFactor: 1.4 });
@@ -221,6 +248,7 @@ await browser.close();
 
 console.log(`\n✅ ${org.name} (#${sokhId}) — ${count} айл`);
 console.log(`   QR → ${url}`);
+console.log(`   Постерын тайлбар ×${k} томруулсан`);
 console.log(`   ${path.relative(ROOT, outDir)}/`);
 for (const f of ['post.png', 'poster.pdf', 'poster.png']) {
   const s = fs.statSync(path.join(outDir, f));

@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 import { UNIT_SCHEMES } from '@/app/lib/bank-sms/unit-address';
 import { periodOf } from '@/app/lib/finance/period';
 
-interface Resident { id: number; name: string; apartment: string; debt: number; building: string | null; entrance: string | null; }
+interface Resident { id: number; name: string; apartment: string; debt: number; building: string | null; entrance: string | null; phone?: string | null; }
 interface Payment { id: number; resident_id: number; amount: number; description: string; paid_at: string; }
 interface MonthInvoice {
   id: number; resident_id: number; year: number; month: number;
@@ -119,7 +119,7 @@ export default function AdminPayments() {
     const sokhId = await getAdminSokhId();
     setSokhId(sokhId);
     // adminFrom proxy ашиглана — admin нь Supabase auth биш тул anon client RLS-д блоклогддог.
-    const { data: res } = await adminFrom('residents').select('id,name,apartment,debt,building,entrance').eq('sokh_id', sokhId).order('apartment', { ascending: true });
+    const { data: res } = await adminFrom('residents').select('id,name,apartment,debt,building,entrance,phone').eq('sokh_id', sokhId).order('apartment', { ascending: true });
     const residentList = (res as unknown as Resident[]) || [];
     setResidents(residentList);
     // payments нь sokh_id шууд байхгүй — proxy resident_id-ээр scope хийдэг тул айлуудын id-аар уншина.
@@ -355,6 +355,7 @@ export default function AdminPayments() {
       .map(r => ({
         'Тоот': r.apartment,
         'Нэр': r.name,
+        'Утас': r.phone || '',
         'Төлсөн (₮)': byRes[r.id]?.sum || 0,
         'Гүйлгээ': byRes[r.id]?.n || 0,
         'Сүүлд төлсөн': byRes[r.id]?.last || '',
@@ -366,6 +367,7 @@ export default function AdminPayments() {
     const debtData = residents.filter(r => debtOf(r) > 0).sort((a, b) => debtOf(b) - debtOf(a)).map(r => ({
       'Нэр': r.name,
       'Тоот': r.apartment,
+      'Утас': r.phone || '',
       'Өр (₮)': debtOf(r),
     }));
     const debtSheet = XLSX.utils.json_to_sheet(debtData);
@@ -892,6 +894,7 @@ export default function AdminPayments() {
                 <tr className="text-left text-sm text-gray-500">
                   <th className="px-4 py-3">Нэр</th>
                   <th className="px-4 py-3">Тоот</th>
+                  <th className="px-4 py-3">Утас</th>
                   <th className="px-4 py-3 text-right">Өр</th>
                 </tr>
               </thead>
@@ -900,11 +903,14 @@ export default function AdminPayments() {
                   <tr key={r.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{r.name}</td>
                     <td className="px-4 py-3 text-sm text-gray-500">{r.apartment}</td>
+                    <td className="px-4 py-3 text-sm font-mono">
+                      {r.phone ? <a href={`tel:${r.phone}`} className="text-blue-600 hover:underline">{r.phone}</a> : <span className="text-gray-400">—</span>}
+                    </td>
                     <td className="px-4 py-3 text-sm text-right font-semibold text-red-500">{debtOf(r).toLocaleString()}₮</td>
                   </tr>
                 ))}
                 {debtors === 0 && (
-                  <tr><td colSpan={3} className="px-4 py-6 text-center text-gray-400">Өртэй айл байхгүй ✓</td></tr>
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-gray-400">Өртэй айл байхгүй ✓</td></tr>
                 )}
               </tbody>
             </table>

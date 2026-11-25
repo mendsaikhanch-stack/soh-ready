@@ -297,6 +297,7 @@ export default function AdminReports() {
                 <th className="px-4 py-2">Орц</th>
                 <th className="px-4 py-2">Нэр</th>
                 <th className="px-4 py-2">Тоот</th>
+                <th className="px-4 py-2">Утас</th>
                 <th className="px-4 py-2 text-right">Өр</th>
               </tr>
             </thead>
@@ -314,6 +315,7 @@ export default function AdminReports() {
                       </td>
                       <td className="px-4 py-2 text-sm font-medium">{r.name}</td>
                       <td className="px-4 py-2 text-sm">{r.apartment}</td>
+                      <td className="px-4 py-2 text-sm text-gray-500">{r.phone || '-'}</td>
                       <td className="px-4 py-2 text-sm text-right text-red-500 font-semibold">
                         {Number(r.debt).toLocaleString()}₮
                       </td>
@@ -321,7 +323,7 @@ export default function AdminReports() {
                   ))
               )}
               {totalDebtors === 0 && (
-                <tr><td colSpan={4} className="px-4 py-6 text-center text-gray-400">Өртэй айл байхгүй 🎉</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">Өртэй айл байхгүй 🎉</td></tr>
               )}
             </tbody>
           </table>
