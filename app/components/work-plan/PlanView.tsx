@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import BoardReportFiles from '@/app/components/BoardReportFiles';
+import PlanPerformance, { VarianceText } from '@/app/components/work-plan/PlanPerformance';
 import {
+  isOverdue,
+  itemVariance,
   CATEGORIES,
   ITEM_STATUS,
   PLAN_STATUS,
@@ -48,14 +51,11 @@ export default function PlanView({ plan, council, canAct, onReview, onRate }: Pr
           </p>
         )}
         {plan.intro && <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap">{plan.intro}</p>}
-        <div className="grid grid-cols-3 gap-2 mt-3 text-center">
-          <Mini label="Ажил" value={`${t.done}/${t.count}`} sub="хийгдсэн" />
-          <Mini label="Төсөв" value={money(t.budget)} />
-          <Mini label="Бодит зардал" value={money(t.actual)} />
-        </div>
+        {/* Биелэлт ба төсвийн зөрүү — даргын самбартай ижил тоо */}
         {t.count > 0 && (
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden mt-3">
-            <div className="h-full bg-green-500" style={{ width: `${Math.round((t.done / t.count) * 100)}%` }} />
+          <div className="mt-3">
+            <p className="text-xs font-semibold text-gray-600 mb-1.5">Гүйцэтгэл ба зөрүү</p>
+            <PlanPerformance items={plan.items} year={plan.year} compact />
           </div>
         )}
         {plan.summary && (
@@ -73,22 +73,12 @@ export default function PlanView({ plan, council, canAct, onReview, onRate }: Pr
           <p className="text-xs font-bold text-gray-500 uppercase px-1 mb-1.5">{QUARTER_LABEL[q]}</p>
           <div className="space-y-2">
             {plan.items.filter((i) => i.quarter === q).map((i) => (
-              <ItemCard key={i.id} item={i} council={council} canRate={canAct && plan.status === 'approved' && !!i.reported_at} onRate={onRate} />
+              <ItemCard key={i.id} item={i} planYear={plan.year} council={council} canRate={canAct && plan.status === 'approved' && !!i.reported_at} onRate={onRate} />
             ))}
           </div>
         </div>
       ))}
       {plan.items.length === 0 && <p className="text-center text-sm text-gray-400 py-6">Ажил бүртгэгдээгүй байна.</p>}
-    </div>
-  );
-}
-
-function Mini({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="bg-gray-50 rounded-lg py-2 px-1">
-      <p className="text-[10px] text-gray-500">{label}</p>
-      <p className="text-sm font-bold text-gray-900">{value}</p>
-      {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
     </div>
   );
 }
@@ -145,7 +135,9 @@ function ReviewBox({ plan, canAct, onReview }: { plan: PlanOut; canAct: boolean;
   );
 }
 
-function ItemCard({ item, council, canRate, onRate }: { item: ItemOut; council: boolean; canRate: boolean; onRate?: Props['onRate'] }) {
+function ItemCard({ item, planYear, council, canRate, onRate }: { item: ItemOut; planYear: number; council: boolean; canRate: boolean; onRate?: Props['onRate'] }) {
+  const late = isOverdue(item, planYear);
+  const variance = itemVariance(item);
   const [open, setOpen] = useState(false);
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
@@ -166,13 +158,16 @@ function ItemCard({ item, council, canRate, onRate }: { item: ItemOut; council: 
       <button onClick={() => setOpen((o) => !o)} className="w-full text-left">
         <div className="flex items-start gap-2">
           <p className="font-medium text-sm text-gray-900 flex-1">{item.title}</p>
+          {late && <span className="text-[10px] font-semibold px-2 py-0.5 rounded whitespace-nowrap bg-red-100 text-red-700">⏰ Хоцорсон</span>}
           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded whitespace-nowrap ${st.cls}`}>{st.label}</span>
         </div>
         <p className="text-[11px] text-gray-400 mt-0.5">
           {CATEGORIES[item.category] || item.category}
           {item.owner ? ` · ${item.owner}` : ''}
           {item.budget != null ? ` · төсөв ${money(item.budget)}` : ''}
+          {item.actual_cost != null ? ` · зардал ${money(item.actual_cost)}` : ''}
         </p>
+        {variance != null && <p className="text-[11px] mt-0.5"><VarianceText value={variance} /></p>}
         {item.status !== 'planned' && item.status !== 'cancelled' && (
           <div className="flex items-center gap-2 mt-1.5">
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden flex-1">

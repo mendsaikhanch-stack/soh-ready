@@ -6,7 +6,10 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { compressImage } from '@/app/lib/compress-image';
 import BoardReportFiles from '@/app/components/BoardReportFiles';
+import PlanPerformance, { VarianceText } from '@/app/components/work-plan/PlanPerformance';
 import {
+  isOverdue,
+  itemVariance,
   CATEGORIES,
   ITEM_STATUS,
   PLAN_STATUS,
@@ -112,6 +115,14 @@ export default function AdminWorkPlanPage({ params }: { params: Promise<{ id: st
         {t.count} ажил · {t.done} хийгдсэн · төсөв {money(t.budget)} · бодит зардал {money(t.actual)}
       </p>
 
+      {/* Биелэлт ба зөрүү — оршин суугчид батлагдсан төлөвлөгөөн дээр ЯГ үүнийг харна */}
+      {!isDraft && t.count > 0 && (
+        <div className="bg-white border rounded-xl p-4 mt-4">
+          <p className="text-sm font-semibold text-gray-700 mb-2">Гүйцэтгэл ба зөрүү</p>
+          <PlanPerformance items={plan.items} year={plan.year} />
+        </div>
+      )}
+
       {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-xl mt-4">{error}</div>}
 
       {/* ---------- Төлөвийн удирдлага ---------- */}
@@ -204,7 +215,7 @@ export default function AdminWorkPlanPage({ params }: { params: Promise<{ id: st
                 <ItemEditor key={i.id} value={editing.f} busy={busy} onChange={(f) => setEditing({ id: i.id, f })}
                   onSave={() => saveItem(editing.f, i.id)} onCancel={() => setEditing(null)} />
               ) : (
-                <ItemRow key={i.id} item={i} draft={isDraft} approved={isApproved} busy={busy} act={act}
+                <ItemRow key={i.id} item={i} planYear={plan.year} draft={isDraft} approved={isApproved} busy={busy} act={act}
                   onEdit={() => { setAdding(null); setEditing({ id: i.id, f: {
                     title: i.title, quarter: i.quarter, category: i.category, owner: i.owner || '',
                     budget: i.budget == null ? '' : String(i.budget), description: i.description || '',
@@ -248,8 +259,8 @@ function ItemEditor({ value: f, onChange, onSave, onCancel, busy }: {
   );
 }
 
-function ItemRow({ item, draft, approved, busy, act, onEdit, onReload, setError }: {
-  item: ItemOut; draft: boolean; approved: boolean; busy: boolean;
+function ItemRow({ item, planYear, draft, approved, busy, act, onEdit, onReload, setError }: {
+  item: ItemOut; planYear: number; draft: boolean; approved: boolean; busy: boolean;
   act: (body: Record<string, unknown>, confirmText?: string) => Promise<boolean>;
   onEdit: () => void; onReload: () => Promise<void>; setError: (s: string) => void;
 }) {
@@ -290,6 +301,8 @@ function ItemRow({ item, draft, approved, busy, act, onEdit, onReload, setError 
   };
 
   const rated = item.ratings.done + item.ratings.partial + item.ratings.not_done;
+  const late = isOverdue(item, planYear);
+  const variance = itemVariance(item);
 
   return (
     <div className="bg-white border rounded-xl p-3">
@@ -302,6 +315,12 @@ function ItemRow({ item, draft, approved, busy, act, onEdit, onReload, setError 
             {item.budget != null ? ` · төсөв ${money(item.budget)}` : ''}
             {item.actual_cost != null ? ` · зарцуулсан ${money(item.actual_cost)}` : ''}
           </p>
+          {!draft && (variance != null || late) && (
+            <p className="text-xs mt-0.5">
+              {late && <span className="text-red-600 font-semibold mr-2">⏰ Улирлын хугацаа хэтэрсэн</span>}
+              {variance != null && <VarianceText value={variance} />}
+            </p>
+          )}
           {item.description && <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{item.description}</p>}
         </div>
         {!draft && <span className={`text-[11px] font-semibold px-2 py-0.5 rounded whitespace-nowrap ${st.cls}`}>{st.label} · {item.progress}%</span>}

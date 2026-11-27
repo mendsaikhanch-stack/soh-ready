@@ -38,6 +38,7 @@ const allFeatures: FeatureItem[] = [
   { href: 'contact', icon: '📞', label: 'Холбоо барих', desc: 'СӨХ-тэй холбогдох', tab: 'СӨХ' },
   { href: 'visitors', icon: '🚪', label: 'Зочны бүртгэл', desc: 'QR код, зочин бүртгэх', tab: 'СӨХ' },
   { href: 'guide', icon: '📖', label: 'Гарын авлага', desc: 'Апп ашиглах заавар', tab: 'СӨХ' },
+  { href: 'work-plan', icon: '📅', label: 'Ажлын төлөвлөгөө', desc: 'Жилийн төлөвлөгөө, гүйцэтгэл, зөрүү', tab: 'СӨХ' },
   // ОСНАА таб
   { href: 'utilities?type=water', icon: '💧', label: 'Усны тоолуур', desc: 'Заалт оруулах', tab: 'ОСНАА' },
   { href: 'utilities?type=water&tab=bills', icon: '🧾', label: 'Усны нэхэмжлэх', desc: 'Төлбөр', tab: 'ОСНАА' },

@@ -1,15 +1,11 @@
 // Ажлын төлөвлөгөө — клиент ба сервер хоёулаа импортлох тогтмол, төрөл, цэвэр функц.
 // Энд серверийн модуль (supabaseAdmin) бүү оруул.
 
-// Туршилт: зөвхөн эдгээр СӨХ-д цэс харагдаж, API ажиллана (superadmin үл хамаарна).
-// Бүх СӨХ-д нээхдээ isWorkPlanEnabled-ийг `true` буцаадаг болгоно.
-export const WORK_PLAN_SOKH_IDS: readonly number[] = [
-  2694, // АйСиТаун (ICTown) — 2026-11-11 туршилт
-];
-
+// 2026-11-11 ICTown-д туршиж, 2026-11-27-нд БҮХ СӨХ-д нээв. Хэрэглэхгүй СӨХ нь
+// «Үйлчилгээ тохиргоо» (disabled_features: 'work-plan')-оос оршин суугчийн цэснээс нууна.
 export function isWorkPlanEnabled(sokhId: number | string | null | undefined): boolean {
   const id = Number(sokhId);
-  return Number.isSafeInteger(id) && WORK_PLAN_SOKH_IDS.includes(id);
+  return Number.isSafeInteger(id) && id > 0;
 }
 
 export type PlanStatus = 'draft' | 'review' | 'approved' | 'archived';
@@ -119,6 +115,68 @@ export interface PlanOut {
   reviews?: ReviewOut[];
   my_review?: Decision | null;
   board_size?: number;
+}
+
+type PerfItem = Pick<ItemOut, 'status' | 'budget' | 'actual_cost' | 'progress' | 'quarter'>;
+
+/** Улирлын эцэс өнгөрсөн ч дуусаагүй ажил (хоцорсон). now — шалгах огноо. */
+export function isOverdue(item: Pick<ItemOut, 'status' | 'quarter'>, planYear: number, now: Date = new Date()): boolean {
+  if (item.status === 'done' || item.status === 'cancelled') return false;
+  return now >= new Date(planYear, item.quarter * 3, 1); // дараагийн улирлын 1-нд
+}
+
+/** Нэг ажлын төсөв ба бодит зардлын зөрүү (+ хэтэрсэн, − хэмнэсэн). Зардал тайлагнаагүй бол null. */
+export function itemVariance(item: Pick<ItemOut, 'budget' | 'actual_cost'>): number | null {
+  if (item.actual_cost == null || item.budget == null) return null;
+  return Number(item.actual_cost) - Number(item.budget);
+}
+
+export interface PerfStats {
+  count: number;          // цуцлагдаагүй ажил
+  done: number;
+  partial: number;
+  notDone: number;
+  inProgress: number;
+  overdue: number;
+  /** Хийгдсэн ажлын хувь */
+  completionPct: number;
+  /** Дундаж явц (хийгдсэн = 100) */
+  progressPct: number;
+  budget: number;
+  actual: number;
+  /** Зардал тайлагнасан ажлуудын төсөв — зөрүүг зөвхөн тэдгээр дээр тооцно */
+  reportedBudget: number;
+  /** Зардал тайлагнасан ажлуудын бодит зардал − төсөв */
+  variance: number;
+  variancePct: number | null;
+}
+
+/**
+ * Төлөвлөгөөний биелэлт, төсвийн зөрүү. Зөрүүг ЗӨВХӨН бодит зардал тайлагнасан ажил дээр
+ * тооцно — эс бөгөөс хийгдээгүй ажлын төсөв «хэмнэлт» мэт харагдана.
+ */
+export function planPerformance(items: PerfItem[], planYear: number, now: Date = new Date()): PerfStats {
+  const active = items.filter((i) => i.status !== 'cancelled');
+  const reported = active.filter((i) => i.actual_cost != null && i.budget != null);
+  const reportedBudget = reported.reduce((s, i) => s + Number(i.budget || 0), 0);
+  const reportedActual = reported.reduce((s, i) => s + Number(i.actual_cost || 0), 0);
+  const count = active.length;
+  const done = active.filter((i) => i.status === 'done').length;
+  return {
+    count,
+    done,
+    partial: active.filter((i) => i.status === 'partial').length,
+    notDone: active.filter((i) => i.status === 'not_done').length,
+    inProgress: active.filter((i) => i.status === 'in_progress').length,
+    overdue: active.filter((i) => isOverdue(i, planYear, now)).length,
+    completionPct: count ? Math.round((done / count) * 100) : 0,
+    progressPct: count ? Math.round(active.reduce((s, i) => s + (i.status === 'done' ? 100 : Number(i.progress || 0)), 0) / count) : 0,
+    budget: active.reduce((s, i) => s + Number(i.budget || 0), 0),
+    actual: active.reduce((s, i) => s + Number(i.actual_cost || 0), 0),
+    reportedBudget,
+    variance: reportedActual - reportedBudget,
+    variancePct: reportedBudget > 0 ? Math.round(((reportedActual - reportedBudget) / reportedBudget) * 100) : null,
+  };
 }
 
 /** Ажлын дүнгийн товч: хэдэн ажил, хэд нь хийгдсэн, төсөв / бодит зардал. */
