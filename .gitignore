@@ -61,6 +61,8 @@ bzd-target-50.csv
 *.local.xlsx
 # PII (утас, нэр) агуулсан нэг удаагийн скрипт — репо public
 scripts/*.local.js
+scripts/*.local.mts
+scripts/*.local.ts
 
 # Marketing screenshots (89 MB) — disk дээр архив, git-д хэт хүнд
 /docs/_archive/marketing/screenshots/
