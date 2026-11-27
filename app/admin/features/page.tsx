@@ -56,6 +56,7 @@ export default function FeaturesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [filterTab, setFilterTab] = useState<string>('all');
 
   useEffect(() => {
@@ -81,11 +82,14 @@ export default function FeaturesPage() {
 
   const save = async () => {
     setSaving(true);
+    setSaveError('');
     const sokhId = await getAdminSokhId();
-    await adminFrom('sokh_organizations')
+    const { error } = await adminFrom('sokh_organizations')
       .update({ disabled_features: disabledFeatures })
       .eq('id', sokhId);
     setSaving(false);
+    // Өмнө нь алдааг үл тоож «Хадгалагдлаа» гэж харуулдаг байсан — багана байхгүй үед ч (2026-11-27)
+    if (error) { setSaveError(`Хадгалж чадсангүй: ${error}`); return; }
     setSaved(true);
   };
 
@@ -164,6 +168,7 @@ export default function FeaturesPage() {
 
       {/* Save */}
       <div className="sticky bottom-4">
+        {saveError && <p className="mb-2 p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{saveError}</p>}
         <button
           onClick={save}
           disabled={saving}
