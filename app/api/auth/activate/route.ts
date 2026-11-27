@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { activationConsumeLimiter } from '@/app/lib/rate-limit';
-import { createSessionToken } from '@/app/lib/session-token';
+import { createSessionToken, ADMIN_SESSION_MAX_AGE_SEC } from '@/app/lib/session-token';
 
-const ADMIN_SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 хоног (зөөлрүүлсэн горим, login route-тэй ижил)
+const ADMIN_SESSION_MAX_AGE = ADMIN_SESSION_MAX_AGE_SEC; // хугацаагүй (login route-тэй ижил)
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';

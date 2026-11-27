@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { checkAuth, createSessionToken, tokenIssuedAt, type AuthRole } from '@/app/lib/session-token';
+import { checkAuth, createSessionToken, tokenIssuedAt, ADMIN_SESSION_MAX_AGE_SEC, type AuthRole } from '@/app/lib/session-token';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
 import { authCheckLimiter } from '@/app/lib/rate-limit';
 import { OTP_DISABLED } from '@/app/lib/auth-flags';
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
         const fresh = createSessionToken({ userId: au.id, sokhId: result.sokhId || 0, role: 'admin' });
         response.cookies.set('admin-session', fresh, {
           httpOnly: true, secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict', maxAge: 60 * 60 * 24 * 30, path: '/',
+          sameSite: 'strict', maxAge: ADMIN_SESSION_MAX_AGE_SEC, path: '/',
         });
       }
     }

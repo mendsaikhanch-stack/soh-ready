@@ -93,8 +93,12 @@ export type AuthRole = 'admin' | 'superadmin' | 'osnaa' | 'inspector';
 // болгож, идэвхтэй засвар үйлчилгээний үед байнга гаргаж байв.
 // (Хэрэглэгч цөөн, байнга ажиллаж буй үеийн зөөлрүүлсэн горим — OTP_DISABLED-тэй адил.)
 const SESSION_TTL = 30 * 24 * 60 * 60 * 1000; // 30 хоног
+// СӨХ-ийн дарга (admin): хугацаагүй нэвтрэлт. Хөтчүүд cookie-г ≤400 хоногоор
+// хязгаарладаг тул 400 хоног + /api/auth/check-ийн гулсдаг сунгалт = бараг хязгааргүй.
+// (Аман хуур дижитал СӨХ-ийн дарга 10-21-нд нэвтрээд 30 хоногийн дараа гарчихсан, 2026-11-27.)
+export const ADMIN_SESSION_MAX_AGE_SEC = 400 * 24 * 60 * 60;
 const ROLE_MAX_AGE: Record<AuthRole, number> = {
-  admin: SESSION_TTL,
+  admin: ADMIN_SESSION_MAX_AGE_SEC * 1000,
   superadmin: SESSION_TTL,
   osnaa: SESSION_TTL,
   inspector: SESSION_TTL,

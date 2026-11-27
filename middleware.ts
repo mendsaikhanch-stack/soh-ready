@@ -102,7 +102,8 @@ export function middleware(request: NextRequest) {
   // зөвхөн үнэхээр хугацаа дууссаныг цэвэрлэнэ, эрт биш.
   const SESSION_TTL = 30 * 24 * 60 * 60 * 1000;
   const routeConfig: Record<string, { cookie: string; maxAge: number }> = {
-    '/admin': { cookie: 'admin-session', maxAge: SESSION_TTL },
+    // Дарга: 400 хоног (session-token.ts ADMIN_SESSION_MAX_AGE_SEC — хугацаагүй нэвтрэлт)
+    '/admin': { cookie: 'admin-session', maxAge: 400 * 24 * 60 * 60 * 1000 },
     '/superadmin': { cookie: 'superadmin-session', maxAge: SESSION_TTL },
     '/osnaa': { cookie: 'osnaa-session', maxAge: SESSION_TTL },
     '/inspector': { cookie: 'inspector-session', maxAge: SESSION_TTL },

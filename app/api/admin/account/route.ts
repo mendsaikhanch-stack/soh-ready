@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '@/app/lib/supabase-admin';
-import { checkAuth, createSessionToken } from '@/app/lib/session-token';
+import { checkAuth, createSessionToken, ADMIN_SESSION_MAX_AGE_SEC } from '@/app/lib/session-token';
 
 // Нэвтэрсэн ДАРГА (админ) өөрийнхөө нэвтрэх нэр / нууц үгээ өөрчилнө.
 // Аюулгүй байдал: аль ч өөрчлөлтөд ОДООГИЙН нууц үгээ давтан оруулах шаардлагатай.
 
-const ADMIN_MAX_AGE = 60 * 60 * 24 * 30; // 30 хоног (зөөлрүүлсэн горим, login route-тэй ижил)
+const ADMIN_MAX_AGE = ADMIN_SESSION_MAX_AGE_SEC; // хугацаагүй (login route-тэй ижил)
 
 // Энгийн brute-force хамгаалалт (нэг session-д хэт олон оролдлого)
 const attempts = new Map<string, { count: number; lockUntil: number }>();

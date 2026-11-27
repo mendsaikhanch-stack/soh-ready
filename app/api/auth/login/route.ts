@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
-import { createSessionToken } from '@/app/lib/session-token';
+import { createSessionToken, ADMIN_SESSION_MAX_AGE_SEC } from '@/app/lib/session-token';
 import { OTP_DISABLED } from '@/app/lib/auth-flags';
 import { DEMO_ADMIN_USERNAME } from '@/app/lib/demo-admin';
 
@@ -102,7 +102,9 @@ export async function POST(request: Request) {
     // "Намайг сана" → 30 хоног, эс бол стандарт (superadmin 12ц, бусад 24ц)
     // Зөөлрүүлсэн горим: default 30 хоног (байнга гарахгүй). Зөвхөн remember-ийг
     // ил `false` болгож илгээвэл богино (superadmin 12ц / бусад 24ц) болно.
-    const maxAge = remember === false ? (type === 'superadmin' ? 43200 : 86400) : 60 * 60 * 24 * 30;
+    // СӨХ-ийн дарга (admin-session) → хугацаагүй (400 хоног + гулсдаг сунгалт)
+    const maxAge = remember === false ? (type === 'superadmin' ? 43200 : 86400)
+      : cookieName === 'admin-session' ? ADMIN_SESSION_MAX_AGE_SEC : 60 * 60 * 24 * 30;
 
     // Суперадмин дээр мэйл код (OTP) ТҮР хаалттай бол 2-р шатыг шууд баталгаажуулна
     const skipOtp = type === 'superadmin' && OTP_DISABLED;
