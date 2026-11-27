@@ -54,13 +54,22 @@ export default function AdminReports() {
         .eq('residents.sokh_id', sokhId)
         .order('paid_at', { ascending: false });
       setPayments(pay || []);
-      const { data: openInv } = await supabase
-        .from('invoices')
-        .select('resident_id,amount,paid_amount,status')
-        .eq('sokh_id', sokhId)
-        .in('status', ['pending', 'overdue', 'partial']);
+      // Хуудаслан уншина — PostgREST нэг удаад ≤1000 мөр буцаадаг
+      const openInv: { resident_id: number; amount: number; paid_amount: number | null }[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data } = await supabase
+          .from('invoices')
+          .select('resident_id,amount,paid_amount,status')
+          .eq('sokh_id', sokhId)
+          .in('status', ['pending', 'overdue', 'partial'])
+          .order('id', { ascending: true })
+          .range(from, from + 999);
+        const page = (data as typeof openInv) || [];
+        openInv.push(...page);
+        if (page.length < 1000) break;
+      }
       const dueMap: Record<number, number> = {};
-      for (const inv of (openInv as { resident_id: number; amount: number; paid_amount: number | null }[]) || []) {
+      for (const inv of openInv) {
         const left = Math.max(0, Number(inv.amount || 0) - Number(inv.paid_amount || 0));
         dueMap[inv.resident_id] = (dueMap[inv.resident_id] || 0) + left;
       }

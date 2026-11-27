@@ -138,7 +138,8 @@ export default function AdminFinanceHub() {
         : Promise.resolve({ data: [] }),
       adminFrom('budget_items').select('*').eq('sokh_id', sokhId).eq('year', year).order('amount', { ascending: false }),
       adminFrom('budget_plans').select('*').eq('sokh_id', sokhId).eq('month', month).eq('year', year),
-      adminFrom('invoices').select('*').eq('sokh_id', sokhId).in('status', ['pending', 'overdue', 'partial']).order('id', { ascending: true }),
+      // Хуудаслана: олон блоктой СӨХ-д нээлттэй нэхэмжлэх 1000-аас давж, сүүлийн сарууд чимээгүй дутдаг байсан
+      adminSelectAll(() => adminFrom('invoices').select('*').eq('sokh_id', sokhId).in('status', ['pending', 'overdue', 'partial']).order('id', { ascending: true })),
       adminFrom('reserve_fund').select('*').eq('sokh_id', sokhId).order('occurred_at', { ascending: false }).limit(100),
       adminFrom('payables').select('*').eq('sokh_id', sokhId).order('due_date', { ascending: true }),
     ]);
@@ -350,8 +351,6 @@ export default function AdminFinanceHub() {
   const monthIncome = payments.reduce((s, p) => s + Number(p.amount), 0);
   const monthExpense = budgetItems.reduce((s, i) => s + i.amount, 0);
   const monthNet = monthIncome - monthExpense;
-  const totalDebt = residents.reduce((s, r) => s + Number(r.debt || 0), 0);
-  const debtors = residents.filter(r => Number(r.debt || 0) > 0).length;
   const expectedMonthly = residents.reduce((s, r) => s + feeOf(r), 0);
   // Тарифын хураангуй: бүх айл ижил дүнтэй юу, эсвэл ялгавартай юу
   const feeVariants = Array.from(new Set(residents.map(feeOf).filter(Boolean))).sort((a, b) => a - b);
@@ -366,6 +365,17 @@ export default function AdminFinanceHub() {
   // Нэхэмжлэхийн тулгалт: төлсөн / төлөөгүй (хэсэгчлэн төлсөн нь төлөөгүйд)
   const invPaid = (i: Invoice) => i.status === 'paid';
   const invLeft = (i: Invoice) => Math.max(0, Number(i.amount) - Number(i.paid_amount || 0));
+  const allOpenDue: Record<number, number> = {}; const scopedOpenDue: Record<number, number> = {}; for (const inv of invoices) { if (!invPaid(inv)) { const left = Math.max(0, Number(inv.amount || 0) - Number(inv.paid_amount || 0)); allOpenDue[inv.resident_id] = (allOpenDue[inv.resident_id] || 0) + left; if (inv.year === year && inv.month === month) scopedOpenDue[inv.resident_id] = (scopedOpenDue[inv.resident_id] || 0) + left; } } const activeDebtOf = (r: Resident) => filterByMonth ? (scopedOpenDue[r.id] || 0) : Math.max(Number(r.debt || 0), allOpenDue[r.id] || 0);
+  // Авлага = бүх сарын төлөгдөөгүй нэхэмжлэх (residents.debt нь нэхэмжлэхээр шинэчлэгддэггүй — ICTown-д 0).
+  const debtOf = (r: Resident) => Math.max(Number(r.debt || 0), allOpenDue[r.id] || 0);
+  // Айл бүрийн төлөгдөөгүй сарууд («2026-09, 2026-10») — Авлагын жагсаалтад сараар харуулна
+  const openMonthsOf: Record<number, string[]> = {};
+  for (const inv of invoices.slice().sort((a, b) => a.year - b.year || a.month - b.month)) {
+    if (invPaid(inv) || invLeft(inv) <= 0) continue;
+    (openMonthsOf[inv.resident_id] ||= []).push(`${inv.year}-${String(inv.month).padStart(2, '0')}`);
+  }
+  const totalDebt = residents.reduce((s, r) => s + debtOf(r), 0);
+  const debtors = residents.filter(r => debtOf(r) > 0).length;
   const unitOf = (r?: Resident) => (r ? [r.building, r.apartment].filter(Boolean).join('-') : '—');
   const unitSort = (a: Invoice, b: Invoice) => {
     const ra = residents.find(x => x.id === a.resident_id), rb = residents.find(x => x.id === b.resident_id);
@@ -399,10 +409,10 @@ export default function AdminFinanceHub() {
     XLSX.writeFile(wb, `төлөлт-${year}-${String(month).padStart(2, '0')}.xlsx`);
   };
 
-  // Өртэй айлын жагсаалт (хугацаа хэтэрсэн үлдэгдэл = residents.debt) — байр, тоотоор эрэмбэлж
+  // Өртэй айлын жагсаалт (бүх сарын төлөгдөөгүй нэхэмжлэх, debtOf) — байр, тоотоор эрэмбэлж
   // утастай нь гаргана: дарга залгаж, мсж явуулахад
   const debtorList = residents
-    .filter(r => Number(r.debt || 0) > 0)
+    .filter(r => debtOf(r) > 0)
     .slice()
     .sort((a, b) => (a.building || '').localeCompare(b.building || '', undefined, { numeric: true })
       || (Number(a.apartment) || 0) - (Number(b.apartment) || 0) || String(a.apartment).localeCompare(String(b.apartment)));
@@ -414,13 +424,14 @@ export default function AdminFinanceHub() {
         'Тоот': r.apartment || '',
         'Нэр': r.name || '',
         'Утас': r.phone || '',
-        'Өр (₮)': Number(r.debt),
-        'Хэдэн сар': fee > 0 ? Math.round(Number(r.debt) / fee * 10) / 10 : '',
+        'Өр (₮)': debtOf(r),
+        'Хэдэн сар': openMonthsOf[r.id]?.length || (fee > 0 ? Math.round(debtOf(r) / fee * 10) / 10 : ''),
+        'Төлөөгүй сарууд': (openMonthsOf[r.id] || []).join(', '),
       };
     });
-    rows.push({ 'Байр': 'НИЙТ', 'Тоот': `${debtorList.length} айл`, 'Нэр': '', 'Утас': '', 'Өр (₮)': totalDebt, 'Хэдэн сар': '' });
+    rows.push({ 'Байр': 'НИЙТ', 'Тоот': `${debtorList.length} айл`, 'Нэр': '', 'Утас': '', 'Өр (₮)': totalDebt, 'Хэдэн сар': '', 'Төлөөгүй сарууд': '' });
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [{ wch: 8 }, { wch: 8 }, { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 10 }];
+    ws['!cols'] = [{ wch: 8 }, { wch: 8 }, { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 40 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, `Өртэй айл (${debtorList.length})`);
     const d = new Date();
@@ -461,7 +472,6 @@ export default function AdminFinanceHub() {
   });
   const maxMonthlyInc = Math.max(...monthlyHistory.map(h => h.income), 1);
 
-  const allOpenDue: Record<number, number> = {}; const scopedOpenDue: Record<number, number> = {}; for (const inv of invoices) { if (!invPaid(inv)) { const left = Math.max(0, Number(inv.amount || 0) - Number(inv.paid_amount || 0)); allOpenDue[inv.resident_id] = (allOpenDue[inv.resident_id] || 0) + left; if (inv.year === year && inv.month === month) scopedOpenDue[inv.resident_id] = (scopedOpenDue[inv.resident_id] || 0) + left; } } const activeDebtOf = (r: Resident) => filterByMonth ? (scopedOpenDue[r.id] || 0) : Math.max(Number(r.debt || 0), allOpenDue[r.id] || 0);
   const exportYearReport = () => {
     const wb = XLSX.utils.book_new();
     const incomeSheet = XLSX.utils.json_to_sheet(
@@ -1026,6 +1036,7 @@ export default function AdminFinanceHub() {
                       <th className="px-4 py-3 text-left text-xs text-gray-500">Тоот</th>
                       <th className="px-4 py-3 text-left text-xs text-gray-500">Нэр</th>
                       <th className="px-4 py-3 text-left text-xs text-gray-500">Утас</th>
+                      <th className="px-4 py-3 text-left text-xs text-gray-500">Төлөөгүй сарууд</th>
                       <th className="px-4 py-3 text-right text-xs text-gray-500">Өр</th>
                     </tr>
                   </thead>
@@ -1038,10 +1049,11 @@ export default function AdminFinanceHub() {
                         <td className="px-4 py-3 font-mono">
                           {r.phone ? <a href={`tel:${r.phone}`} className="text-blue-600 hover:underline">{r.phone}</a> : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="px-4 py-3 text-right font-semibold text-red-600">{Number(r.debt).toLocaleString()}₮</td>
+                        <td className="px-4 py-3 text-xs text-gray-600">{(openMonthsOf[r.id] || []).join(', ') || '—'}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-red-600">{debtOf(r).toLocaleString()}₮</td>
                       </tr>
                     ))}
-                    {debtors === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Өртэй айл байхгүй ✓</td></tr>}
+                    {debtors === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Өртэй айл байхгүй ✓</td></tr>}
                   </tbody>
                 </table>
               </div>

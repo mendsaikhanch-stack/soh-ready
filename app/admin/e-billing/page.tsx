@@ -10,6 +10,7 @@ interface Resident {
   id: number;
   name: string;
   apartment: string;
+  building: string | null;
   debt: number;
   monthly_fee: number | null;
   bank_customer_code: string | null;
@@ -27,7 +28,9 @@ interface ParsedRow {
   payer: string;
   externalRef: string;
   resident: Resident | null;
-  matchedBy: 'code' | 'apartment' | 'memo' | null;
+  matchedBy: 'code' | 'apartment' | 'memo' | 'manual' | null;
+  /** Тоот нь олон блок/байранд давхцсан үед (жнь 2-1 602 ба 5-1 602) — автоматаар оноохгүй, админ сонгоно */
+  candidates: Resident[];
   duplicate: boolean;
 }
 
@@ -99,6 +102,8 @@ export default function AdminEBilling() {
   const [headerRow, setHeaderRow] = useState(0);
   const [mapping, setMapping] = useState<Record<ColumnKey, number>>({ code: -1, amount: -1, date: -1, memo: -1, payer: -1, ref: -1 });
   const [existingRefs, setExistingRefs] = useState<Set<string>>(new Set());
+  // Давхцсан тоотын мөрд админы сонгосон айл: rowNo → resident id
+  const [picks, setPicks] = useState<Record<number, number>>({});
   const [applying, setApplying] = useState(false);
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
@@ -244,6 +249,7 @@ export default function AdminEBilling() {
         if (score > bestScore) { bestScore = score; bestRow = i; }
       }
       setRawRows(rows);
+      setPicks({});
       setHeaderRow(bestRow);
       setMapping(guessMapping(rows[bestRow]));
     } catch {
@@ -255,12 +261,29 @@ export default function AdminEBilling() {
   // Файлын мөрүүдийг айлтай тулгана
   const parsed: ParsedRow[] = (() => {
     if (!rawRows.length || mapping.amount < 0) return [];
+    // Тоот олон блокт давтагддаг (ICTown: 2-1 602, 5-1 602) тул зөвхөн тоотоор нь
+    // Map-д хийвэл сүүлийнх нь өмнөхийгөө дарж, төлбөр буруу айлд ордог байсан.
+    // Иймд тоотоор жагсаалт хадгалж, давхцвал «блок+тоот»-оор л тулгана.
+    const normB = (s: unknown) => String(s ?? '').trim().replace(/[\s/._–—-]+/g, '-');
     const byCode = new Map<string, Resident>();
-    const byApt = new Map<string, Resident>();
+    const byApt = new Map<string, Resident[]>();
+    const byUnit = new Map<string, Resident>();
     for (const r of residents) {
       if (r.bank_customer_code) byCode.set(String(r.bank_customer_code).trim(), r);
-      byApt.set(String(r.apartment).trim(), r);
+      const apt = String(r.apartment).trim();
+      byApt.set(apt, [...(byApt.get(apt) || []), r]);
+      if (r.building) byUnit.set(`${normB(r.building)}|${apt}`, r);
     }
+    // Текстээс «блок-орц тоот» («2-1 602», «2-1-602», «2/1 602») эсвэл «байр тоот»-ыг хайна
+    const findUnit = (text: string): Resident | null => {
+      const t = text.match(/\d{1,5}/g) || [];
+      for (let i = 0; i < t.length; i++) {
+        const hit = (t[i + 2] && byUnit.get(`${t[i]}-${t[i + 1]}|${t[i + 2]}`))
+          || (t[i + 1] && byUnit.get(`${t[i]}|${t[i + 1]}`));
+        if (hit) return hit;
+      }
+      return null;
+    };
 
     const out: ParsedRow[] = [];
     for (let i = headerRow + 1; i < rawRows.length; i++) {
@@ -284,16 +307,31 @@ export default function AdminEBilling() {
       // Тулгах дараалал: хэрэглэгчийн код → тоот → гүйлгээний утган дахь тоо
       let resident: Resident | null = null;
       let matchedBy: ParsedRow['matchedBy'] = null;
+      let candidates: Resident[] = [];
       if (code) {
+        const unit = findUnit(code);
+        const list = byApt.get(code) || [];
         if (byCode.has(code)) { resident = byCode.get(code)!; matchedBy = 'code'; }
-        else if (byApt.has(code)) { resident = byApt.get(code)!; matchedBy = 'apartment'; }
+        else if (unit) { resident = unit; matchedBy = 'apartment'; }
+        else if (list.length === 1) { resident = list[0]; matchedBy = 'apartment'; }
+        else if (list.length > 1) candidates = list;
       }
-      // Гүйлгээний утга (шаардлагатай бол илгээгчийн нэр) дотроос тоот хайна
+      // Гүйлгээний утга (шаардлагатай бол илгээгчийн нэр) дотроос блок+тоот, дараа нь тоот хайна
       if (!resident) {
-        for (const m of `${memo} ${payer}`.match(/\d{1,5}/g) || []) {
-          const hit = byCode.get(m) || byApt.get(m);
-          if (hit) { resident = hit; matchedBy = 'memo'; break; }
+        const text = `${memo} ${payer}`;
+        const unit = findUnit(text);
+        if (unit) { resident = unit; matchedBy = 'memo'; candidates = []; }
+        else for (const m of text.match(/\d{1,5}/g) || []) {
+          const list = byApt.get(m) || [];
+          const hit = byCode.get(m) || (list.length === 1 ? list[0] : null);
+          if (hit) { resident = hit; matchedBy = 'memo'; candidates = []; break; }
+          if (list.length > 1 && !candidates.length) candidates = list;
         }
+      }
+      // Давхцсан тоотыг админ гараар сонгосон бол
+      if (!resident && candidates.length && picks[i + 1]) {
+        resident = candidates.find(r => r.id === picks[i + 1]) || null;
+        if (resident) matchedBy = 'manual';
       }
 
       const refCell = mapping.ref >= 0 ? String(row[mapping.ref] ?? '').trim() : '';
@@ -303,7 +341,7 @@ export default function AdminEBilling() {
 
       out.push({
         rowNo: i + 1, code, amount, paidAt, memo, payer, externalRef,
-        resident, matchedBy, duplicate: existingRefs.has(externalRef),
+        resident, matchedBy, candidates, duplicate: existingRefs.has(externalRef),
       });
     }
     return out;
@@ -554,9 +592,21 @@ export default function AdminEBilling() {
                               <span className="text-xs">өмнө оруулсан</span>
                             ) : p.resident ? (
                               <span>
-                                {p.resident.name} <span className="text-gray-400">({p.resident.apartment})</span>
+                                {p.resident.name} <span className="text-gray-400">({[p.resident.building, p.resident.apartment].filter(Boolean).join(' ')})</span>
                                 {p.matchedBy === 'memo' && <span className="ml-1 text-[10px] text-blue-500">утгаас</span>}
+                                {p.matchedBy === 'manual' && (
+                                  <button onClick={() => setPicks(s => { const n = { ...s }; delete n[p.rowNo]; return n; })}
+                                    className="ml-1 text-[10px] text-gray-400 hover:text-red-500">✕ солих</button>
+                                )}
                               </span>
+                            ) : p.candidates.length ? (
+                              <select value="" onChange={e => setPicks(s => ({ ...s, [p.rowNo]: Number(e.target.value) }))}
+                                className="text-xs border border-amber-400 rounded px-1 py-0.5 bg-white">
+                                <option value="">⚠ {p.candidates[0].apartment} тоот {p.candidates.length} блокт байна — сонгох</option>
+                                {p.candidates.map(r => (
+                                  <option key={r.id} value={r.id}>{[r.building, r.apartment].filter(Boolean).join(' ')} — {r.name}</option>
+                                ))}
+                              </select>
                             ) : (
                               <span className="text-amber-700 text-xs">олдсонгүй — гараар бүртгэнэ</span>
                             )}
