@@ -5,6 +5,11 @@ import * as XLSX from 'xlsx';
 import { adminFrom } from '@/app/lib/admin-db';
 import { getAdminSokhId } from '@/app/lib/admin-config';
 import Field from '@/app/components/Field';
+import { UNIT_SCHEMES, resolveUnitReference, type UnitScheme } from '@/app/lib/bank-sms/unit-address';
+
+/** Банкны гүйлгээний код: SX1234567, XB0012345, QPAY 200000786215243 */
+const txnCodes = (text: string): string[] =>
+  (text.toUpperCase().match(/\b(?:SX|XB)\d{6,}\b|QPAY\s*\d{9,}/g) || []).map(c => c.replace(/\s+/g, ''));
 
 interface Resident {
   id: number;
@@ -104,6 +109,9 @@ export default function AdminEBilling() {
   const [existingRefs, setExistingRefs] = useState<Set<string>>(new Set());
   // Давхцсан тоотын мөрд админы сонгосон айл: rowNo → resident id
   const [picks, setPicks] = useState<Record<number, number>>({});
+  const [existingCodes, setExistingCodes] = useState<Set<string>>(new Set());
+  // Тоотын схемтэй СӨХ (ICTown): гүйлгээний утгыг банкны SMS-тэй ижил дүрмээр уншина
+  const [scheme, setScheme] = useState<UnitScheme | null>(null);
   const [applying, setApplying] = useState(false);
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
@@ -113,6 +121,7 @@ export default function AdminEBilling() {
 
   const load = async () => {
     const sokhId = await getAdminSokhId();
+    setScheme(sokhId ? UNIT_SCHEMES[Number(sokhId)] ?? null : null);
     const [{ data: res }, { data: org }] = await Promise.all([
       adminFrom('residents').select('*').eq('sokh_id', sokhId),
       adminFrom('sokh_organizations').select('monthly_fee').eq('id', sokhId).single(),
@@ -140,14 +149,21 @@ export default function AdminEBilling() {
     const ids = rows.map(r => r.id);
     if (ids.length) {
       const refs = new Set<string>();
+      // Банкны гүйлгээний код (SX…/XB…/QPAY …) — банкны SMS-ээр аль хэдийн орсон гүйлгээг
+      // и-биллингээр ДАХИН бүртгэхээс сэргийлнэ (ICTown 2026-11: 17 гүйлгээ хоёр удаа орсон).
+      const codes = new Set<string>();
       for (let from = 0; ; from += 1000) {
-        const { data: pays } = await adminFrom('payments').select('external_ref')
+        const { data: pays } = await adminFrom('payments').select('external_ref,description')
           .in('resident_id', ids).order('id', { ascending: true }).range(from, from + 999);
-        const page = (pays as unknown as { external_ref: string | null }[]) || [];
-        for (const p of page) if (p.external_ref) refs.add(p.external_ref);
+        const page = (pays as unknown as { external_ref: string | null; description: string | null }[]) || [];
+        for (const p of page) {
+          if (p.external_ref) refs.add(p.external_ref);
+          for (const c of txnCodes(`${p.external_ref || ''} ${p.description || ''}`)) codes.add(c);
+        }
         if (page.length < 1000) break;
       }
       setExistingRefs(refs);
+      setExistingCodes(codes);
     }
     setLoading(false);
   };
@@ -268,11 +284,15 @@ export default function AdminEBilling() {
     const byCode = new Map<string, Resident>();
     const byApt = new Map<string, Resident[]>();
     const byUnit = new Map<string, Resident>();
-    for (const r of residents) {
+    // Өөрөө бүртгүүлсэн, баталгаажаагүй (pending_claim) мөрт төлбөр оруулахгүй — үндсэн мөр нь
+    // нэхэмжлэхтэй. Өмнө нь 2-2-114-ийн төлбөр давхар мөрд орж, нэг мөнгө хоёр төлбөр болсон.
+    for (const r of residents.filter(x => !x.pending_claim)) {
       if (r.bank_customer_code) byCode.set(String(r.bank_customer_code).trim(), r);
       const apt = String(r.apartment).trim();
       byApt.set(apt, [...(byApt.get(apt) || []), r]);
-      if (r.building) byUnit.set(`${normB(r.building)}|${apt}`, r);
+      // Нэг тоотод өөрөө бүртгүүлсэн (pending) давхар мөр байж болно — баталгаажсаныг нь сонгоно
+      const uk = `${normB(r.building)}|${apt}`;
+      if (r.building && (!byUnit.has(uk) || byUnit.get(uk)!.pending_claim)) byUnit.set(uk, r);
     }
     // Текстээс «блок-орц тоот» («2-1 602», «2-1-602», «2/1 602») эсвэл «байр тоот»-ыг хайна
     const findUnit = (text: string): Resident | null => {
@@ -316,8 +336,25 @@ export default function AdminEBilling() {
         else if (list.length === 1) { resident = list[0]; matchedBy = 'apartment'; }
         else if (list.length > 1) candidates = list;
       }
+      // Тоотын схемтэй СӨХ: банкны SMS-тэй ИЖИЛ хаяг танигч. Ганц тодорхой айл л бол автоматаар,
+      // эргэлзээтэй бол сонголт руу. Энгийн «эхний тоо» хайлтыг ХЭРЭГЛЭХГҮЙ — «202R BAIR … 1306»
+      // гэх мэт утгад байрны дугаар (202)-ыг тоот гэж уншиж өөр айлд оруулдаг байсан (2026-11-27).
+      if (!resident && scheme) {
+        const toResidents = (c: { building_number: string; entrance_number: string; apartment_number: string }) => {
+          const hit = byUnit.get(`${c.building_number}-${c.entrance_number}|${c.apartment_number}`);
+          return hit ? [hit] : [];
+        };
+        let r = resolveUnitReference(scheme, memo);
+        if (r.status === 'none' && code) r = resolveUnitReference(scheme, code);
+        if (r.status === 'resolved') {
+          const hit = toResidents(r.unit)[0];
+          if (hit) { resident = hit; matchedBy = 'memo'; candidates = []; }
+        } else if (r.status === 'unconfirmed' || r.status === 'conflict') {
+          candidates = r.candidates.flatMap(toResidents);
+        }
+      }
       // Гүйлгээний утга (шаардлагатай бол илгээгчийн нэр) дотроос блок+тоот, дараа нь тоот хайна
-      if (!resident) {
+      if (!resident && !scheme) {
         const text = `${memo} ${payer}`;
         const unit = findUnit(text);
         if (unit) { resident = unit; matchedBy = 'memo'; candidates = []; }
@@ -341,7 +378,8 @@ export default function AdminEBilling() {
 
       out.push({
         rowNo: i + 1, code, amount, paidAt, memo, payer, externalRef,
-        resident, matchedBy, candidates, duplicate: existingRefs.has(externalRef),
+        resident, matchedBy, candidates,
+        duplicate: existingRefs.has(externalRef) || txnCodes(`${refCell} ${code} ${memo}`).some(c => existingCodes.has(c)),
       });
     }
     return out;
@@ -602,7 +640,7 @@ export default function AdminEBilling() {
                             ) : p.candidates.length ? (
                               <select value="" onChange={e => setPicks(s => ({ ...s, [p.rowNo]: Number(e.target.value) }))}
                                 className="text-xs border border-amber-400 rounded px-1 py-0.5 bg-white">
-                                <option value="">⚠ {p.candidates[0].apartment} тоот {p.candidates.length} блокт байна — сонгох</option>
+                                <option value="">⚠ {p.candidates.length > 1 ? `${p.candidates[0].apartment} тоот ${p.candidates.length} блокт байна` : 'Байр нь тодорхойгүй'} — шалгаад сонгох</option>
                                 {p.candidates.map(r => (
                                   <option key={r.id} value={r.id}>{[r.building, r.apartment].filter(Boolean).join(' ')} — {r.name}</option>
                                 ))}

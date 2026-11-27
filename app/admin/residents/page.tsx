@@ -420,6 +420,20 @@ export default function AdminResidents() {
 
   // Өөрөө бүртгүүлсэн айлыг дарга баталгаажуулна — үүний дараа тоо/дүнд орно
   const approveResident = async (r: Resident) => {
+    // Энэ тоот аль хэдийн баталгаажсан айлтай бол баталгаажуулбал нэг тоот хоёр нэхэмжлэх,
+    // хоёр өртэй болж төлбөр аль нэгд нь л ордог (ICTown 1-1-1102, 2-2-114, 2026-11-27).
+    const same = residents.filter(x => x.id !== r.id && !x.pending_claim
+      && norm(x.apartment) === norm(r.apartment) && norm(x.building || '') === norm(r.building || ''));
+    if (same.length) {
+      alert(
+        `${[r.building, r.apartment].filter(Boolean).join('-')} тоот аль хэдийн бүртгэлтэй байна` +
+        ` (${same.map(x => `${x.name}, ${x.phone || 'утасгүй'}`).join('; ')}).\n\n` +
+        `Баталгаажуулбал нэг тоот ХОЁР айл болж давхар нэхэмжлэгдэнэ, төлбөр аль нэгд нь л орно.\n` +
+        `Хэрэв өөр тоот бол «Засах»-аар байр/тоотыг нь зөв болгоод баталгаажуулна уу.\n` +
+        `Хэрэв ижил айлын гишүүн бол энэ мөрийг баталгаажуулалгүй үлдээнэ үү (нэхэмжлэх үндсэн мөрд очно).`
+      );
+      return;
+    }
     if (!confirm(
       `${r.apartment} тоот — ${r.name} (${r.phone || 'утасгүй'})\n\n` +
       `Энэ хүн өөрөө бүртгүүлсэн байна. Үнэхээр танай СӨХ-ийн оршин суугч мөн бол\n` +
@@ -465,14 +479,56 @@ export default function AdminResidents() {
       return;
     }
 
-    const byApartment = new Map(residents.map(r => [String(r.apartment).trim(), r]));
-    const toUpdate = parsed.filter(r => byApartment.has(r.apartment));
-    const toInsert = parsed.filter(r => !byApartment.has(r.apartment));
+    // Байр/блок + тоотоор тулгана. Тоот олон блокт давтагддаг (ICTown: 2-1 602, 5-1 602) тул
+    // зөвхөн тоотоор Map хийвэл нэг блокийн мөр нөгөө блокийн айлыг дарж бичдэг байсан.
+    const normB = (s: unknown) => String(s ?? '').trim().replace(/[\s/._–—-]+/g, '-');
+    const unitKey = (b: unknown, a: unknown) => `${normB(b)}|${String(a ?? '').trim()}`;
+    const byUnit = new Map<string, Resident[]>();
+    const byAptList = new Map<string, Resident[]>();
+    for (const r of residents) {
+      const k = unitKey(r.building, r.apartment), a = String(r.apartment).trim();
+      byUnit.set(k, [...(byUnit.get(k) || []), r]);
+      byAptList.set(a, [...(byAptList.get(a) || []), r]);
+    }
+    // Нэг тоотод хэд хэдэн мөр (жнь өөрөө бүртгүүлсэн хүлээгдэж буй) байвал баталгаажсаныг нь сонгоно
+    const pickOne = (list: Resident[]) => {
+      const real = list.filter(r => !r.pending_claim);
+      const pool = real.length ? real : list;
+      return pool.length === 1 ? pool[0] : null;
+    };
+    type Target = { kind: 'update'; row: Resident } | { kind: 'insert' } | { kind: 'ambiguous'; count: number };
+    const targetOf = (r: typeof parsed[number]): Target => {
+      const sameUnit = byUnit.get(unitKey(r.building, r.apartment)) || [];
+      if (sameUnit.length) {
+        const one = pickOne(sameUnit);
+        return one ? { kind: 'update', row: one } : { kind: 'ambiguous', count: sameUnit.length };
+      }
+      const sameApt = byAptList.get(r.apartment) || [];
+      // CSV-д байр бичсэн: тэр байранд ийм тоот байхгүй бол шинэ айл. Харин байргүй
+      // бүртгэгдсэн ганц айл байвал (байр ашигладаггүй СӨХ) түүнийг шинэчилнэ.
+      if (r.building) {
+        const noBuilding = sameApt.filter(x => !normB(x.building));
+        const one = noBuilding.length ? pickOne(noBuilding) : null;
+        return one && sameApt.length === noBuilding.length ? { kind: 'update', row: one } : { kind: 'insert' };
+      }
+      // CSV-д байр бичээгүй: тоот ганц айлд л таарвал шинэчилнэ, олон блокт байвал таамаглахгүй
+      if (!sameApt.length) return { kind: 'insert' };
+      const one = pickOne(sameApt);
+      return one ? { kind: 'update', row: one } : { kind: 'ambiguous', count: sameApt.length };
+    };
+    const plan = parsed.map(r => ({ r, t: targetOf(r) }));
+    const toUpdate = plan.filter(p => p.t.kind === 'update') as { r: typeof parsed[number]; t: { kind: 'update'; row: Resident } }[];
+    const toInsert = plan.filter(p => p.t.kind === 'insert').map(p => p.r);
+    const ambiguous = plan.filter(p => p.t.kind === 'ambiguous').map(p => [p.r.building, p.r.apartment].filter(Boolean).join(' '));
 
     const proceed = confirm(
       `${parsed.length} мөр уншлаа:\n\n` +
       `• Байгаа ${toUpdate.length} тоот ШИНЭЧЛЭГДЭНЭ\n` +
-      `• Шинэ ${toInsert.length} тоот НЭМЭГДЭНЭ\n\n` +
+      `• Шинэ ${toInsert.length} тоот НЭМЭГДЭНЭ\n` +
+      (ambiguous.length
+        ? `• ${ambiguous.length} мөр АЛГАСАГДАНА — тоот нь олон блокт байгаа тул «building» баганад блокийг бичнэ үү:\n  ${ambiguous.slice(0, 15).join(', ')}${ambiguous.length > 15 ? '…' : ''}\n`
+        : '') +
+      `\n` +
       `Хоосон үлдээсэн нүд байвал тэр талбар хэвээрээ үлдэнэ.\n\n` +
       `Үргэлжлүүлэх үү?`
     );
@@ -500,10 +556,8 @@ export default function AdminResidents() {
     let updated = 0, inserted = 0, failed = 0;
     const phoneChanged: string[] = [];
 
-    for (const r of toUpdate) {
-      const row = byApartment.get(r.apartment);
-      if (!row) continue;
-      if (r.phone && r.phone !== (row.phone || '')) phoneChanged.push(r.apartment);
+    for (const { r, t: { row } } of toUpdate) {
+      if (r.phone && r.phone !== (row.phone || '')) phoneChanged.push([row.building, r.apartment].filter(Boolean).join(' '));
       const { error } = await adminFrom('residents').update(patchOf(r)).eq('id', row.id);
       if (error) failed++; else updated++;
     }
@@ -515,11 +569,12 @@ export default function AdminResidents() {
       if (error) failed += toInsert.length; else inserted = toInsert.length;
     }
 
-    const needsReset = [...phoneChanged, ...toInsert.map(r => r.apartment)];
+    const needsReset = [...phoneChanged, ...toInsert.map(r => [r.building, r.apartment].filter(Boolean).join(' '))];
     alert(
       `Дууслаа.\n\n` +
       `Шинэчилсэн : ${updated}\n` +
       `Нэмсэн     : ${inserted}\n` +
+      (ambiguous.length ? `Алгассан   : ${ambiguous.length} (блок тодорхойгүй)\n` : '') +
       (failed ? `Алдаа      : ${failed}\n` : '') +
       (needsReset.length
         ? `\n⚠️ Утас нь солигдсон/шинэ ${needsReset.length} айл дээр "Нууц үг сэргээх" дарж өгнө үү,\n` +
